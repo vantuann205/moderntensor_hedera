@@ -1,0 +1,16 @@
+{
+    "name": "moderntensor-contracts",
+    "version": "1.0.0",
+    "description": "ModernTensor Smart Contracts — SubnetRegistry and PaymentEscrow on Hedera",
+    "scripts": {
+        "compile": "npx hardhat compile",
+        "test": "npx hardhat test",
+        "clean": "npx hardhat clean"
+    },
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+        "@openzeppelin/contracts": "^4.9.6",
+        "hardhat": "^2.22.0"
+    },
+    "license": "MIT"
+}

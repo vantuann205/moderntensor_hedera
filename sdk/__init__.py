@@ -1,220 +1,189 @@
 """
-ModernTensor SDK
+ModernTensor SDK — Full Marketplace Protocol on Hedera
 
-Python SDK for interacting with Luxtensor blockchain and building AI/ML subnets.
+Four-layer architecture:
+  1. sdk.hedera       — Hedera service layer (HCS, HTS, HSCS)
+  2. sdk.protocol     — Protocol core (tasks, miners, fees, matching)
+  3. sdk.scoring      — Scoring engine (multi-dim, consensus, PoI)
+  4. sdk.marketplace  — Orchestrator (unifies all layers)
+
+For Hedera Hello Future Apex Hackathon 2026.
 """
 
-# Luxtensor client (blockchain interaction)
-from .luxtensor_client import (
-    LuxtensorClient,
-    AsyncLuxtensorClient,
-    connect,
-    async_connect,
-    ChainInfo,
-    Account,
-    TransactionResult,
+# -----------------------------------------------------------------------
+# Layer 1: Hedera Service Layer
+# -----------------------------------------------------------------------
+from .hedera import (
+    # Config
+    HederaConfig,
+    NetworkType,
+    load_hedera_config,
+    # Client
+    HederaClient,
+    connect_hedera,
+    async_connect_hedera,
+    # HCS
+    HCSService,
+    HCSMessageType,
+    MinerRegistration,
+    ScoreSubmission,
+    TaskSubmission,
+    # HTS
+    HTSService,
+    # Smart Contracts
+    SmartContractService,
+    TaskStatus as HederaTaskStatus,
+    TaskInfo,
+    # Subnets
+    SubnetService,
+    SubnetConfig,
+    SubnetInfo as HederaSubnetInfo,
+    SubnetStatus,
+    create_subnet_service,
+    # Errors
+    HederaError,
+    HederaConnectionError,
+    HederaTransactionError,
+    TopicNotFoundError,
+    InsufficientBalanceError,
+    TokenNotFoundError,
+    ContractNotFoundError,
+    ContractCallError,
+    ContractExecuteError,
 )
 
-# Transactions
-from .transactions import (
-    LuxtensorTransaction,
-    create_transfer_transaction,
-    sign_transaction,
-    verify_transaction_signature,
-    encode_transaction_for_rpc,
+# -----------------------------------------------------------------------
+# Layer 2: Protocol Core
+# -----------------------------------------------------------------------
+from .protocol import (
+    # Types
+    TaskStatus,
+    TaskPriority,
+    MinerStatus,
+    TaskRequest,
+    TaskResult,
+    TaskAssignment,
+    MinerInfo,
+    MinerReputation,
+    ValidatorScore,
+    ScoreBreakdown,
+    FeeBreakdown,
+    PaymentInfo,
+    ProtocolConfig,
+    # Engines
+    FeeEngine,
+    MinerRegistry,
+    TaskManager,
+    ValidationOrchestrator,
+    TaskMatcher,
+    # Reward System
+    RewardDistributor,
+    RewardTransaction,
+    RewardBatch,
+    EscrowManager,
+    EscrowDeposit,
+    EscrowStatus,
+    Treasury,
+    PayoutRecord,
+    TreasurySnapshot,
 )
 
-# WebSocket (real-time events)
-from .websocket_client import (
-    LuxtensorWebSocket,
-    SubscriptionType,
-    BlockEvent,
-    TransactionEvent,
-    AccountChangeEvent,
-    subscribe_to_blocks,
+# -----------------------------------------------------------------------
+# Layer 3: Scoring Engine
+# -----------------------------------------------------------------------
+from .scoring import (
+    ScoringDimension,
+    DimensionConfig,
+    MultiDimensionScorer,
+    ScoreConsensus,
+    ConsensusResult,
+    WeightCalculator,
+    WeightMatrix,
+    ProofOfIntelligence,
+    PoIResult,
 )
 
-# Caching (moved to core/)
-from .core.cache import (
-    LuxtensorCache,
-    MemoryCache,
-    RedisCache,
-    CacheBackend,
-    cached,
-    get_cache,
-    set_cache,
+# -----------------------------------------------------------------------
+# Layer 4: Marketplace Orchestrator
+# -----------------------------------------------------------------------
+from .marketplace import (
+    MarketplaceProtocol,
+    SubnetManager,
+    ProtocolAnalytics,
 )
-
-# Indexer Client
-from .indexer_client import (
-    IndexerClient,
-    AsyncIndexerClient,
-    IndexedBlock,
-    IndexedTransaction,
-    TokenTransfer,
-    StakeEvent,
-    SyncStatus,
-)
-
-# Neuron Checker (registration & activity)
-from .neuron_checker import (
-    NeuronChecker,
-    NeuronRegistrationInfo,
-    NeuronStatus,
-    NeuronType,
-)
-
-# Utilities (unit conversion, validation)
-from .utils import (
-    to_mdt,
-    from_mdt,
-    format_mdt,
-    validate_address,
-    shorten_address,
-    shorten_hash,
-    MDT_DECIMALS,
-    MDT_WEI_MULTIPLIER,
-)
-
-# Errors (structured RPC errors)
-from .errors import (
-    RpcError,
-    RpcErrorCode,
-    BlockNotFoundError,
-    TransactionNotFoundError,
-    InsufficientFundsError,
-    InvalidSignatureError,
-    NonceTooLowError,
-    GasLimitExceededError,
-    RateLimitedError,
-    MempoolFullError,
-    parse_rpc_error,
-    check_rpc_response,
-)
-
-# Consensus module (slashing, circuit breaker, liveness, fork choice, fast finality)
-from .consensus import (
-    # Slashing
-    SlashReason,
-    SlashingConfig,
-    SlashingEvidence,
-    SlashEvent,
-    JailStatus,
-    SlashingManager,
-    # Circuit Breaker
-    CircuitState,
-    CircuitBreakerConfig,
-    CircuitBreaker,
-    # Liveness
-    LivenessAction,
-    LivenessConfig,
-    LivenessMonitor,
-    # Fork Choice
-    BlockInfo,
-    ForkChoice,
-    ForkChoiceError,
-    # Fast Finality
-    BlockSignatures,
-    FastFinalityStats,
-    FastFinality,
-    FastFinalityError,
-)
-
-
-# Version
-from .version import __version__
-
 
 __all__ = [
-    # Luxtensor client
-    "LuxtensorClient",
-    "AsyncLuxtensorClient",
-    "connect",
-    "async_connect",
-    "ChainInfo",
-    "Account",
-    "TransactionResult",
-    # Transactions
-    "LuxtensorTransaction",
-    "create_transfer_transaction",
-    "sign_transaction",
-    "verify_transaction_signature",
-    "encode_transaction_for_rpc",
-    # WebSocket
-    "LuxtensorWebSocket",
-    "SubscriptionType",
-    "BlockEvent",
-    "TransactionEvent",
-    "AccountChangeEvent",
-    "subscribe_to_blocks",
-    # Caching
-    "LuxtensorCache",
-    "MemoryCache",
-    "RedisCache",
-    "CacheBackend",
-    "cached",
-    "get_cache",
-    "set_cache",
-    # Indexer
-    "IndexerClient",
-    "AsyncIndexerClient",
-    "IndexedBlock",
-    "IndexedTransaction",
-    "TokenTransfer",
-    "StakeEvent",
-    "SyncStatus",
-    # Neuron Checker
-    "NeuronChecker",
-    "NeuronRegistrationInfo",
-    "NeuronStatus",
-    "NeuronType",
-    # Utilities
-    "to_mdt",
-    "from_mdt",
-    "format_mdt",
-    "validate_address",
-    "shorten_address",
-    "shorten_hash",
-    "MDT_DECIMALS",
-    "MDT_WEI_MULTIPLIER",
-    # Errors
-    "RpcError",
-    "RpcErrorCode",
-    "BlockNotFoundError",
-    "TransactionNotFoundError",
-    "InsufficientFundsError",
-    "InvalidSignatureError",
-    "NonceTooLowError",
-    "GasLimitExceededError",
-    "RateLimitedError",
-    "MempoolFullError",
-    "parse_rpc_error",
-    "check_rpc_response",
-    # Consensus - Slashing
-    "SlashReason",
-    "SlashingConfig",
-    "SlashingEvidence",
-    "SlashEvent",
-    "JailStatus",
-    "SlashingManager",
-    # Consensus - Circuit Breaker
-    "CircuitState",
-    "CircuitBreakerConfig",
-    "CircuitBreaker",
-    # Consensus - Liveness
-    "LivenessAction",
-    "LivenessConfig",
-    "LivenessMonitor",
-    # Consensus - Fork Choice
-    "BlockInfo",
-    "ForkChoice",
-    "ForkChoiceError",
-    # Consensus - Fast Finality
-    "BlockSignatures",
-    "FastFinalityStats",
-    "FastFinality",
-    "FastFinalityError",
-    # Version
-    "__version__",
+    # --- Hedera Service Layer ---
+    "HederaConfig",
+    "NetworkType",
+    "load_hedera_config",
+    "HederaClient",
+    "connect_hedera",
+    "async_connect_hedera",
+    "HCSService",
+    "HCSMessageType",
+    "MinerRegistration",
+    "ScoreSubmission",
+    "TaskSubmission",
+    "HTSService",
+    "SmartContractService",
+    "HederaTaskStatus",
+    "TaskInfo",
+    "SubnetService",
+    "SubnetConfig",
+    "HederaSubnetInfo",
+    "SubnetStatus",
+    "create_subnet_service",
+    "HederaError",
+    "HederaConnectionError",
+    "HederaTransactionError",
+    "TopicNotFoundError",
+    "InsufficientBalanceError",
+    "TokenNotFoundError",
+    "ContractNotFoundError",
+    "ContractCallError",
+    "ContractExecuteError",
+    # --- Protocol Core ---
+    "TaskStatus",
+    "TaskPriority",
+    "MinerStatus",
+    "TaskRequest",
+    "TaskResult",
+    "TaskAssignment",
+    "MinerInfo",
+    "MinerReputation",
+    "ValidatorScore",
+    "ScoreBreakdown",
+    "FeeBreakdown",
+    "PaymentInfo",
+    "ProtocolConfig",
+    "FeeEngine",
+    "MinerRegistry",
+    "TaskManager",
+    "ValidationOrchestrator",
+    "TaskMatcher",
+    # --- Reward System ---
+    "RewardDistributor",
+    "RewardTransaction",
+    "RewardBatch",
+    "EscrowManager",
+    "EscrowDeposit",
+    "EscrowStatus",
+    "Treasury",
+    "PayoutRecord",
+    "TreasurySnapshot",
+    # --- Scoring Engine ---
+    "ScoringDimension",
+    "DimensionConfig",
+    "MultiDimensionScorer",
+    "ScoreConsensus",
+    "ConsensusResult",
+    "WeightCalculator",
+    "WeightMatrix",
+    "ProofOfIntelligence",
+    "PoIResult",
+    # --- Marketplace ---
+    "MarketplaceProtocol",
+    "SubnetManager",
+    "ProtocolAnalytics",
 ]
-

@@ -1,11 +1,34 @@
-# tests/conftest.py
 """
-Test configuration and fixtures for ModernTensor SDK tests.
-
-REMOVED: Cardano-specific hotkey/coldkey fixtures (decode_hotkey_skeys, hotkey_config, hotkey_skey_fixture)
-These were tightly coupled with removed keymanager and compat modules.
-
-For AI/ML and core functionality tests, see individual test files for their fixtures.
+Test configuration — auto-clean state files between tests
+to prevent inter-test pollution from persistence layer.
 """
-
+import os
 import pytest
+from pathlib import Path
+
+
+STATE_FILES = [
+    "data/miner_registry.json",
+    "data/task_manager.json",
+    "data/poi_state.json",
+]
+
+
+@pytest.fixture(autouse=True)
+def clean_state_files():
+    """Remove state files before and after each test to ensure isolation."""
+    project_root = Path(__file__).parent.parent
+
+    # Clean before test
+    for sf in STATE_FILES:
+        fp = project_root / sf
+        if fp.exists():
+            fp.unlink()
+
+    yield
+
+    # Clean after test
+    for sf in STATE_FILES:
+        fp = project_root / sf
+        if fp.exists():
+            fp.unlink()

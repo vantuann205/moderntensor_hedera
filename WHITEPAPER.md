@@ -1,583 +1,147 @@
-# ModernTensor Whitepaper
+# ModernTensor: Decentralized AI Marketplace Protocol on Hedera
 
-**Version 2.0 | January 2026**
-
-**The Decentralized Intelligence Infrastructure**
-
----
-
-## Abstract
-
-ModernTensor is a next-generation decentralized artificial intelligence network built on LuxTensor, a custom Layer-1 blockchain optimized for AI workloads. The network enables a global marketplace where AI compute providers (miners) are incentivized to contribute computational resources, while validators ensure quality and security through advanced consensus mechanisms. This whitepaper presents the technical architecture, economic model, and governance framework that positions ModernTensor as the infrastructure layer for decentralized AI.
+**Version:** 1.0 (Hackathon Edition)
+**Date:** February 2026
+**Website:** [modern-tensor.io](https://modern-tensor.io) (Demo)
 
 ---
 
-## Table of Contents
+## 1. Executive Summary
 
-1. [Introduction](#1-introduction)
-2. [Problem Statement](#2-problem-statement)
-3. [Solution Architecture](#3-solution-architecture)
-4. [LuxTensor Blockchain](#4-luxtensor-blockchain)
-5. [Network Participants](#5-network-participants)
-6. [Consensus Mechanism](#6-consensus-mechanism)
-7. [Tokenomics](#7-tokenomics)
-8. [Subnet Architecture](#8-subnet-architecture)
-9. [Security Model](#9-security-model)
-10. [Governance](#10-governance)
-11. [Roadmap](#11-roadmap)
-12. [Conclusion](#12-conclusion)
+ModernTensor is a **decentralized protocol for verifiable AI computation**, built on the **Hedera network**. It creates a marketplace where AI agents compete to solve complex tasks (starting with smart contract auditing), and their outputs are cryptographically verified and ranked by a novel consensus mechanism.
+
+Unlike centralized AI APIs (OpenAI, Anthropic), ModernTensor provides:
+1.  **Verifiable Intelligence:** Proof of Intelligence (PoI) ensures AI outputs are unique, high-quality, and non-collusive.
+2.  **Multi-Model Consensus:** Aggregates insights from multiple competing LLMs to eliminate hallucinations and bias.
+3.  **On-Chain Accountability:** Miners stake tokens to guarantee performance; results are immutable on Hedera Consensus Service (HCS).
+4.  **Agent-to-Agent Economy:** A native interface for AI agents to hire other specialized AI agents using micro-payments.
+
+**Why Hedera?** We leverage Hedera's high throughput (10k+ TPS), fair ordering (HCS), and extremely low fees ($0.0001) to make AI micro-tasks economically viable, something impossible on traditional blockchains like Ethereum.
 
 ---
 
-## 1. Introduction
+## 2. The Problem
 
-The convergence of artificial intelligence and blockchain technology presents an unprecedented opportunity to democratize access to AI infrastructure. ModernTensor addresses the fundamental challenges of centralized AI by creating a permissionless, incentive-aligned network for AI computation.
+### 2.1 The "Black Box" AI Crisis
+Currently, AI is consumed via centralized APIs. Users must trust a single provider (e.g., OpenAI) blindly.
+*   **No Verification:** Was the code really audited, or did the model hallucinate?
+*   **No Accountability:** If the AI misses a bug, the user has no recourse.
+*   **Single Point of Failure:** Biases or outages in one model affect everyone.
 
-### 1.1 Vision
+### 2.2 The Smart Contract Audit Bottleneck
+In the Web3 space, security audits are slow, expensive ($10k-$100k), and rely on scarce human experts.
+*   **Manual auditing is unscalable.**
+*   **Current AI tools are fragmented.** Developers copy-paste code into ChatGPT, risking data privacy and lacking structured verification.
 
-To build the world's most robust and accessible decentralized AI infrastructure, enabling anyone to contribute computing power and access AI capabilities without intermediaries.
-
-### 1.2 Mission
-
-- **Decentralize AI compute**: Break the monopoly of centralized cloud providers
-- **Incentivize participation**: Create sustainable economic models for contributors
-- **Ensure quality**: Implement rigorous validation and scoring mechanisms
-- **Enable innovation**: Provide infrastructure for novel AI applications
-
----
-
-## 2. Problem Statement
-
-### 2.1 Centralization of AI Infrastructure
-
-The current AI landscape is dominated by a handful of technology giants who control:
-
-- 85% of global AI compute capacity
-- Access to training data and model weights
-- Pricing and availability of AI services
-
-This centralization creates significant risks:
-
-- **Single points of failure**: Outages affect millions of users
-- **Censorship**: Arbitrary content restrictions
-- **Privacy concerns**: User data concentrated in few hands
-- **Barrier to entry**: High costs exclude smaller players
-
-### 2.2 Limitations of Existing Decentralized Solutions
-
-Previous attempts at decentralized AI face critical challenges:
-
-| Challenge | Current Solutions | ModernTensor Approach |
-|-----------|-------------------|----------------------|
-| Verification | Trust-based | Cryptographic proofs + consensus |
-| Quality Control | Minimal | Multi-validator scoring |
-| Scalability | Limited | Subnet parallelism |
-| Economic Model | Inflationary | Dynamic emission + burn |
-| Governance | Centralized | On-chain DAO |
+### 2.3 The Agent Coordination Gap
+AI Agents are proliferating, but there is no standard protocol for **Agent A to hire Agent B**.
+*   An Investment Agent cannot easily "hire" a Security Agent to vet a contract.
+*   Payment rails are missing or slow.
 
 ---
 
-## 3. Solution Architecture
+## 3. The Solution: ModernTensor Protocol
 
-ModernTensor implements a three-layer architecture:
+ModernTensor is the **TCP/IP for AI Tasks**. It connects distinct layers:
+*   **Miners (Supply):** Run AI nodes (LLMs, specialized models) to perform tasks.
+*   **Validators (Verification):** Score and verify outputs using the PoI algorithm.
+*   **Customers (Demand):** Developers, DAOs, or other AI Agents submitting tasks.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    APPLICATION LAYER                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐          │
-│  │   Text AI   │  │  Image AI   │  │  Compute    │   ...    │
-│  │   Subnet    │  │   Subnet    │  │   Subnet    │          │
-│  └─────────────┘  └─────────────┘  └─────────────┘          │
-├─────────────────────────────────────────────────────────────┤
-│                    CONSENSUS LAYER                           │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  Validators • Scoring • Slashing • Weight Updates   │    │
-│  └─────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                    BLOCKCHAIN LAYER                          │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  LuxTensor L1 • EVM Compatible • High Throughput    │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 3.1 Key Components
-
-1. **LuxTensor L1**: Custom blockchain optimized for AI workloads
-2. **Subnet System**: Specialized networks for different AI domains
-3. **Validator Network**: Quality assurance and consensus
-4. **Miner Network**: Distributed compute providers
-5. **SDK & Tools**: Developer-friendly APIs and CLI
+### Core Mechanism
+1.  **Task Submission:** User submits a task (e.g., "Audit Vault.sol") with a reward (e.g., 50 MDT).
+2.  **Weighted Matching:** The protocol selects the best-suited miners based on **Reputation (EMA)** and **Stake**.
+3.  **Competitive Execution:** Selected miners process the task independently using their own AI models.
+4.  **Consensus & Scoring:** Validators score results on 5 dimensions (Security, Correctness, etc.) and run PoI checks.
+5.  **Weighted Median Aggregation:** Scores are aggregated to filter out outliers and malicious nodes.
+6.  **Instant Payment:** The winner receives the reward; protocol fees are distributed to the DAO and Subnet Owner.
 
 ---
 
-## 4. LuxTensor Blockchain
+## 4. Technical Architecture (4-Layer Stack)
 
-LuxTensor is a purpose-built Layer-1 blockchain designed specifically for decentralized AI infrastructure.
+### Layer 1: Hedera Network (Trust Layer)
+*   **HCS (Hedera Consensus Service):** Orders transaction events, ensuring fair timestamps for submissions.
+*   **HTS (Hedera Token Service):** Manages the MDT token and stablecoin payments.
+*   **HSCS (Smart Contract Service):** Handles the `SubnetRegistry` and `PaymentEscrow`.
 
-### 4.1 Technical Specifications
+### Layer 2: Protocol Core (Logic Layer)
+*   **Miner Registry:** Manages identities, staking, and reputation tracking.
+*   **Task Manager:** State machine handling the lifecycle (Pending -> Assigned -> Validating -> Completed).
+*   **Fee Engine:** Calculates dynamic fees based on network congestion and priority.
 
-| Parameter | Value |
-|-----------|-------|
-| Consensus | Proof of Stake (PoS) |
-| Block Time | 6 seconds |
-| Finality | 2 blocks (~12 seconds) |
-| TPS | 10,000+ |
-| EVM Compatible | Yes |
-| Native Token | MDT |
+### Layer 3: Scoring Engine (Intelligence Layer)
+*   **Multi-Dimension Scorer:** Evaluates outputs on:
+    1.  **Security:** Vulnerability detection accuracy.
+    2.  **Correctness:** Logic and syntax verification.
+    3.  **Readability:** Code clarity and documentation.
+    4.  **Best Practices:** Adherence to standards (e.g., OpenZeppelin).
+    5.  **Gas Efficiency:** Optimization suggestions.
+*   **Proof of Intelligence (PoI):** (See Section 5)
 
-### 4.2 Core Features
-
-#### 4.2.1 High-Performance RPC
-
-The LuxTensor RPC server provides 80+ endpoints for:
-
-- Blockchain queries (`eth_*` compatible)
-- Neuron management (`query_neuron`, `neuron_register`)
-- Subnet operations (`subnet_create`, `subnet_getInfo`)
-- Staking operations (`staking_*`)
-- AI task submission (`lux_submitAITask`)
-
-#### 4.2.2 Metagraph Storage
-
-Persistent storage for network state:
-
-- **Subnets**: Configuration and hyperparameters
-- **Neurons**: Registration, stake, performance
-- **Weights**: Trust relationships
-- **AI Tasks**: Job queue and results
-
-#### 4.2.3 Smart Contract Support
-
-Full EVM compatibility enables:
-
-- Custom token deployments
-- DeFi integrations
-- Automated market makers
-- Cross-chain bridges
-
-#### 4.2.4 dApp Platform (Beyond AI Networks)
-
-Unlike Subtensor (Bittensor's blockchain), LuxTensor is a **general-purpose L1** with AI superpowers:
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                 LuxTensor dApp Ecosystem                            │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  AI-NATIVE DAPPS                    TRADITIONAL DAPPS               │
-│  ┌─────────────────────┐           ┌─────────────────────┐         │
-│  │ • Prediction Markets │           │ • DEX / AMM          │         │
-│  │ • AI-Generated NFTs  │           │ • Lending Protocols  │         │
-│  │ • Inference Markets  │           │ • Stablecoins        │         │
-│  │ • Model Marketplaces │           │ • DAOs               │         │
-│  └─────────────────────┘           └─────────────────────┘         │
-│                                                                     │
-│  UNIQUE FEATURES:                                                   │
-│  • Native AI Task Submission (mt_submitAITask)                     │
-│  • zkML Proof Verification On-Chain                                │
-│  • AI Oracle Smart Contracts                                       │
-│  • Miner Rewards for Inference                                     │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-**Developer Tooling:**
-
-| Tool | Support |
-|------|---------|
-| Hardhat | ✅ Full support |
-| Foundry | ✅ Full support |
-| Web3.py | ✅ Full support |
-| ethers.js | ✅ Full support |
-| Remix IDE | ✅ Full support |
-
-**Contract Templates Available:**
-
-- ERC-20 Token Template (`LuxToken.sol`)
-- AI-Enhanced NFT Template (`LuxNFT.sol`)
-- AI Oracle Contract (`AIOracle.sol`)
+### Layer 4: Marketplace (Application Layer)
+*   **Orchestrator:** Unifies all components into a simple SDK.
+*   **Subnet Manager:** Allows creation of specialized markets (e.g., "AI Image Gen", "DeFi Risk Analysis").
 
 ---
 
-## 5. Network Participants
+## 5. Key Innovation: Proof of Intelligence (PoI)
 
-### 5.1 Validators
+PoI is our novel mechanism to verify that work was done by a **capable, honest, and unique** AI model.
 
-Validators are the backbone of network security and quality:
+### 5.1 The 4 Signals
+1.  **Knowledge Verification:** Does the output contain correct domain-specific terminology and logic? (e.g., "reentrancy", "checks-effects-interactions").
+2.  **Shannon Entropy Analysis:** Is the output information-rich? This detects "template" responses or low-effort copying.
+3.  **Cross-Correlation Check:** Are multiple miners submitting identical answers? This detects **collusion** or Sybil attacks.
+4.  **Temporal Consistency:** Is the miner's performance stable over time, or erratic (gaming the system)?
 
-**Responsibilities:**
-
-- Score miner outputs for quality
-- Participate in consensus
-- Set network weights
-- Detect fraud and misbehavior
-
-**Requirements:**
-
-- Minimum stake: 10,000 MDT
-- Uptime: 95%+
-- Hardware: 8 cores, 32GB RAM
-
-**Rewards:**
-
-- Emission share based on stake and performance
-- Dividends from subnet activity
-
-### 5.2 Miners
-
-Miners provide the computational power for AI tasks:
-
-**Responsibilities:**
-
-- Process AI inference requests
-- Maintain service availability
-- Submit results with proofs
-
-**Requirements:**
-
-- GPU: NVIDIA RTX 3090+ (recommended)
-- Network: 100 Mbps+
-- Storage: 500GB+ SSD
-
-**Rewards:**
-
-- Incentives based on performance scores
-- Bonuses for reliability
-
-### 5.3 Delegators
-
-Token holders who stake to validators without running infrastructure:
-
-**Benefits:**
-
-- Earn passive rewards
-- Participate in governance
-- No technical requirements
+### 5.2 Why it Matters
+PoI solves the "Oracle Problem" for AI. It ensures that the result on-chain is **trustworthy** without needing a human in the loop.
 
 ---
 
-## 6. Consensus Mechanism
+## 6. Tokenomics (MDT Token)
 
-ModernTensor implements a novel **Proof of Intelligence (PoI)** consensus layered on Proof of Stake.
+The MDT token aligns incentives across the ecosystem.
 
-### 6.1 Scoring Process
+### 6.1 Utility
+*   **Staking:** Miners must stake MDT to register. Malicious behavior leads to slashing.
+*   **Payment:** Standard currency for task rewards.
+*   **Governance:** DAO voting on protocol parameters (fees, new subnets).
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Task      │────▶│   Miner     │────▶│  Validator  │
-│  Dispatch   │     │  Execution  │     │   Scoring   │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                               │
-                                               ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Reward    │◀────│  Consensus  │◀────│   P2P       │
-│ Distribution│     │ Aggregation │     │  Broadcast  │
-└─────────────┘     └─────────────┘     └─────────────┘
-```
+### 6.2 Fee Structure (Sustainable Model)
+Every task generates revenue:
+*   **1% Protocol Fee:** Goes to the ModernTensor DAO Treasury.
+*   **3% Subnet Fee:** Goes to the Creator/Owner of the Subnet (incentivizes niche markets).
+*   **96% Miner Reward:** Goes to the winning nodes.
 
-### 6.2 Trust Score Formula
-
-Each miner maintains a trust score updated via exponential moving average:
-
-```
-T_new = (1 - α) × T_old + α × P_consensus
-```
-
-Where:
-
-- `T_new`: Updated trust score
-- `T_old`: Previous trust score
-- `α`: Learning rate (default: 0.1)
-- `P_consensus`: Consensus-weighted performance
-
-### 6.3 Validator Weight Calculation
-
-Validator influence is weighted by stake and performance:
-
-```
-W_v = λ × log(1 + stake) + (1 - λ) × performance_score
-```
-
-Where:
-
-- `λ`: Balance factor (default: 0.5)
-- `stake`: Validator's staked MDT
-- `performance_score`: Historical accuracy
-
-### 6.4 Slashing Conditions
-
-Validators face penalties for:
-
-| Violation | Penalty |
-|-----------|---------|
-| Double signing | 5% stake slash |
-| Extended downtime | 1% stake slash |
-| Fraudulent scoring | 10% stake slash + jail |
-| Consensus deviation | Trust score reduction |
+### 6.3 Dynamic Calibration
+*   **Bonding Curve:** Miner weight = `sqrt(Stake)`. Prevents "whale" dominance (diminishing returns on large stakes).
+*   **Reputation EMA:** Recent performance matters more. Bad actors are auto-suspended if Score < 0.15.
 
 ---
 
-## 7. Tokenomics
+## 7. Roadmap
 
-### 7.1 Token Overview
+### Phase 1: MVP (Hackathon - Current)
+*   [x] Core Protocol (Python SDK)
+*   [x] Single Subnet (AI Code Review)
+*   [x] Basic Scoring Engine (5-Dimensions)
+*   [x] CLI & Dashboard Demo
 
-**Token Name:** ModernTensor
-**Symbol:** MDT
-**Total Supply:** 21,000,000 MDT (fixed)
-**Decimals:** 18
+### Phase 2: Testnet Beta (Q3 2026)
+*   [ ] Decentralized P2P Validator Network
+*   [ ] 3 New Subnets (GenAI, Trading Analysis, Medical Research)
+*   [ ] Smart Contract Full Audit
 
-### 7.2 Distribution
-
-| Allocation | Percentage | Amount | Vesting |
-|------------|------------|--------|---------|
-| Emission Rewards | 50% | 10,500,000 | 10 years |
-| Team & Development | 15% | 3,150,000 | 4 years cliff, 2 years linear |
-| Ecosystem Fund | 15% | 3,150,000 | DAO controlled |
-| Early Investors | 10% | 2,100,000 | 1 year cliff, 3 years linear |
-| Community Sale | 5% | 1,050,000 | Immediate |
-| Foundation Reserve | 5% | 1,050,000 | Multi-sig controlled |
-
-### 7.3 Emission Schedule
-
-The network follows a halving emission model:
-
-| Year | Daily Emission | Annual Emission |
-|------|----------------|-----------------|
-| 1 | 2,876 MDT | 1,050,000 MDT |
-| 2 | 1,438 MDT | 525,000 MDT |
-| 3 | 719 MDT | 262,500 MDT |
-| 4+ | Halving continues | Until cap |
-
-### 7.4 Token Utility
-
-1. **Staking**: Required for validators and miners
-2. **Governance**: Voting on proposals
-3. **Subnet Registration**: Cost to create subnets
-4. **Transaction Fees**: Gas for operations
-5. **Slashing Collateral**: Security deposits
-
-### 7.5 Deflationary Mechanisms
-
-- **Transaction burns**: 50% of gas fees burned
-- **Subnet registration burns**: Full amount burned
-- **Slashing burns**: 80% of slashed stake burned
+### Phase 3: Mainnet Launch (Q1 2027)
+*   [ ] MDT Token TGE (Token Generation Event)
+*   [ ] Permissionless Miner Registration
+*   [ ] Enterprise Partnerships (Integration with CI/CD pipelines)
 
 ---
 
-## 8. Subnet Architecture
+## 8. Conclusion
 
-Subnets are specialized AI networks optimized for specific tasks.
+ModernTensor isn't just another AI wrapper. It is **infrastructure for the Age of Agents**. By combining Hedera's speed with a novel verification mechanism (PoI), we enable a trustless, efficient, and scalable marketplace for machine intelligence.
 
-### 8.1 Subnet Types
-
-| Subnet ID | Name | Purpose |
-|-----------|------|---------|
-| 1 | Text Generation | LLM inference, chat, completion |
-| 2 | Image Generation | Diffusion models, DALL-E style |
-| 3 | Code Generation | Programming assistance |
-| 4 | Audio Processing | Speech-to-text, TTS |
-| 5 | Custom AI | User-defined applications |
-
-### 8.2 Subnet Hyperparameters
-
-Each subnet configures:
-
-```python
-SubnetHyperparameters(
-    tempo = 100,           # Epoch length (blocks)
-    max_neurons = 256,     # Maximum participants
-    min_stake = 1000,      # Minimum stake (MDT)
-    emission_rate = 10000, # Emission per epoch
-    rho = 10.0,            # Inflation rate
-    kappa = 10.0,          # Decay rate
-)
-```
-
-### 8.3 Creating a Subnet
-
-1. **Application**: Submit proposal with technical specs
-2. **Stake**: Lock 100,000 MDT registration fee (burned)
-3. **Governance Vote**: Community approval
-4. **Deployment**: Automatic activation upon approval
-
----
-
-## 9. Security Model
-
-### 9.1 Cryptographic Primitives
-
-- **Digital Signatures**: secp256k1 (Ethereum compatible)
-- **Hashing**: Keccak-256
-- **Key Derivation**: BIP-39 mnemonics
-
-### 9.2 Network Security
-
-#### 9.2.1 Sybil Resistance
-
-- Minimum stake requirements
-- Progressive registration costs under high demand
-- Identity verification for high-value subnets
-
-#### 9.2.2 Attack Mitigation
-
-| Attack Vector | Mitigation |
-|---------------|------------|
-| 51% Attack | Economic threshold >$1B at scale |
-| DDoS | Rate limiting + distributed architecture |
-| Eclipse | Peer diversity requirements |
-| Long-range | Checkpoints + social consensus |
-
-### 9.3 Validator Security
-
-- Hardware security module (HSM) support
-- Multi-signature withdrawal
-- Gradual stake unlock (7-day unbonding)
-
----
-
-## 10. Governance
-
-### 10.1 DAO Structure
-
-```
-┌─────────────────────────────────────────┐
-│           ModernTensor DAO              │
-├─────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐      │
-│  │  Technical  │  │  Treasury   │      │
-│  │  Committee  │  │  Committee  │      │
-│  └─────────────┘  └─────────────┘      │
-│  ┌─────────────┐  ┌─────────────┐      │
-│  │   Grants    │  │  Emergency  │      │
-│  │  Committee  │  │  Council    │      │
-│  └─────────────┘  └─────────────┘      │
-└─────────────────────────────────────────┘
-```
-
-### 10.2 Proposal Types
-
-| Type | Quorum | Threshold | Voting Period |
-|------|--------|-----------|---------------|
-| Parameter Change | 10% | 50% + 1 | 3 days |
-| Upgrade | 20% | 67% | 7 days |
-| Treasury Spend | 15% | 60% | 5 days |
-| Emergency | 5% | 75% | 24 hours |
-
-### 10.3 Voting Power
-
-```
-VotingPower = sqrt(stake) × (1 + k_g × sqrt(time_staked / total_time))
-```
-
-Where:
-
-- `stake`: Amount of MDT staked
-- `time_staked`: Duration of stake
-- `k_g`: Time bonus coefficient (default: 1.0)
-
----
-
-## 11. Roadmap
-
-### Phase 1: Foundation (Q1 2026) ✅
-
-- [x] LuxTensor L1 blockchain
-- [x] Core consensus mechanism
-- [x] Python SDK release
-
-### Phase 2-3: Network & Consensus (Q1 2026) ✅
-
-- [x] P2P Networking (libp2p)
-- [x] Validator Logic & Slashing
-- [x] Task Dispatch System
-
-### Phase 4: Native AI Integration (Q1 2026) ✅
-
-- [x] **Native AI Opcodes (0x10-0x13)**
-- [x] **PaymentEscrow System** (Pay-per-Compute)
-- [x] AI Oracle Integration
-
-### Phase 5: Testnet Launch (Q2 2026)
-
-- [ ] Public Testnet
-- [ ] Initial Validator Set
-- [ ] First Subnet (Text Generation)
-
-### Phase 4: Maturity (2027+)
-
-- [ ] Full DAO governance
-- [ ] 1000+ subnets
-- [ ] Global inference network
-- [ ] Regulatory compliance
-
----
-
-## 12. Conclusion
-
-ModernTensor represents a paradigm shift in how AI infrastructure is built, operated, and accessed. By combining the security of blockchain technology with the power of distributed computing, we create a network that is:
-
-- **Decentralized**: No single point of control or failure
-- **Incentive-aligned**: All participants benefit from network growth
-- **Scalable**: Subnet architecture enables unlimited expansion
-- **Secure**: Cryptographic proofs and economic penalties ensure integrity
-- **Accessible**: Low barriers to entry for all participants
-
-The future of AI is decentralized. ModernTensor is building it today.
-
----
-
-## References
-
-1. Nakamoto, S. (2008). Bitcoin: A Peer-to-Peer Electronic Cash System
-2. Buterin, V. (2014). Ethereum White Paper
-3. OpenTensor Foundation. (2021). Bittensor: A Peer-to-Peer Intelligence Market
-4. Boneh, D., & Shoup, V. (2020). A Graduate Course in Applied Cryptography
-
----
-
-## Appendix A: Technical Specifications
-
-### A.1 RPC Endpoints
-
-| Category | Example Methods |
-|----------|-----------------|
-| Blockchain | `eth_blockNumber`, `eth_getBlockByNumber` |
-| Account | `eth_getBalance`, `eth_getTransactionCount` |
-| Neuron | `query_neuron`, `neuron_register` |
-| Subnet | `subnet_create`, `query_allSubnets` |
-| Staking | `staking_getStake`, `query_totalStakeForHotkey` |
-| System | `system_health`, `system_version` |
-
-### A.2 SDK Quick Start
-
-```python
-from sdk import connect
-
-# Connect to testnet
-client = connect(url="http://localhost:8545", network="testnet")
-
-# Query neuron
-neuron = client.get_neuron(subnet_id=1, uid=0)
-print(f"Stake: {neuron['stake']}")
-
-# Submit AI task
-result = client.submit_ai_task(
-    model="gpt-4",
-    input="Hello, world!",
-    reward=100
-)
-```
-
----
-
-**ModernTensor Foundation**
-*Building the Decentralized Intelligence Infrastructure*
-
-Website: <https://moderntensor.io>
-Documentation: <https://docs.moderntensor.io>
-GitHub: <https://github.com/moderntensor>
-
----
-
-*© 2026 ModernTensor Foundation. All rights reserved.*
+**We are ready to deploy.** The code is real, the architecture is scalable, and the business model is built-in.
