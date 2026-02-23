@@ -63,7 +63,7 @@ class MarketplaceProtocol:
     Example:
         # Initialize
         protocol = MarketplaceProtocol(
-            config=ProtocolConfig(protocol_fee_rate=0.01),
+            config=ProtocolConfig(protocol_fee_rate=0.05),
             validator_id="0.0.99999",
         )
 

@@ -216,6 +216,8 @@ class ScoreConsensus:
         IQR = Q3 - Q1
         Lower fence = Q1 - k * IQR
         Upper fence = Q3 + k * IQR
+
+        Uses linear interpolation for quartiles (more accurate for small N).
         """
         if len(scores) < 4:
             return []  # Too few for meaningful outlier detection
@@ -223,10 +225,16 @@ class ScoreConsensus:
         sorted_scores = sorted(scores)
         n = len(sorted_scores)
 
-        q1_idx = n // 4
-        q3_idx = (3 * n) // 4
-        q1 = sorted_scores[q1_idx]
-        q3 = sorted_scores[q3_idx]
+        # Linear interpolation for quartiles (more accurate for small N)
+        def _percentile(data: List[float], p: float) -> float:
+            k = (len(data) - 1) * p
+            f = int(k)
+            c = f + 1 if f + 1 < len(data) else f
+            d = k - f
+            return data[f] + d * (data[c] - data[f])
+
+        q1 = _percentile(sorted_scores, 0.25)
+        q3 = _percentile(sorted_scores, 0.75)
         iqr = q3 - q1
 
         k = self.outlier_sensitivity

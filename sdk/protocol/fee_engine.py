@@ -106,6 +106,12 @@ class FeeEngine:
         """
         Calculate all fees for a task.
 
+        On-chain split (matches PaymentEscrow.sol):
+            - 80% → Miner reward
+            - 15% → Validator reward pool
+            -  5% → Protocol treasury
+            - Subnet fee is additional (set by subnet owner)
+
         Args:
             reward_amount: Base reward offered by the task submitter
             subnet_fee_rate: Fee rate set by the subnet owner (0 to 0.20)
@@ -122,11 +128,15 @@ class FeeEngine:
         # Apply priority multiplier to effective reward
         effective_reward = reward_amount * priority.multiplier
 
-        # Calculate protocol fee (always 1% of effective reward)
+        # Calculate protocol fee (5% of effective reward)
         protocol_fee_rate = self.config.protocol_fee_rate
         protocol_fee = effective_reward * protocol_fee_rate
 
-        # Calculate subnet fee
+        # Calculate validator reward (15% of effective reward)
+        validator_reward_rate = self.config.validator_reward_rate
+        validator_reward = effective_reward * validator_reward_rate
+
+        # Calculate subnet fee (additional, on top)
         subnet_fee = effective_reward * subnet_fee_rate
 
         # Apply dynamic fee adjustment if enabled
@@ -135,8 +145,8 @@ class FeeEngine:
             protocol_fee *= dynamic_multiplier
             subnet_fee *= dynamic_multiplier
 
-        # Miner gets the remainder
-        miner_reward = effective_reward - protocol_fee - subnet_fee
+        # Miner gets the remainder (80% base minus subnet fee)
+        miner_reward = effective_reward - protocol_fee - validator_reward - subnet_fee
 
         # Record metrics
         self.network_load.record_task()
@@ -149,12 +159,16 @@ class FeeEngine:
             miner_reward=round(miner_reward, 6),
             protocol_fee_rate=protocol_fee_rate,
             subnet_fee_rate=subnet_fee_rate,
+            validator_reward=round(validator_reward, 6),
+            validator_reward_rate=validator_reward_rate,
         )
 
         logger.debug(
-            "Fee calculated: reward=%.4f, protocol=%.4f, subnet=%.4f, miner=%.4f",
+            "Fee calculated: reward=%.4f, protocol=%.4f, validator=%.4f, "
+            "subnet=%.4f, miner=%.4f",
             effective_reward,
             protocol_fee,
+            validator_reward,
             subnet_fee,
             miner_reward,
         )

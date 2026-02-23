@@ -17,7 +17,7 @@ module.exports = {
         },
     },
     paths: {
-        sources: "./",          // Contracts are in contracts/ directory
+        sources: "./src",       // Contracts are in contracts/src/ directory
         tests: "./test",
         cache: "./cache",
         artifacts: "./artifacts",

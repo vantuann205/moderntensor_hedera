@@ -33,6 +33,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Set
 import json
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -229,7 +230,9 @@ class ProofOfIntelligence:
             poi_score,
             flags,
         )
-        self.save_state()
+        # Debounce: save state every 10 verifications to reduce disk I/O
+        if self._total_verifications % 10 == 0:
+            self.save_state()
         return result
 
     # ------------------------------------------------------------------
@@ -339,7 +342,7 @@ class ProofOfIntelligence:
         score += min(0.4, found_combos * 0.15)
 
         # 2. Specificity (Line numbers / variables)
-        import re
+
         # Look for "Line X", "line X", "L:X"
         line_refs = len(re.findall(r'(line|L)\s?[:\#]?\s?\d+', output_text, re.IGNORECASE))
         score += min(0.3, line_refs * 0.1)
@@ -549,8 +552,11 @@ class ProofOfIntelligence:
     @staticmethod
     def _hash_output(output: Dict[str, Any]) -> str:
         """Create a deterministic hash of an output (for duplicate detection)."""
-        # Sort keys for deterministic hashing
-        text = str(sorted(output.items())) if isinstance(output, dict) else str(output)
+        # Use json.dumps with sort_keys for deterministic ordering of nested dicts
+        try:
+            text = json.dumps(output, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            text = str(sorted(output.items())) if isinstance(output, dict) else str(output)
         return hashlib.sha256(text.encode()).hexdigest()[:16]
 
     def _get_or_create_history(self, miner_id: str) -> MinerHistory:

@@ -152,17 +152,24 @@ def main():
     print(f"  5 AI miners registering into subnet #{SUBNET_ID}...\n")
 
     for m in miners_config:
-        protocol.register_miner(
-            miner_id=m["id"],
-            subnet_ids=[SUBNET_ID],
-            stake=m["stake"],
-            capabilities=["code_review", "security_audit"],
-        )
-        miner_wallets[m["id"]] = 0.0
+        existing = protocol.get_miner(m["id"])
+        if not existing:
+            protocol.register_miner(
+                miner_id=m["id"],
+                subnet_ids=[SUBNET_ID],
+                stake=m["stake"],
+                capabilities=["code_review", "security_audit"],
+            )
+            miner_wallets[m["id"]] = 0.0
 
-        print(f"  {CHECK} {CYAN}{m['name']:<14}{RESET} "
-              f"({DIM}{m['model']:<16}{RESET}) "
-              f"staked {YELLOW}{m['stake']:>4} MDT{RESET}")
+            print(f"  {CHECK} {CYAN}{m['name']:<14}{RESET} "
+                  f"({DIM}{m['model']:<16}{RESET}) "
+                  f"staked {YELLOW}{m['stake']:>4} MDT{RESET}")
+        else:
+            miner_wallets[m["id"]] = 0.0
+            print(f"  {CHECK} {CYAN}{m['name']:<14}{RESET} "
+                  f"({DIM}{m['model']:<16}{RESET}) "
+                  f"already registered")
 
     print(f"\n  {BOLD}Staking Summary:{RESET}")
     total_staked = sum(m["stake"] for m in miners_config)

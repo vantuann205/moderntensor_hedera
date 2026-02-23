@@ -29,6 +29,7 @@ from .matching import TaskMatcher
 from .reward_distributor import RewardDistributor, RewardTransaction, RewardBatch
 from .escrow_manager import EscrowManager, EscrowDeposit, EscrowStatus
 from .treasury import Treasury, PayoutRecord, TreasurySnapshot
+from .heartbeat import MinerHeartbeat
 
 __all__ = [
     # Types
@@ -61,4 +62,6 @@ __all__ = [
     "Treasury",
     "PayoutRecord",
     "TreasurySnapshot",
+    # Heartbeat
+    "MinerHeartbeat",
 ]

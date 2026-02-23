@@ -173,6 +173,7 @@ class TaskAssignment:
     score: Optional[float] = None
     is_completed: bool = False
     is_timeout: bool = False
+    commitment: Optional[str] = None  # For Commit-Reveal pattern
 
     @property
     def is_expired(self) -> bool:
@@ -419,8 +420,11 @@ class FeeBreakdown:
     """
     Detailed fee calculation for a task.
 
-    total_fee = protocol_fee + subnet_fee
-    miner_reward = reward_amount - total_fee
+    On-chain fee model (matches PaymentEscrow.sol):
+        total_deposit = miner_reward + validator_reward + protocol_fee
+        miner_reward   = 80% of base reward
+        validator_reward = 15% of base reward
+        protocol_fee   =  5% of base reward
     """
     reward_amount: float
     protocol_fee: float
@@ -428,25 +432,35 @@ class FeeBreakdown:
     miner_reward: float
     protocol_fee_rate: float
     subnet_fee_rate: float
+    validator_reward: float = 0.0  # 15% validator pool
+    validator_reward_rate: float = 0.15
     subnet_owner_id: str = ""  # Hedera account ID of subnet owner
 
     @property
     def total_fee(self) -> float:
-        return self.protocol_fee + self.subnet_fee
+        return self.protocol_fee + self.subnet_fee + self.validator_reward
 
     @property
     def total_fee_rate(self) -> float:
-        return self.protocol_fee_rate + self.subnet_fee_rate
+        return self.protocol_fee_rate + self.subnet_fee_rate + self.validator_reward_rate
+
+    @property
+    def total_deposit(self) -> float:
+        """Total amount deposited to escrow (reward + all fees)."""
+        return self.miner_reward + self.validator_reward + self.protocol_fee + self.subnet_fee
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "reward_amount": round(self.reward_amount, 6),
             "protocol_fee": round(self.protocol_fee, 6),
             "subnet_fee": round(self.subnet_fee, 6),
+            "validator_reward": round(self.validator_reward, 6),
             "miner_reward": round(self.miner_reward, 6),
             "total_fee": round(self.total_fee, 6),
+            "total_deposit": round(self.total_deposit, 6),
             "protocol_fee_rate": self.protocol_fee_rate,
             "subnet_fee_rate": self.subnet_fee_rate,
+            "validator_reward_rate": self.validator_reward_rate,
             "subnet_owner_id": self.subnet_owner_id,
             "total_fee_rate": round(self.total_fee_rate, 4),
         }
@@ -487,8 +501,14 @@ class PaymentInfo:
 class ProtocolConfig:
     """
     Global protocol configuration.
+
+    Fee split (matches on-chain PaymentEscrow.sol):
+        - 80% → Miner reward
+        - 15% → Validator reward pool
+        -  5% → Protocol treasury
     """
-    protocol_fee_rate: float = 0.01  # 1% of all volume
+    protocol_fee_rate: float = 0.05  # 5% of base reward → protocol treasury
+    validator_reward_rate: float = 0.15  # 15% of base reward → validator pool
     min_subnet_fee_rate: float = 0.0
     max_subnet_fee_rate: float = 0.20  # Max 20%
     min_stake_amount: float = 100.0  # Minimum stake to be a miner
@@ -503,6 +523,7 @@ class ProtocolConfig:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "protocol_fee_rate": self.protocol_fee_rate,
+            "validator_reward_rate": self.validator_reward_rate,
             "min_subnet_fee_rate": self.min_subnet_fee_rate,
             "max_subnet_fee_rate": self.max_subnet_fee_rate,
             "min_stake_amount": self.min_stake_amount,

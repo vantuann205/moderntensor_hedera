@@ -81,7 +81,7 @@ class SubnetService:
     """
 
     # Protocol constants
-    PROTOCOL_FEE_RATE = 100  # 1%
+    PROTOCOL_FEE_RATE = 500  # 5% (matches PaymentEscrow.sol platformFeeRate)
     MAX_SUBNET_FEE_RATE = 2000  # 20%
     REGISTRATION_COST = 10000 * 10**8  # 10,000 MDT
 
@@ -309,6 +309,150 @@ class SubnetService:
             "miner_reward": miner_reward,
             "total_deposit": total_deposit
         }
+
+    # =========================================================================
+    # PULL PATTERN: WITHDRAWALS
+    # =========================================================================
+
+    async def withdraw_earnings(self) -> bool:
+        """Withdraw pending earnings (miner/validator Pull pattern)."""
+        await self.contract_service.execute_contract(
+            self.contract_id,
+            "withdrawEarnings",
+            []
+        )
+        return True
+
+    async def get_pending_withdrawals(self, address: str) -> int:
+        """Get pending withdrawable balance for an address."""
+        result = await self.contract_service.query_contract(
+            self.contract_id,
+            "pendingWithdrawals",
+            [address]
+        )
+        return result
+
+    # =========================================================================
+    # COMMIT-REVEAL SCHEME
+    # =========================================================================
+
+    async def commit_score(
+        self,
+        task_id: int,
+        miner_index: int,
+        commit_hash: bytes
+    ) -> bool:
+        """
+        Phase A: Commit a hashed score (anti-front-running).
+
+        Args:
+            task_id: Task ID
+            miner_index: Index of miner submission
+            commit_hash: keccak256(abi.encodePacked(score, salt))
+        """
+        await self.contract_service.execute_contract(
+            self.contract_id,
+            "commitScore",
+            [task_id, miner_index, commit_hash]
+        )
+        return True
+
+    async def reveal_score(
+        self,
+        task_id: int,
+        miner_index: int,
+        score: int,
+        salt: bytes
+    ) -> bool:
+        """
+        Phase B: Reveal the committed score.
+
+        Args:
+            task_id: Task ID
+            miner_index: Index of miner submission
+            score: The actual validation score (0-10000)
+            salt: The random salt used when committing
+        """
+        await self.contract_service.execute_contract(
+            self.contract_id,
+            "revealScore",
+            [task_id, miner_index, score, salt]
+        )
+        return True
+
+    async def get_commit_hash(self, score: int, salt: bytes) -> bytes:
+        """Generate commit hash for off-chain verification."""
+        result = await self.contract_service.query_contract(
+            self.contract_id,
+            "getCommitHash",
+            [score, salt]
+        )
+        return result
+
+    # =========================================================================
+    # PROOF-OF-INTELLIGENCE: REPUTATION
+    # =========================================================================
+
+    async def get_validator_reputation(self, address: str) -> dict:
+        """
+        Get on-chain reputation data for a validator.
+
+        Returns:
+            dict with totalValidations, accurateValidations,
+            reputationScore (basis points), lastActiveAt
+        """
+        result = await self.contract_service.query_contract(
+            self.contract_id,
+            "validatorReputation",
+            [address]
+        )
+        return {
+            "total_validations": result[0],
+            "accurate_validations": result[1],
+            "reputation_score": result[2],
+            "last_active_at": result[3],
+            "reputation_percent": result[2] / 100  # Convert basis points to %
+        }
+
+    async def port_reputation(
+        self,
+        from_subnet_id: int,
+        to_subnet_id: int
+    ) -> bool:
+        """
+        Port reputation from one subnet to another (50% decay).
+
+        Cross-Subnet Reputation Portability — unique to ModernTensor.
+        Validators who proved themselves in one AI domain can carry
+        50% of their reputation to a new domain.
+        """
+        await self.contract_service.execute_contract(
+            self.contract_id,
+            "portReputation",
+            [from_subnet_id, to_subnet_id]
+        )
+        return True
+
+    # =========================================================================
+    # PROOF-OF-INTELLIGENCE: ADAPTIVE VALIDATION
+    # =========================================================================
+
+    async def get_adaptive_min_validations(
+        self,
+        subnet_id: int,
+        reward_amount: int
+    ) -> int:
+        """
+        Get adaptive minValidations based on task reward.
+
+        Higher-value tasks require more validators (security scales with value).
+        """
+        result = await self.contract_service.query_contract(
+            self.contract_id,
+            "getAdaptiveMinValidations",
+            [subnet_id, reward_amount]
+        )
+        return result
 
     # =========================================================================
     # INTERNAL HELPERS

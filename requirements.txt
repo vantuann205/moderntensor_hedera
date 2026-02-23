@@ -1,0 +1,31 @@
+# ModernTensor Hackathon Dependencies
+# CRITICAL: Hedera SDK 0.1.9+ required for AccountInfoQuery/ContractFunctionParameters
+hiero-sdk-python>=0.1.9
+
+# Core App Dependencies
+python-dotenv==1.0.1
+pydantic==2.10.4
+pydantic-settings==2.7.1
+fastapi==0.115.6
+uvicorn==0.34.0
+websockets==13.0
+requests==2.32.3
+click==8.1.8
+loguru==0.7.3
+colorama==0.4.6
+
+# Crypto / Blockchain
+bip_utils==2.9.3
+cryptography==42.0.8
+ecdsa==0.18.0
+coincurve>=19.0.1
+pycryptodome==3.23.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-mock>=3.14.0
+
+# Optional / Utils
+plyvel==1.5.0  # Note: Requires LevelDB installed on system
+termcolor>=2.4.0

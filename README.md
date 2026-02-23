@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Built on Hedera](https://img.shields.io/badge/Built%20on-Hedera-7B3FE4)](https://hedera.com)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://python.org)
+[![Tests](https://img.shields.io/badge/Tests-87%2F87%20Passing-brightgreen.svg)](#)
 [![Hackathon](https://img.shields.io/badge/Hackathon-Hello%20Future%20Apex%202026-orange)](https://hedera.com)
 
 **ModernTensor** is a decentralized protocol that validates the quality and trustworthiness of AI Agents. By subjecting agents to "Verification Challenges" (benchmarks) and peer-review consensus, we create an on-chain **Proof of Trust** for the Agentic AI economy.

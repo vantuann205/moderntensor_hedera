@@ -279,10 +279,10 @@ class SmartContractService:
             gas=gas,
         )
 
-    def cancel_task(self, task_id: int, gas: int = 200_000) -> "TransactionReceipt":
-        """Cancel a task and refund the escrow to the depositor.
+    def expire_task(self, task_id: int, gas: int = 200_000) -> "TransactionReceipt":
+        """Expire a task that has passed its deadline and refund the depositor.
 
-        Called by EscrowManager.refund_escrow() when a task fails or times out.
+        Called by EscrowManager.refund_escrow() when a task times out.
 
         Args:
             task_id: On-chain numeric task identifier
@@ -299,7 +299,7 @@ class SmartContractService:
 
         return self.client.execute_contract(
             contract_id=self.contract_id,
-            function_name="cancelTask",
+            function_name="expireTask",
             params=params,
             gas=gas,
         )
