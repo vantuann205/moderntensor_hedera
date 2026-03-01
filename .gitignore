@@ -202,3 +202,10 @@ hotkey*
 # Sphinx build directory
 docs/api/_build/
 validator_state.json
+
+# Node modules
+node_modules/
+
+# Contract build artifacts (optional)
+contracts/artifacts/build-info/
+
