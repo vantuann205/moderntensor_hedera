@@ -1,15 +1,12 @@
 """
 ModernTensor Dynamic Weight Calculator
 
-Calculates miner weights for reward distribution and task matching.
-Combines multiple signals:
-- Historical performance (EMA of scores)
-- Stake amount (with diminishing returns via bonding curve)
-- Uptime and reliability
-- Anti-sybil cap to prevent dominance
+Calculates weights for miners and validators:
+- Miners: weight = performance × reliability (MERIT-BASED, no stake)
+- Validators: weight = stake × reliability (SKIN-IN-THE-GAME)
 
-The weight matrix is recalculated periodically (each "epoch") and
-determines how much influence each miner has in the network.
+Miners earn incentive rewards based on quality of work.
+Validators earn by staking + honest scoring.
 """
 
 from __future__ import annotations
@@ -60,21 +57,17 @@ class WeightMatrix:
 
 class WeightCalculator:
     """
-    Calculates dynamic weights for miners.
+    Calculates dynamic weights — merit-based for miners.
 
-    Weight formula:
-        raw_weight = performance_weight * stake_weight * reliability_weight
-        final_weight = min(raw_weight, weight_cap)  # Anti-sybil
-        normalized = final_weight / sum(all_final_weights)
+    Miner weight formula:
+        raw = performance × reliability + new_miner_bonus
+        performance = reputation_score ^ exponent
+        reliability = success_rate × (1 - timeout_rate × penalty)
 
-    Components:
-        performance_weight = EMA score ^ performance_exponent
-        stake_weight = bonding_curve(stake_amount)
-        reliability_weight = success_rate * (1 - timeout_penalty)
+    Validators use a separate formula where stake matters:
+        raw = sqrt(stake / min_stake) × reliability
 
-    Bonding curve (diminishing returns):
-        f(stake) = sqrt(stake / min_stake)
-        This means 4x stake only gives 2x weight
+    Anti-sybil: weight_cap prevents any single node from dominating.
 
     Example:
         calc = WeightCalculator(min_stake=100, weight_cap=0.15)
@@ -92,8 +85,8 @@ class WeightCalculator:
     ):
         """
         Args:
-            min_stake: Minimum stake for weight calculation
-            weight_cap: Maximum weight any single miner can have (anti-sybil)
+            min_stake: Minimum stake for validator weight calculation
+            weight_cap: Maximum weight any single node can have (anti-sybil)
             performance_exponent: How aggressively to reward/penalize performance
             timeout_penalty: Penalty multiplier for each timeout
             new_miner_bonus: Bonus weight for new miners (< 5 tasks)
@@ -117,7 +110,7 @@ class WeightCalculator:
         subnet_id: int = 0,
     ) -> WeightMatrix:
         """
-        Calculate weight matrix for a set of miners.
+        Calculate weight matrix for a set of miners (merit-based).
 
         Args:
             miners: List of miner dicts with keys:
@@ -138,7 +131,7 @@ class WeightCalculator:
 
         for miner in miners:
             miner_id = miner["miner_id"]
-            raw = self._compute_raw_weight(miner)
+            raw = self._compute_miner_weight(miner)
             # Apply anti-sybil cap
             capped = min(raw, self.weight_cap * (len(miners) or 1))
             raw_weights[miner_id] = capped
@@ -174,48 +167,101 @@ class WeightCalculator:
         )
         return matrix
 
-    def _compute_raw_weight(self, miner: Dict[str, Any]) -> float:
+    def calculate_validator_weights(
+        self,
+        validators: List[Dict[str, Any]],
+        epoch: Optional[int] = None,
+    ) -> WeightMatrix:
         """
-        Compute raw weight for a single miner.
+        Calculate weight matrix for validators (stake + reliability).
 
-        Components:
-        1. Performance: EMA score raised to exponent
-        2. Stake: Bonding curve (sqrt for diminishing returns)
-        3. Reliability: Success rate with timeout penalty
+        Validators need skin-in-the-game: their weight depends on both
+        the amount staked and their reliability as honest scorers.
+
+        Args:
+            validators: List of validator dicts with keys:
+                        validator_id, stake_amount, reliability_score,
+                        total_validations, dishonesty_rate
         """
-        # Performance weight
+        if epoch is not None:
+            self._epoch = epoch
+
+        raw_weights: Dict[str, float] = {}
+
+        for v in validators:
+            vid = v["validator_id"]
+            raw = self._compute_validator_weight(v)
+            capped = min(raw, self.weight_cap * (len(validators) or 1))
+            raw_weights[vid] = capped
+
+        total = sum(raw_weights.values())
+        if total > 0:
+            normalized = {vid: w / total for vid, w in raw_weights.items()}
+        else:
+            n = len(validators)
+            normalized = {v["validator_id"]: 1.0 / n for v in validators} if n > 0 else {}
+
+        normalized = self._enforce_cap(normalized)
+
+        return WeightMatrix(
+            weights=normalized,
+            raw_weights=raw_weights,
+            epoch=self._epoch,
+        )
+
+    def _compute_miner_weight(self, miner: Dict[str, Any]) -> float:
+        """
+        Compute weight for a miner — MERIT-BASED ONLY.
+
+        Miners earn weight through quality of work, NOT amount staked.
+        Stake is only an "agent bond" (slash-able deposit for bad behavior).
+
+        Formula: performance × reliability + new_miner_bonus
+        """
+        # Performance (quality of past outputs)
         rep_score = miner.get("reputation_score", 0.5)
         performance = rep_score ** self.performance_exponent
 
-        # Stake weight (bonding curve — diminishing returns)
-        stake = max(miner.get("stake_amount", 0), 0)
-        if stake >= self.min_stake:
-            stake_weight = math.sqrt(stake / self.min_stake)
-        else:
-            stake_weight = stake / self.min_stake  # Linear below minimum
-
-        # Reliability weight
+        # Reliability (consistency + uptime)
         success_rate = miner.get("success_rate", 0.5)
         timeout_rate = miner.get("timeout_rate", 0.0)
         reliability = success_rate * (1.0 - timeout_rate * self.timeout_penalty)
         reliability = max(0.01, reliability)  # Floor
 
-        # New miner bonus (give new miners a fair chance)
+        # New miner bonus (give newcomers a fair chance)
         total_tasks = miner.get("total_tasks", 0)
-        if total_tasks < 5:
-            new_bonus = self.new_miner_bonus
-        else:
-            new_bonus = 0.0
+        new_bonus = self.new_miner_bonus if total_tasks < 5 else 0.0
 
-        raw_weight = performance * stake_weight * reliability + new_bonus
-
+        raw_weight = performance * reliability + new_bonus
         return max(0.0, raw_weight)
+
+    def _compute_validator_weight(self, validator: Dict[str, Any]) -> float:
+        """
+        Compute weight for a validator — STAKE + RELIABILITY.
+
+        Validators must have skin-in-the-game. Their influence in
+        consensus is proportional to their stake and track record.
+
+        Formula: sqrt(stake / min_stake) × reliability
+        """
+        stake = max(validator.get("stake_amount", 0), 0)
+        if stake >= self.min_stake:
+            stake_weight = math.sqrt(stake / self.min_stake)
+        else:
+            stake_weight = stake / self.min_stake  # Linear below minimum
+
+        reliability = validator.get("reliability_score", 0.5)
+        dishonesty = validator.get("dishonesty_rate", 0.0)
+        reliability = reliability * (1.0 - dishonesty)
+        reliability = max(0.01, reliability)
+
+        return max(0.0, stake_weight * reliability)
 
     def _enforce_cap(self, weights: Dict[str, float]) -> Dict[str, float]:
         """
-        Enforce weight cap to prevent any single miner from dominating.
+        Enforce weight cap to prevent any single node from dominating.
 
-        If any miner exceeds the cap, redistribute excess to others.
+        If any node exceeds the cap, redistribute excess to others.
         """
         iterations = 0
         max_iterations = 10
@@ -228,7 +274,6 @@ class WeightCalculator:
             if not over_cap:
                 break
 
-            # Cap overweight miners
             excess = 0.0
             under_cap = {}
             for mid, w in weights.items():
@@ -238,7 +283,6 @@ class WeightCalculator:
                 else:
                     under_cap[mid] = w
 
-            # Redistribute excess proportionally to under-cap miners
             if under_cap:
                 total_under = sum(under_cap.values())
                 if total_under > 0:
@@ -250,8 +294,7 @@ class WeightCalculator:
 
         if iterations >= max_iterations:
             logger.warning(
-                "Weight cap enforcement did not converge in %d iterations; "
-                "weights may not sum exactly to 1.0",
+                "Weight cap enforcement did not converge in %d iterations",
                 max_iterations,
             )
 
@@ -268,28 +311,20 @@ class WeightCalculator:
     ) -> Dict[str, float]:
         """Get detailed weight breakdown for a single miner (debugging)."""
         rep_score = miner.get("reputation_score", 0.5)
-        stake = max(miner.get("stake_amount", 0), 0)
         success_rate = miner.get("success_rate", 0.5)
         timeout_rate = miner.get("timeout_rate", 0.0)
         total_tasks = miner.get("total_tasks", 0)
 
         performance = rep_score ** self.performance_exponent
-        stake_weight = (
-            math.sqrt(stake / self.min_stake)
-            if stake >= self.min_stake
-            else stake / self.min_stake
-        )
         reliability = success_rate * (1.0 - timeout_rate * self.timeout_penalty)
         new_bonus = self.new_miner_bonus if total_tasks < 5 else 0.0
 
         return {
             "reputation_score": round(rep_score, 4),
             "performance_weight": round(performance, 4),
-            "stake_weight": round(stake_weight, 4),
             "reliability_weight": round(max(0.01, reliability), 4),
             "new_miner_bonus": round(new_bonus, 4),
             "raw_weight": round(
-                performance * stake_weight * max(0.01, reliability) + new_bonus,
-                4,
+                performance * max(0.01, reliability) + new_bonus, 4,
             ),
         }

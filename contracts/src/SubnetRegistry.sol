@@ -65,6 +65,9 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     /// @dev Task counter (global across all subnets)
     uint256 private _taskIdCounter;
 
+    /// @dev Maximum submissions per task (anti-spam)
+    uint256 public maxSubmissionsPerTask = 10;
+
     /// @dev Protocol treasury
     address public protocolTreasury;
 
@@ -489,6 +492,7 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         require(block.timestamp < task.deadline, "Task expired");
         require(subnetMiners[task.subnetId][msg.sender], "Not registered in subnet");
         require(!hasMinerSubmitted[taskId][msg.sender], "Miner already submitted");
+        require(taskSubmissions[taskId].length < maxSubmissionsPerTask, "Max submissions reached");
 
         // Mark as submitted (anti-spam)
         hasMinerSubmitted[taskId][msg.sender] = true;
@@ -508,6 +512,32 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         }
 
         emit SubmissionReceived(taskId, msg.sender, resultHash);
+    }
+
+    /**
+     * @dev Expire a task that has passed its deadline.
+     *      Anyone can call this — trustless cleanup.
+     *      Refunds the full deposit to the requester.
+     * @param taskId The task to expire
+     */
+    function expireTask(uint256 taskId) external nonReentrant {
+        Task storage task = tasks[taskId];
+
+        require(
+            task.status == TaskStatus.Created ||
+            task.status == TaskStatus.InProgress ||
+            task.status == TaskStatus.PendingReview,
+            "Task not expirable"
+        );
+        require(block.timestamp > task.deadline, "Task not yet expired");
+        require(task.winningMiner == address(0), "Task has a winner");
+
+        // Effects before interactions (CEI)
+        uint256 refund = task.rewardAmount + task.protocolFee + task.validatorReward + task.subnetFee;
+        task.status = TaskStatus.Expired;
+
+        // Refund to requester
+        mdtToken.safeTransfer(task.requester, refund);
     }
 
     // =========================================================================
@@ -544,6 +574,12 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
         MinerSubmission storage submission = taskSubmissions[taskId][submissionIndex];
         require(!submission.validated, "Submission already has consensus");
+
+        // GUARD: If commit-reveal has started for this submission, block direct scoring
+        require(
+            commitPhaseStart[taskId][submissionIndex] == 0,
+            "Commit-reveal active: use commitScore/revealScore"
+        );
 
         // Record this validator's individual score
         validatorScores[taskId][submissionIndex][msg.sender] = score;
@@ -966,6 +1002,13 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
      * @param fromSubnetId Source subnet where reputation was earned
      * @param toSubnetId Target subnet to port reputation to
      */
+    /// @dev Track ported reputation boosts per validator per subnet
+    mapping(address => mapping(uint256 => uint256)) public portedReputationBoost;
+
+    /// @dev Cooldown: last time a validator ported reputation
+    mapping(address => uint256) public lastPortedAt;
+    uint256 public constant PORT_COOLDOWN = 1 days;
+
     function portReputation(
         uint256 fromSubnetId,
         uint256 toSubnetId
@@ -973,6 +1016,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         require(subnetValidators[fromSubnetId][msg.sender], "Not validator in source subnet");
         require(subnetValidators[toSubnetId][msg.sender], "Not validator in target subnet");
         require(fromSubnetId != toSubnetId, "Same subnet");
+        require(
+            block.timestamp >= lastPortedAt[msg.sender] + PORT_COOLDOWN,
+            "Port cooldown active"
+        );
 
         ValidatorReputation storage rep = validatorReputation[msg.sender];
         require(rep.totalValidations > 0, "No reputation to port");
@@ -980,15 +1027,13 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         // Calculate ported score with 50% decay
         uint256 portedScore = (rep.reputationScore * REPUTATION_DECAY_FACTOR) / 10000;
 
-        // Only apply if ported score is better than default
-        // This prevents gaming by porting low reputation to reset
-        require(portedScore > 5000, "Ported score not better than default");
+        // Only apply if ported score is better than default (5000 = 50%)
+        require(portedScore >= 5000, "Ported score not better than default");
 
-        // Update if beneficial
-        if (portedScore > rep.reputationScore) {
-            // This case shouldn't happen with 50% decay, but safety check
-            portedScore = rep.reputationScore;
-        }
+        // Store the ported boost for target subnet
+        // This boost is used as a starting multiplier advantage
+        portedReputationBoost[msg.sender][toSubnetId] = portedScore;
+        lastPortedAt[msg.sender] = block.timestamp;
 
         emit ReputationPorted(msg.sender, fromSubnetId, toSubnetId, portedScore);
     }

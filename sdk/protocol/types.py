@@ -307,6 +307,17 @@ class MinerInfo:
     last_active_at: float = field(default_factory=time.time)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    # Networking: Axon endpoint for receiving tasks from validators
+    axon_host: str = "0.0.0.0"
+    axon_port: int = 0  # 0 = not serving
+
+    @property
+    def axon_endpoint(self) -> Optional[str]:
+        """Full HTTP endpoint if axon is serving."""
+        if self.axon_port > 0:
+            return f"http://{self.axon_host}:{self.axon_port}"
+        return None
+
     @property
     def is_active(self) -> bool:
         return self.status == MinerStatus.ACTIVE
@@ -314,12 +325,12 @@ class MinerInfo:
     @property
     def effective_weight(self) -> float:
         """
-        Combined weight based on stake + reputation.
-        Capped at 10x to prevent sybil dominance.
+        Merit-based weight: performance x reliability.
+        Miners earn weight through quality of work, not stake.
         """
-        stake_weight = min(self.stake_amount / 1000.0, 10.0)  # Cap at 10x
-        reputation_weight = self.reputation.score
-        return stake_weight * reputation_weight
+        performance = self.reputation.score ** 2
+        reliability = self.reputation.success_rate
+        return performance * max(0.01, reliability)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -332,6 +343,7 @@ class MinerInfo:
             "registered_at": self.registered_at,
             "last_active_at": self.last_active_at,
             "effective_weight": round(self.effective_weight, 4),
+            "axon_endpoint": self.axon_endpoint,
         }
 
 
@@ -515,7 +527,7 @@ class ProtocolConfig:
     max_miners_per_task: int = 10
     max_miners_per_subnet: int = 1000  # Max miners allowed in a single subnet
     default_task_timeout: float = 300.0  # 5 minutes
-    min_validators_for_consensus: int = 1
+    min_validators_for_consensus: int = 2
     reputation_ema_alpha: float = 0.1
     miner_suspension_threshold: float = 0.15  # Suspend if reputation < 15%
     network: str = "testnet"

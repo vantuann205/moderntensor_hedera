@@ -1,10 +1,10 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/PaymentEscrow.sol": {
-      "lastModificationDate": 1771821659210,
-      "contentHash": "a57b786b275dd54354df8fc1458619bb",
-      "sourceName": "src/PaymentEscrow.sol",
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/MDTGovernor.sol": {
+      "lastModificationDate": 1772183329738,
+      "contentHash": "a93bd36b594f1bea0959365c086b2be2",
+      "sourceName": "src/MDTGovernor.sol",
       "solcConfig": {
         "version": "0.8.24",
         "settings": {
@@ -32,16 +32,51 @@
       },
       "imports": [
         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
-        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
         "@openzeppelin/contracts/security/ReentrancyGuard.sol",
-        "@openzeppelin/contracts/access/Ownable.sol",
-        "@openzeppelin/contracts/security/Pausable.sol"
+        "@openzeppelin/contracts/access/Ownable.sol"
       ],
       "versionPragmas": [
         "^0.8.24"
       ],
       "artifacts": [
-        "PaymentEscrow"
+        "MDTGovernor"
+      ]
+    },
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol": {
+      "lastModificationDate": 1770862773899,
+      "contentHash": "1535f8c0c68463f8c1b5239f7584e71f",
+      "sourceName": "@openzeppelin/contracts/security/ReentrancyGuard.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ReentrancyGuard"
       ]
     },
     "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
@@ -83,10 +118,10 @@
         "Ownable"
       ]
     },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/security/ReentrancyGuard.sol": {
-      "lastModificationDate": 1770862773899,
-      "contentHash": "1535f8c0c68463f8c1b5239f7584e71f",
-      "sourceName": "@openzeppelin/contracts/security/ReentrancyGuard.sol",
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
+      "lastModificationDate": 1770862793335,
+      "contentHash": "df36f7051335cd1e748b1b6463b7fdd3",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
       "solcConfig": {
         "version": "0.8.24",
         "settings": {
@@ -117,7 +152,124 @@
         "^0.8.0"
       ],
       "artifacts": [
-        "ReentrancyGuard"
+        "IERC20"
+      ]
+    },
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/utils/Context.sol": {
+      "lastModificationDate": 1770782776147,
+      "contentHash": "f07feb4a44b1a4872370da5aa70e8e46",
+      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "Context"
+      ]
+    },
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+      "lastModificationDate": 1770782776073,
+      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
+      ]
+    },
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
+      "lastModificationDate": 1771672440837,
+      "contentHash": "3ae5166c6827a9cf1a7a462d1632b464",
+      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./IERC20.sol",
+        "./extensions/IERC20Metadata.sol",
+        "../../utils/Context.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "ERC20"
       ]
     },
     "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/security/Pausable.sol": {
@@ -159,10 +311,10 @@
         "Pausable"
       ]
     },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol": {
-      "lastModificationDate": 1770862793335,
-      "contentHash": "df36f7051335cd1e748b1b6463b7fdd3",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/SubnetRegistry.sol": {
+      "lastModificationDate": 1772275905777,
+      "contentHash": "afcbe1f539b6d7e2c4a949f5a824d716",
+      "sourceName": "src/SubnetRegistry.sol",
       "solcConfig": {
         "version": "0.8.24",
         "settings": {
@@ -188,16 +340,22 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
+        "@openzeppelin/contracts/security/ReentrancyGuard.sol",
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/security/Pausable.sol"
+      ],
       "versionPragmas": [
-        "^0.8.0"
+        "^0.8.24"
       ],
       "artifacts": [
-        "IERC20"
+        "SubnetRegistry"
       ]
     },
     "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol": {
-      "lastModificationDate": 1770777050118,
+      "lastModificationDate": 1771672124081,
       "contentHash": "1b5d667d3740d866eca0352758e59827",
       "sourceName": "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
       "solcConfig": {
@@ -237,45 +395,8 @@
         "SafeERC20"
       ]
     },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/utils/Context.sol": {
-      "lastModificationDate": 1770782776147,
-      "contentHash": "f07feb4a44b1a4872370da5aa70e8e46",
-      "sourceName": "@openzeppelin/contracts/utils/Context.sol",
-      "solcConfig": {
-        "version": "0.8.24",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.0"
-      ],
-      "artifacts": [
-        "Context"
-      ]
-    },
     "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/utils/Address.sol": {
-      "lastModificationDate": 1770777045352,
+      "lastModificationDate": 1771672351051,
       "contentHash": "211ffd288c1588ba8c10eae668ca3c66",
       "sourceName": "@openzeppelin/contracts/utils/Address.sol",
       "solcConfig": {
@@ -348,10 +469,10 @@
         "IERC20Permit"
       ]
     },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/SubnetRegistry.sol": {
-      "lastModificationDate": 1771821630064,
-      "contentHash": "8e7d7bbe1aabfead0b09e627cae33442",
-      "sourceName": "src/SubnetRegistry.sol",
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/StakingVault.sol": {
+      "lastModificationDate": 1772183169586,
+      "contentHash": "750aee46d65e68b8b023589e1bcec814",
+      "sourceName": "src/StakingVault.sol",
       "solcConfig": {
         "version": "0.8.24",
         "settings": {
@@ -388,13 +509,13 @@
         "^0.8.24"
       ],
       "artifacts": [
-        "SubnetRegistry"
+        "StakingVault"
       ]
     },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/Test.sol": {
-      "lastModificationDate": 1771394707635,
-      "contentHash": "bb75200dfc0306e4fcf70763bfc3844b",
-      "sourceName": "src/Test.sol",
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/PaymentEscrow.sol": {
+      "lastModificationDate": 1772183275117,
+      "contentHash": "54dad8f677d97d64d5178fac3defef7a",
+      "sourceName": "src/PaymentEscrow.sol",
       "solcConfig": {
         "version": "0.8.24",
         "settings": {
@@ -420,16 +541,22 @@
           }
         }
       },
-      "imports": [],
+      "imports": [
+        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
+        "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol",
+        "@openzeppelin/contracts/security/ReentrancyGuard.sol",
+        "@openzeppelin/contracts/access/Ownable.sol",
+        "@openzeppelin/contracts/security/Pausable.sol"
+      ],
       "versionPragmas": [
-        "^0.8.19"
+        "^0.8.24"
       ],
       "artifacts": [
-        "Test"
+        "PaymentEscrow"
       ]
     },
     "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/MockMDT.sol": {
-      "lastModificationDate": 1771394828776,
+      "lastModificationDate": 1771448364838,
       "contentHash": "1b288303f0c6d31c500e4e77eb7ba5cd",
       "sourceName": "src/MockMDT.sol",
       "solcConfig": {
@@ -467,10 +594,10 @@
         "MockMDT"
       ]
     },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol": {
-      "lastModificationDate": 1770777045956,
-      "contentHash": "3ae5166c6827a9cf1a7a462d1632b464",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/ERC20.sol",
+    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/src/Test.sol": {
+      "lastModificationDate": 1771394749540,
+      "contentHash": "bb75200dfc0306e4fcf70763bfc3844b",
+      "sourceName": "src/Test.sol",
       "solcConfig": {
         "version": "0.8.24",
         "settings": {
@@ -496,55 +623,12 @@
           }
         }
       },
-      "imports": [
-        "./IERC20.sol",
-        "./extensions/IERC20Metadata.sol",
-        "../../utils/Context.sol"
-      ],
+      "imports": [],
       "versionPragmas": [
-        "^0.8.0"
+        "^0.8.19"
       ],
       "artifacts": [
-        "ERC20"
-      ]
-    },
-    "/Users/sonson/Documents/code/hedera/moderntensor/contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
-      "lastModificationDate": 1770782776073,
-      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
-      "sourceName": "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
-      "solcConfig": {
-        "version": "0.8.24",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "viaIR": true,
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../IERC20.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.0"
-      ],
-      "artifacts": [
-        "IERC20Metadata"
+        "Test"
       ]
     }
   }

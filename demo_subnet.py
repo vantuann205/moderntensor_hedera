@@ -92,7 +92,7 @@ def main():
     from sdk.marketplace import MarketplaceProtocol, SubnetManager
 
     config = ProtocolConfig(
-        protocol_fee_rate=0.01,     # 1% protocol fee
+        protocol_fee_rate=0.05,     # 5% protocol fee
         min_stake_amount=100.0,     # Min 100 MDT to be a miner
         reputation_ema_alpha=0.15,  # EMA smoothing
         miner_suspension_threshold=0.15,
@@ -292,9 +292,9 @@ def main():
     total_vol = sum(c["reward"] for c in contracts)
     print(f"\n  {BOLD}Task Volume:{RESET}")
     print(f"  Total submitted:  {money(total_vol)}")
-    print(f"  Protocol fee (1%): {money(total_vol * 0.01)}")
+    print(f"  Protocol fee (5%): {money(total_vol * 0.05)}")
     print(f"  Subnet fee (3%):   {money(total_vol * SUBNET_FEE)}")
-    print(f"  Miner pool:       {money(total_vol * (1 - 0.01 - SUBNET_FEE))}")
+    print(f"  Miner pool:       {money(total_vol * (1 - 0.05 - 0.15 - SUBNET_FEE))}")
 
     # ══════════════════════════════════════════════════════════════
     # PHASE 4: TASK EXECUTION (Miners work)
@@ -415,9 +415,9 @@ def main():
     │   ┌──────────────────────────────────────┐             │
     │   │     PROTOCOL FEE ENGINE               │             │
     │   │                                        │             │
-    │   │  Protocol Fee (1%): {money(treasury['protocol_revenue'])}  │             │
+    │   │  Protocol Fee (5%): {money(treasury['protocol_revenue'])}  │             │
     │   │  Subnet Fee (3%):   {money(treasury['subnet_revenue'])}  │             │
-    │   │  Miner Pool (96%):  {money(treasury['total_miner_payouts'])}  │             │
+    │   │  Miner Pool (77%):  {money(treasury['total_miner_payouts'])}  │             │
     │   └──────────────────────────────────────┘             │
     │                        │                               │
     │            ┌───────────┼───────────┐                   │
@@ -585,11 +585,11 @@ def main():
     print(f"""
     Assumptions: {daily_tasks} tasks/day, avg {YELLOW}{avg_reward:.0f} MDT{RESET}/task
 
-    {'Period':<14} {'Volume':>12} {'Protocol (1%)':>14} {'Subnet (3%)':>14} {'Miners (96%)':>14}
+    {'Period':<14} {'Volume':>12} {'Protocol (5%)':>14} {'Subnet (3%)':>14} {'Miners (77%)':>14}
     {'─' * 14} {'─' * 12} {'─' * 14} {'─' * 14} {'─' * 14}
-    {'Daily':<14} {money(daily_vol)} {money(daily_vol * 0.01)} {money(daily_vol * 0.03)} {money(daily_vol * 0.96)}
-    {'Monthly':<14} {money(monthly_vol)} {money(monthly_vol * 0.01)} {money(monthly_vol * 0.03)} {money(monthly_vol * 0.96)}
-    {'Yearly':<14} {money(yearly_vol)} {money(yearly_vol * 0.01)} {money(yearly_vol * 0.03)} {money(yearly_vol * 0.96)}
+    {'Daily':<14} {money(daily_vol)} {money(daily_vol * 0.05)} {money(daily_vol * 0.03)} {money(daily_vol * 0.77)}
+    {'Monthly':<14} {money(monthly_vol)} {money(monthly_vol * 0.05)} {money(monthly_vol * 0.03)} {money(monthly_vol * 0.77)}
+    {'Yearly':<14} {money(yearly_vol)} {money(yearly_vol * 0.05)} {money(yearly_vol * 0.03)} {money(yearly_vol * 0.77)}
 """)
 
     subheader("Per-Miner Economics (Monthly Projection)")
@@ -603,7 +603,7 @@ def main():
     for mcfg in miners_config:
         earned = miner_wallets.get(mcfg["id"], 0)
         share = earned / total_earned_all if total_earned_all > 0 else 0.2
-        miner_monthly = monthly_vol * 0.96 * share
+        miner_monthly = monthly_vol * 0.77 * share
         miner_yearly = miner_monthly * 12
         roi = (miner_yearly / mcfg["stake"] * 100) if mcfg["stake"] > 0 else 0
 
@@ -629,7 +629,7 @@ def main():
   {CHECK} Weighted matching: better miners get more tasks
   {CHECK} 5-dimension scoring: Security, Correctness, Readability, etc.
   {CHECK} Proof of Intelligence: verified AI authenticity
-  {CHECK} Tokenomics: 1% protocol + 3% subnet + 96% miners
+  {CHECK} Tokenomics: 5% protocol + 3% subnet + 77% miners + 15% validators
   {CHECK} Multi-epoch reputation evolution (EMA-based)
   {CHECK} Revenue projection: protocol-level economics
 

@@ -7,7 +7,7 @@ Tests the complete flow:
 
 Uses dry_run mode (no real Hedera transactions), but verifies:
     1. Escrow is created on task submission
-    2. Fees are calculated correctly (1% protocol + 5% subnet = 6%)
+    2. Fees are calculated correctly (5% protocol + 5% subnet = 10%)
     3. Winner receives 94% of reward
     4. RewardDistributor processes payment
     5. Treasury records all flows accurately
@@ -42,7 +42,7 @@ def test_reward_system():
     print("-" * 40)
 
     config = ProtocolConfig(
-        protocol_fee_rate=0.01,  # 1%
+        protocol_fee_rate=0.05,  # 5%
         min_stake_amount=100.0,
     )
 
@@ -122,7 +122,7 @@ def transfer(sender, receiver, amount):
     if fee_breakdown:
         print(f"\n  📊 Fee Breakdown:")
         print(f"     Reward:       {fmt(fee_breakdown.reward_amount)}")
-        print(f"     Protocol (1%): {fmt(fee_breakdown.protocol_fee)}")
+        print(f"     Protocol (5%): {fmt(fee_breakdown.protocol_fee)}")
         print(f"     Subnet (5%):   {fmt(fee_breakdown.subnet_fee)}")
         print(f"     Miner (94%):   {fmt(fee_breakdown.miner_reward)}")
         print(f"     Total fee:     {fmt(fee_breakdown.total_fee)}")
@@ -357,7 +357,7 @@ def transfer(sender, receiver, amount):
     print("  ✅ EscrowManager — creates & releases escrow deposits")
     print("  ✅ Treasury — records all flows with running totals")
     print("  ✅ MarketplaceProtocol — full end-to-end integration")
-    print("  ✅ Fee split: 1% protocol + 5% subnet + 94% miner")
+    print("  ✅ Fee split: 5% protocol + 5% subnet + 75% miner + 15% validators")
 
 
 if __name__ == "__main__":

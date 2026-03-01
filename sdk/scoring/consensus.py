@@ -14,8 +14,10 @@ Algorithm:
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import math
+import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -219,8 +221,18 @@ class ScoreConsensus:
 
         Uses linear interpolation for quartiles (more accurate for small N).
         """
+        if len(scores) < 2:
+            return []  # Cannot detect outliers with fewer than 2 scores
+
+        # For small N (2-3), use simple deviation-from-median check
         if len(scores) < 4:
-            return []  # Too few for meaningful outlier detection
+            sorted_s = sorted(scores)
+            median = sorted_s[len(sorted_s) // 2]
+            threshold = 0.3  # 30% deviation from median → outlier
+            return [
+                i for i, s in enumerate(scores)
+                if abs(s - median) > threshold and median > 0
+            ]
 
         sorted_scores = sorted(scores)
         n = len(sorted_scores)
@@ -291,3 +303,247 @@ class ScoreConsensus:
 
         confidence = validator_factor * agreement_factor * outlier_penalty
         return max(0.0, min(1.0, confidence))
+
+
+# ===========================================================================
+# Commit-Reveal Consensus  (Mirrors on-chain commit-reveal scheme)
+# ===========================================================================
+
+@dataclass
+class ScoreCommit:
+    """A single validator's committed score (hashed)."""
+    validator_id: str
+    commit_hash: str       # SHA-256 of (score || salt)
+    committed_at: float = field(default_factory=time.time)
+    revealed: bool = False
+    revealed_score: Optional[float] = None
+    revealed_salt: Optional[str] = None
+
+
+class CommitRevealConsensus:
+    """
+    Commit-Reveal wrapper around ScoreConsensus.
+
+    Prevents validators from seeing each other's scores before committing.
+    This mirrors the on-chain commitScore() + revealScore() pattern from
+    PaymentEscrow.sol / SubnetRegistry.sol.
+
+    Flow:
+        1. Each validator calls commit_score(id, score, salt) → stores hash
+        2. After all commits, call start_reveal_phase()
+        3. Each validator calls reveal_score(id, score, salt) → verifies hash
+        4. After all reveals, call finalize() → runs ScoreConsensus.aggregate()
+
+    Usage:
+        cr = CommitRevealConsensus(min_validators=3)
+
+        # Phase 1: Commit
+        cr.commit_score("v1", 0.85, "random_salt_1")
+        cr.commit_score("v2", 0.80, "random_salt_2")
+        cr.commit_score("v3", 0.90, "random_salt_3")
+
+        # Phase 2: Reveal
+        cr.start_reveal_phase()
+        cr.reveal_score("v1", 0.85, "random_salt_1")
+        cr.reveal_score("v2", 0.80, "random_salt_2")
+        cr.reveal_score("v3", 0.90, "random_salt_3")
+
+        # Phase 3: Finalize
+        result = cr.finalize()
+        print(result.consensus_score)
+    """
+
+    def __init__(
+        self,
+        min_validators: int = 2,
+        commit_timeout: float = 3600.0,   # 1 hour
+        reveal_timeout: float = 1800.0,   # 30 minutes
+    ):
+        self.min_validators = min_validators
+        self.commit_timeout = commit_timeout
+        self.reveal_timeout = reveal_timeout
+
+        # State
+        self._commits: Dict[str, ScoreCommit] = {}
+        self._phase: str = "commit"       # commit | reveal | finalized
+        self._phase_started_at: float = time.time()
+        self._inner_consensus = ScoreConsensus()
+
+        logger.info(
+            "CommitRevealConsensus created (min_validators=%d)",
+            min_validators,
+        )
+
+    # -------------------------------------------------------------------
+    # Phase 1: Commit
+    # -------------------------------------------------------------------
+
+    @staticmethod
+    def compute_hash(score: float, salt: str) -> str:
+        """Compute SHA-256 hash for commit. Matches on-chain keccak pattern."""
+        payload = f"{score:.6f}:{salt}"
+        return hashlib.sha256(payload.encode()).hexdigest()
+
+    def commit_score(self, validator_id: str, score: float, salt: str) -> str:
+        """
+        Commit a hashed score. The actual score is hidden until reveal.
+
+        Args:
+            validator_id: Validator's ID
+            score: The actual score (0.0 - 1.0)
+            salt: Random string used to prevent brute-force hash reversal
+
+        Returns:
+            The commit hash (for verification)
+
+        Raises:
+            ValueError: If not in commit phase or validator already committed
+        """
+        if self._phase != "commit":
+            raise ValueError(f"Not in commit phase (current: {self._phase})")
+        if validator_id in self._commits:
+            raise ValueError(f"Validator {validator_id} already committed")
+
+        commit_hash = self.compute_hash(score, salt)
+        self._commits[validator_id] = ScoreCommit(
+            validator_id=validator_id,
+            commit_hash=commit_hash,
+        )
+
+        logger.info(
+            "Score committed: validator=%s, hash=%s...%s",
+            validator_id, commit_hash[:8], commit_hash[-4:],
+        )
+        return commit_hash
+
+    @property
+    def commit_count(self) -> int:
+        return len(self._commits)
+
+    @property
+    def is_commit_phase_complete(self) -> bool:
+        """True if enough validators have committed."""
+        return len(self._commits) >= self.min_validators
+
+    # -------------------------------------------------------------------
+    # Phase 2: Reveal
+    # -------------------------------------------------------------------
+
+    def start_reveal_phase(self) -> None:
+        """Transition from commit to reveal phase."""
+        if self._phase != "commit":
+            raise ValueError(f"Cannot start reveal: phase is {self._phase}")
+        if not self.is_commit_phase_complete:
+            raise ValueError(
+                f"Not enough commits: {len(self._commits)}/{self.min_validators}"
+            )
+        self._phase = "reveal"
+        self._phase_started_at = time.time()
+        logger.info("Reveal phase started (%d commits)", len(self._commits))
+
+    def reveal_score(
+        self, validator_id: str, score: float, salt: str
+    ) -> bool:
+        """
+        Reveal a previously committed score.
+
+        Args:
+            validator_id: Validator's ID
+            score: The actual score (must match committed hash)
+            salt: The salt used during commit
+
+        Returns:
+            True if reveal was valid
+
+        Raises:
+            ValueError: If hash mismatch, not in reveal phase, etc.
+        """
+        if self._phase != "reveal":
+            raise ValueError(f"Not in reveal phase (current: {self._phase})")
+
+        commit = self._commits.get(validator_id)
+        if commit is None:
+            raise ValueError(f"Validator {validator_id} did not commit")
+        if commit.revealed:
+            raise ValueError(f"Validator {validator_id} already revealed")
+
+        # Verify hash
+        expected_hash = self.compute_hash(score, salt)
+        if expected_hash != commit.commit_hash:
+            raise ValueError(
+                f"Hash mismatch for validator {validator_id}: "
+                f"expected {commit.commit_hash[:12]}..., "
+                f"got {expected_hash[:12]}..."
+            )
+
+        commit.revealed = True
+        commit.revealed_score = score
+        commit.revealed_salt = salt
+
+        logger.info(
+            "Score revealed: validator=%s, score=%.4f",
+            validator_id, score,
+        )
+        return True
+
+    @property
+    def reveal_count(self) -> int:
+        return sum(1 for c in self._commits.values() if c.revealed)
+
+    @property
+    def is_reveal_phase_complete(self) -> bool:
+        """True if all committers have revealed."""
+        return all(c.revealed for c in self._commits.values())
+
+    # -------------------------------------------------------------------
+    # Phase 3: Finalize
+    # -------------------------------------------------------------------
+
+    def finalize(self) -> ConsensusResult:
+        """
+        Finalize: aggregate all revealed scores via ScoreConsensus.
+
+        Returns:
+            ConsensusResult from the underlying ScoreConsensus
+
+        Raises:
+            ValueError: If not all validators have revealed
+        """
+        if self._phase == "finalized":
+            raise ValueError("Already finalized")
+
+        revealed_scores: Dict[str, float] = {}
+        for vid, commit in self._commits.items():
+            if not commit.revealed or commit.revealed_score is None:
+                raise ValueError(f"Validator {vid} has not revealed")
+            revealed_scores[vid] = commit.revealed_score
+
+        if len(revealed_scores) < self.min_validators:
+            raise ValueError(
+                f"Insufficient reveals: {len(revealed_scores)}/{self.min_validators}"
+            )
+
+        result = self._inner_consensus.aggregate(revealed_scores)
+        self._phase = "finalized"
+
+        logger.info(
+            "Commit-Reveal finalized: consensus=%.4f, validators=%d, outliers=%s",
+            result.consensus_score, result.num_validators, result.outliers,
+        )
+        return result
+
+    @property
+    def phase(self) -> str:
+        return self._phase
+
+    def get_status(self) -> Dict[str, Any]:
+        """Get current commit-reveal status."""
+        return {
+            "phase": self._phase,
+            "commits": self.commit_count,
+            "reveals": self.reveal_count,
+            "min_validators": self.min_validators,
+            "is_commit_complete": self.is_commit_phase_complete,
+            "is_reveal_complete": self.is_reveal_phase_complete,
+            "validators": list(self._commits.keys()),
+        }

@@ -55,18 +55,18 @@ pie title MDT Token Allocation (1B Total)
 | **Subnet Owner** | 10,000 MDT | Register & operate a subnet |
 | **Agent Bond** | 1,000 MDT | AI Agent deposits as "good behavior" guarantee |
 
-- **Slashing**: Malicious validators lose 10% stake → Burned
-- **Agent Penalty**: Failed verification = 5% bond burn
+- **Slashing**: Validators with scores deviating >20% from consensus median receive reduced rewards and lower reputation score
+- **Agent Penalty**: Failed verification = reduced reputation, lower task assignment priority
 
 ### Pillar 2: 💸 Payment & Fees
 
 ```
 Task Reward Flow:
 User pays 100 MDT for Code Review task
-├── 1% → Protocol Treasury (1 MDT)          [BURNED or DAO]
-├── 3% → Subnet Owner (3 MDT)               [Subnet #1 fee]
-├── 5% → Validator Pool (5 MDT)             [Trust Nodes]
-└── 91% → Winning Miner (91 MDT)            [Best performer]
+├── 5%  → Protocol Treasury (5 MDT)           [DAO / Burned]
+├── 15% → Validator Pool (15 MDT)             [Trust Nodes]
+├── X%  → Subnet Owner (custom, max 20%)      [Subnet fee]
+└── 80% → Winning Miner (80 MDT)              [Best performer]
 ```
 
 ### Pillar 3: 🏛️ Governance (DAO Voting)
@@ -88,7 +88,7 @@ User pays 100 MDT for Code Review task
 
 | Mechanism | Burn Rate | Trigger |
 |-----------|-----------|---------|
-| Protocol Fee Burn | 50% of 1% fee | Every task completion |
+| Protocol Fee Burn | 50% of 5% fee | Every task completion |
 | Subnet Registration | 20% of 10K MDT | New subnet creation |
 | Slash Events | 100% of slashed amount | Malicious behavior |
 | Badge Renewal | 100 MDT/year | Annual re-verification |

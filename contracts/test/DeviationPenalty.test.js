@@ -121,9 +121,12 @@ describe("Score Deviation Penalty Tests", function () {
             await escrow.connect(requester).finalizeTask(1);
             const feesAfter = await escrow.collectedFees();
 
-            // Protocol fees should include the platform fee + the dust/penalty portion
+            // Protocol fees should include the kept fee (50% of 5 MDT = 2.5 MDT after burn)
+            // plus any penalized validator's leftover
+            // Note: finalizeTask burns 50% of platformFee for deflationary mechanism
             const platformFee = ethers.parseUnits("5", 8); // 5% of 100 MDT
-            expect(feesAfter).to.be.gt(feesBefore + platformFee - 1n);
+            const keepFee = platformFee / 2n; // 50% burned, 50% kept
+            expect(feesAfter).to.be.gte(feesBefore + keepFee);
         });
     });
 

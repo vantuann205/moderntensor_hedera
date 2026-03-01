@@ -217,7 +217,7 @@ moderntensor/
 ### Full Protocol Engine (~2,400 lines)
 - **Task Lifecycle State Machine**: submit → match → assign → execute → validate → pay
 - **EMA Reputation System**: Exponential Moving Average tracking with auto-suspension
-- **Dynamic Fee Engine**: Protocol fee (1%) + subnet fee (0-20%) + priority multipliers + congestion pricing
+- **Dynamic Fee Engine**: Protocol fee (5%) + subnet fee (0-20%) + priority multipliers + congestion pricing
 - **Weighted Task Matching**: Anti-sybil caps, load balancing, reputation-weighted random selection
 
 ### Proof of Intelligence (PoI) — Our Innovation
@@ -249,7 +249,7 @@ moderntensor/
 
 | Revenue Stream | Description |
 |----------------|-------------|
-| **Protocol Fee (1%)** | Tax on ALL subnet volume — automatic, permissionless |
+| **Protocol Fee (5%)** | Tax on ALL subnet volume — automatic, permissionless |
 | **Subnet Registration** | 10,000 MDT burned/locked per subnet |
 | **Reference Subnet** | We own Subnet #0 (5% fee) and Subnet #1 (3% fee) |
 

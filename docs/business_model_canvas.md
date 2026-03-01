@@ -75,7 +75,7 @@
 ├─────────────────────────────────────────────────────────────────┤
 │                    REVENUE STREAMS                              │
 ├─────────────────────────────────────────────────────────────────┤
-│ • Protocol Fee: 1% of ALL subnet volume (Tax on everything)     │
+│ • Protocol Fee: 5% of ALL subnet volume (Tax on everything)     │
 │ • Subnet Registration: 10,000 MDT burn/lock per new subnet      │
 │ • Reference Subnets: We own #0 (5% fee) + #1 (3% fee)          │
 └─────────────────────────────────────────────────────────────────┘
@@ -87,7 +87,7 @@
 
 | Revenue Stream | % of Total | Year 1 Target |
 |----------------|------------|---------------|
-| Protocol Fees (1% of all volume) | 55% | $50K |
+| Protocol Fees (5% of all volume) | 55% | $250K |
 | Subnet Registration Fees | 28% | $25K |
 | Reference Subnet Revenue | 17% | $15K |
 | **Total** | **100%** | **$90K** |

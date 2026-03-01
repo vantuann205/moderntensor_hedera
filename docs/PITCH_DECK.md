@@ -67,7 +67,7 @@ Protocol (SubnetRegistry)
 ```
 
 ### Fee Distribution
-- **1% Protocol Fee** → ModernTensor DAO (from ALL subnets)
+- **5% Protocol Fee** → ModernTensor DAO (from ALL subnets)
 - **0–20% Subnet Fee** → Subnet owner
 - **Remainder** → Winning miner
 
@@ -115,7 +115,7 @@ Protocol (SubnetRegistry)
 
 | Stream | Description | Projected Year 1 |
 |--------|-------------|-------------------|
-| Protocol Fee (1%) | Tax on ALL subnet volume | $50K |
+| Protocol Fee (5%) | Tax on ALL subnet volume | $250K |
 | Subnet Registration | 10,000 MDT burned/locked per subnet | $25K |
 | Reference Subnets | We own Subnet #0 (5%) + #1 (3%) | $15K |
 | **Total** | | **$90K** |

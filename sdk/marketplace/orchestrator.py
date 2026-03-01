@@ -41,6 +41,10 @@ from ..scoring.proof_of_intelligence import ProofOfIntelligence
 from ..scoring.proof_of_quality import ProofOfQuality
 from ..scoring.benchmark_pool import BenchmarkPool
 from .analytics import ProtocolAnalytics
+from ..protocol.staking import StakingManager, StakeRole
+from ..protocol.dispute import DisputeManager
+from ..protocol.badges import BadgeManager
+from ..protocol.emissions import EmissionSchedule
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +153,25 @@ class MarketplaceProtocol:
         # Analytics aggregator
         self.analytics = ProtocolAnalytics()
 
+        # ── Staking Manager (on-chain MDT staking) ──
+        self.staking_manager = StakingManager(client=None)
+
+        # ── Dispute Manager (on-chain dispute resolution) ──
+        self.dispute_manager = DisputeManager(client=None)
+
+        # ── Badge Manager (Verified Agent Badges via HCS) ──
+        self.badge_manager = BadgeManager(hcs_service=hcs_service)
+
+        # ── Emission Schedule (staking rewards with halving) ──
+        self.emission_schedule = EmissionSchedule()
+
+        # ── Validator registry ──
+        self._validators: Dict[str, Dict[str, Any]] = {}
+
         logger.info(
             "MarketplaceProtocol initialized — validator=%s, poi=%s, "
-            "reward_system=active (dry_run=%s), hcs_sync=%s",
+            "reward_system=active (dry_run=%s), hcs_sync=%s, "
+            "staking=on, disputes=on, badges=on, emissions=on",
             validator_id, enable_poi, dry_run, self._hcs_sync is not None,
         )
 
@@ -257,13 +277,25 @@ class MarketplaceProtocol:
         """
         Register a new miner in the marketplace.
 
+        Any miner with MDT tokens can register. Stake is an optional
+        agent bond (deposit for good behavior, can be slashed if cheating).
+        Miner weight is based on performance, not stake amount.
+
         Args:
             miner_id: Unique Hedera account ID
             subnet_ids: Subnets to register in
-            stake: Amount of MDT to stake
+            stake: Optional agent bond amount (MDT)
             capabilities: Task types this miner supports
             publish_to_hcs: If True and HCS is available, also publish on-chain
         """
+        # Optional: lock agent bond on-chain if miner chooses to stake
+        if stake > 0 and self.staking_manager.vault_contract_id:
+            try:
+                self.staking_manager.stake(amount=stake, role=StakeRole.MINER)
+                logger.info("Agent bond of %.2f MDT locked for miner %s", stake, miner_id)
+            except Exception as e:
+                logger.warning("On-chain bond deposit failed: %s", e)
+
         if publish_to_hcs and self._hcs_sync:
             result = self._hcs_sync.publish_registration(
                 miner_id=miner_id,
@@ -277,6 +309,7 @@ class MarketplaceProtocol:
                 "subnets": subnet_ids,
                 "stake": stake,
                 "on_chain": result["on_chain"],
+                "staking_vault": bool(self.staking_manager.vault_contract_id),
             })
         else:
             miner = self.miner_registry.register(
@@ -290,6 +323,7 @@ class MarketplaceProtocol:
                 "subnets": subnet_ids,
                 "stake": stake,
                 "on_chain": False,
+                "staking_vault": bool(self.staking_manager.vault_contract_id),
             })
         return miner
 
@@ -298,6 +332,92 @@ class MarketplaceProtocol:
         miner = self.miner_registry.deregister(miner_id)
         self._log_event("miner_deregistered", {"miner_id": miner_id})
         return miner
+
+    # ------------------------------------------------------------------
+    # Validator Management
+    # ------------------------------------------------------------------
+
+    # Matching StakingVault.sol: minValidatorStake = 50,000 MDT
+    MIN_VALIDATOR_STAKE = 50_000.0
+
+    def register_validator(
+        self,
+        validator_id: str,
+        subnet_ids: List[int],
+        stake: float,
+    ) -> Dict[str, Any]:
+        """
+        Register a validator for one or more subnets.
+
+        Validators MUST stake a minimum of 50,000 MDT to participate.
+        This is the skin-in-the-game requirement — validators who score
+        dishonestly risk losing their stake.
+
+        Args:
+            validator_id: Hedera account ID of the validator
+            subnet_ids: List of subnets to validate
+            stake: Amount of MDT to stake (must be >= 50,000)
+
+        Raises:
+            ValueError: If stake is below minimum threshold
+        """
+        if stake < self.MIN_VALIDATOR_STAKE:
+            raise ValueError(
+                f"Validator stake {stake:,.0f} MDT is below the minimum "
+                f"threshold of {self.MIN_VALIDATOR_STAKE:,.0f} MDT. "
+                f"Validators must stake at least {self.MIN_VALIDATOR_STAKE:,.0f} MDT "
+                f"to register for subnet validation."
+            )
+
+        # On-chain staking if vault is configured
+        on_chain = False
+        if self.staking_manager.vault_contract_id:
+            try:
+                self.staking_manager.stake(amount=stake, role=StakeRole.VALIDATOR)
+                on_chain = True
+                logger.info(
+                    "Validator %s staked %.0f MDT on-chain", validator_id, stake
+                )
+            except Exception as e:
+                logger.warning("On-chain validator staking failed: %s", e)
+
+        # Store in validator registry
+
+        self._validators[validator_id] = {
+            "validator_id": validator_id,
+            "subnet_ids": subnet_ids,
+            "stake_amount": stake,
+            "reliability_score": 1.0,  # Start with full trust
+            "dishonesty_rate": 0.0,
+            "total_validations": 0,
+            "is_active": True,
+            "on_chain": on_chain,
+        }
+
+        self._log_event("validator_registered", {
+            "validator_id": validator_id,
+            "subnet_ids": subnet_ids,
+            "stake": stake,
+            "on_chain": on_chain,
+        })
+
+        logger.info(
+            "Validator %s registered — stake=%.0f MDT, subnets=%s",
+            validator_id, stake, subnet_ids,
+        )
+
+        return self._validators[validator_id]
+
+    def get_validator(self, validator_id: str) -> Optional[Dict[str, Any]]:
+        """Get validator info by ID."""
+        return self._validators.get(validator_id)
+
+    def list_validators(self, active_only: bool = True) -> List[Dict[str, Any]]:
+        """List all registered validators."""
+        validators = list(self._validators.values())
+        if active_only:
+            validators = [v for v in validators if v.get("is_active", True)]
+        return validators
 
     def get_miner(self, miner_id: str) -> Optional[MinerInfo]:
         """Get miner information."""
@@ -450,6 +570,20 @@ class MarketplaceProtocol:
                 "verified": poi_result.is_verified,
             })
 
+            # ── Auto-issue Verified Agent Badge after successful PoI ──
+            if poi_result.is_verified and poi_result.poi_score >= 0.60:
+                try:
+                    self.badge_manager.issue_badge(
+                        agent_id=validation.winner_miner_id,
+                        poi_score=poi_result.poi_score,
+                    )
+                    self._log_event("badge_issued", {
+                        "miner_id": validation.winner_miner_id,
+                        "poi_score": poi_result.poi_score,
+                    })
+                except (ValueError, Exception) as e:
+                    logger.debug("Badge not issued: %s", e)
+
         # ── Layer 2: Proof of Quality (multi-validator consensus) ──
         if self.poq and validation.is_valid and assignments:
             for a in assignments:
@@ -534,6 +668,145 @@ class MarketplaceProtocol:
         })
         return validation
 
+    # ------------------------------------------------------------------
+    # Dispute Operations
+    # ------------------------------------------------------------------
+
+    def open_dispute(self, task_id: str) -> Dict[str, Any]:
+        """
+        Open a dispute on a completed task.
+
+        The requester calls this when they believe the task result is
+        incorrect. If the StakingVault is configured, the dispute also
+        triggers on-chain dispute in PaymentEscrow.
+
+        Args:
+            task_id: Task ID to dispute
+
+        Returns:
+            Dispute status dict
+        """
+        task = self.task_manager.get_task(task_id)
+        if not task:
+            raise ValueError(f"Task {task_id} not found")
+
+        # On-chain dispute if contract configured
+        on_chain = False
+        if self.dispute_manager.escrow_contract_id and hasattr(task, 'on_chain_id'):
+            try:
+                self.dispute_manager.open_dispute(task.on_chain_id)
+                on_chain = True
+            except Exception as e:
+                logger.warning("On-chain dispute failed: %s", e)
+
+        self._log_event("dispute_opened", {
+            "task_id": task_id,
+            "requester_id": task.requester_id,
+            "on_chain": on_chain,
+        })
+
+        return {
+            "task_id": task_id,
+            "status": "disputed",
+            "on_chain": on_chain,
+            "requester_id": task.requester_id,
+        }
+
+    def resolve_dispute(
+        self,
+        task_id: str,
+        requester_wins: bool,
+    ) -> Dict[str, Any]:
+        """
+        Resolve a dispute. If requester wins, miner is penalized.
+
+        Args:
+            task_id: Disputed task
+            requester_wins: True if requester's dispute is valid
+        """
+        task = self.task_manager.get_task(task_id)
+        if not task:
+            raise ValueError(f"Task {task_id} not found")
+
+        # On-chain resolution
+        on_chain = False
+        if self.dispute_manager.escrow_contract_id and hasattr(task, 'on_chain_id'):
+            try:
+                self.dispute_manager.resolve_dispute(task.on_chain_id, requester_wins)
+                on_chain = True
+            except Exception as e:
+                logger.warning("On-chain dispute resolution failed: %s", e)
+
+        # If requester wins, penalize the miner's reputation
+        if requester_wins:
+            validation = self.task_manager.get_validation(task_id)
+            if validation and validation.winner_miner_id:
+                miner = self.miner_registry.get_miner(validation.winner_miner_id)
+                if miner:
+                    miner.reputation.score = max(0, miner.reputation.score - 0.2)
+                    miner.reputation.penalties += 1
+                    # Auto-revoke badge if reputation too low
+                    self.badge_manager.auto_revoke_if_needed(
+                        miner.miner_id, miner.reputation.score
+                    )
+
+        winner = "requester" if requester_wins else "miner"
+        self._log_event("dispute_resolved", {
+            "task_id": task_id,
+            "winner": winner,
+            "on_chain": on_chain,
+        })
+
+        return {
+            "task_id": task_id,
+            "status": "resolved",
+            "winner": winner,
+            "on_chain": on_chain,
+        }
+
+    # ------------------------------------------------------------------
+    # Staking Operations
+    # ------------------------------------------------------------------
+
+    def get_staking_info(self, miner_id: str) -> Dict[str, Any]:
+        """
+        Get staking information for a miner.
+
+        Returns local stake amount, and on-chain info if available.
+        """
+        miner = self.miner_registry.get_miner(miner_id)
+        result: Dict[str, Any] = {
+            "miner_id": miner_id,
+            "local_stake": miner.stake_amount if miner else 0,
+            "is_registered": miner is not None,
+        }
+
+        # Query on-chain if available
+        if self.staking_manager.vault_contract_id:
+            try:
+                on_chain = self.staking_manager.get_stake_info(miner_id)
+                result["on_chain"] = on_chain
+            except Exception as e:
+                result["on_chain_error"] = str(e)
+
+        return result
+
+    # ------------------------------------------------------------------
+    # Badge Queries
+    # ------------------------------------------------------------------
+
+    def is_verified_agent(self, miner_id: str) -> bool:
+        """Check if a miner has a verified agent badge."""
+        return self.badge_manager.is_verified(miner_id)
+
+    def get_verified_agents(self) -> List[str]:
+        """Get all agents with active verified badges."""
+        return self.badge_manager.get_all_verified()
+
+    # ------------------------------------------------------------------
+    # Miner Queries
+    # ------------------------------------------------------------------
+
     def get_miner_tasks(self, miner_id: str) -> List:
         """Get pending assignments for a specific miner."""
         return self.task_manager.get_assignments_for_miner(miner_id)
@@ -554,6 +827,7 @@ class MarketplaceProtocol:
             "tasks_won": wins,
             "win_rate": round(wins / len(history), 4) if history else 0.0,
             "history": history,
+            "is_verified": self.badge_manager.is_verified(miner_id),
         }
 
     def get_task_detail(self, task_id: str) -> Dict[str, Any]:
@@ -648,7 +922,8 @@ class MarketplaceProtocol:
 
     def advance_epoch(self) -> Dict[str, Any]:
         """
-        Advance to next epoch — recalculate weights, reset counters.
+        Advance to next epoch — recalculate weights, reset counters,
+        auto-revoke badges for low-rep miners, distribute staking emissions.
 
         Should be called periodically (e.g., every 100 blocks or hourly).
         """
@@ -675,17 +950,41 @@ class MarketplaceProtocol:
         # Reset load counters
         self.matcher.reset_load_counters()
 
+        # ── Auto-revoke badges for miners with low reputation ──
+        badges_revoked = 0
+        for m in active:
+            if self.badge_manager.auto_revoke_if_needed(
+                agent_id=m.miner_id,
+                reputation_score=m.reputation.score,
+            ):
+                badges_revoked += 1
+
+        # ── Distribute staking emission rewards ──
+        emission_total = 0.0
+        stakers = {m.miner_id: m.stake_amount for m in active if m.stake_amount > 0}
+        if stakers:
+            rewards = self.emission_schedule.calculate_epoch_rewards(stakers)
+            epoch = self.emission_schedule.distribute_epoch(rewards)
+            emission_total = epoch.distributed
+
         self._log_event("epoch_advanced", {
             "epoch": self._epoch,
             "active_miners": len(active),
             "top_miners": weights.top_miners(5),
+            "badges_revoked": badges_revoked,
+            "emission_distributed": round(emission_total, 4),
         })
 
-        logger.info("Epoch %d — %d active miners", self._epoch, len(active))
+        logger.info(
+            "Epoch %d — %d miners, %d badges revoked, %.2f MDT emitted",
+            self._epoch, len(active), badges_revoked, emission_total,
+        )
         return {
             "epoch": self._epoch,
             "weights": weights.to_dict(),
             "active_miners": len(active),
+            "badges_revoked": badges_revoked,
+            "emission_distributed": round(emission_total, 4),
         }
 
     def get_protocol_stats(self) -> Dict[str, Any]:
@@ -705,6 +1004,12 @@ class MarketplaceProtocol:
             "escrow_stats": self.escrow_manager.get_stats(),
             "treasury": self.treasury.get_snapshot().to_dict(),
             "analytics": self.analytics.get_dashboard_metrics(),
+            # ── New module stats ──
+            "badge_stats": self.badge_manager.get_stats(),
+            "emission_stats": self.emission_schedule.get_stats(),
+            "staking_vault": bool(self.staking_manager.vault_contract_id),
+            "dispute_contract": bool(self.dispute_manager.escrow_contract_id),
+            "verified_agents": len(self.badge_manager.get_all_verified()),
             "event_count": len(self._event_log),
         }
 

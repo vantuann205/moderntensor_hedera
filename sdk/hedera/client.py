@@ -409,6 +409,9 @@ class HederaClient:
         """
         Deploy a smart contract.
 
+        For large bytecodes (>4KB), uses FileCreate + FileAppend to upload
+        the bytecode first, then references the file ID in ContractCreate.
+
         Args:
             bytecode: Contract bytecode
             gas: Gas limit
@@ -417,9 +420,50 @@ class HederaClient:
         Returns:
             Contract ID string
         """
-        tx = ContractCreateTransaction()
-        tx.set_bytecode(bytecode)
-        tx.set_gas(gas)
+        from hiero_sdk_python import (
+            FileCreateTransaction,
+            FileAppendTransaction,
+        )
+
+        CHUNK_SIZE = 4096  # 4KB chunks
+
+        if len(bytecode) > CHUNK_SIZE:
+            logger.info(
+                "Bytecode %d bytes — uploading via FileCreate + FileAppend",
+                len(bytecode),
+            )
+
+            # Create file with first chunk
+            first_chunk = bytecode[:CHUNK_SIZE]
+            file_tx = FileCreateTransaction()
+            file_tx.set_contents(first_chunk)
+            if self._operator_key:
+                file_tx.set_keys([self._operator_key.public_key()])
+            file_receipt = file_tx.execute(self.client)
+            file_id = file_receipt.file_id
+            logger.info(f"Created bytecode file: {file_id}")
+
+            # Append remaining chunks
+            remaining = bytecode[CHUNK_SIZE:]
+            chunk_num = 1
+            while remaining:
+                chunk = remaining[:CHUNK_SIZE]
+                remaining = remaining[CHUNK_SIZE:]
+                append_tx = FileAppendTransaction()
+                append_tx.set_file_id(file_id)
+                append_tx.set_contents(chunk)
+                append_tx.execute(self.client)
+                chunk_num += 1
+                logger.info(f"Appended chunk {chunk_num} ({len(chunk)} bytes)")
+
+            # Deploy from file
+            tx = ContractCreateTransaction()
+            tx.set_bytecode_file_id(file_id)
+            tx.set_gas(gas)
+        else:
+            tx = ContractCreateTransaction()
+            tx.set_bytecode(bytecode)
+            tx.set_gas(gas)
 
         if constructor_params:
             tx.set_constructor_parameters(constructor_params)
@@ -454,7 +498,7 @@ class HederaClient:
         Returns:
             SDK TransactionReceipt
         """
-        from hiero_sdk_python import ContractId
+        from hiero_sdk_python.contract.contract_id import ContractId
 
         tx = ContractExecuteTransaction()
         tx.set_contract_id(ContractId.from_string(contract_id))
@@ -490,7 +534,7 @@ class HederaClient:
         Returns:
             SDK ContractFunctionResult
         """
-        from hiero_sdk_python import ContractId
+        from hiero_sdk_python.contract.contract_id import ContractId
 
         query = ContractCallQuery()
         query.set_contract_id(ContractId.from_string(contract_id))

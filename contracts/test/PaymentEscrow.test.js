@@ -228,8 +228,10 @@ describe("PaymentEscrow", function () {
             await escrow.connect(requester).finalizeTask(taskId);
 
             const reward = ethers.parseUnits("100", 8);
-            const expectedFee = (reward * 500n) / 10000n; // 5% = 5 MDT
-            expect(await escrow.collectedFees()).to.equal(expectedFee);
+            const fee = (reward * 500n) / 10000n; // 5% = 5 MDT
+            // finalizeTask burns 50% of fee for deflationary mechanism
+            const expectedKept = fee / 2n; // 2.5 MDT kept, 2.5 MDT burned
+            expect(await escrow.collectedFees()).to.equal(expectedKept);
         });
 
         it("should credit miner reward to pendingWithdrawals (Pull pattern)", async function () {

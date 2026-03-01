@@ -14,10 +14,12 @@ For ModernTensor on Hedera — Hello Future Hackathon 2026
 """
 
 import hashlib
+import json
 import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -139,12 +141,14 @@ class EscrowManager:
         contract_service: Optional["SmartContractService"] = None,
         hts_service: Optional["HTSService"] = None,
         dry_run: bool = False,
+        state_dir: Optional[str] = None,
     ):
         """
         Args:
             contract_service: SmartContractService for PaymentEscrow operations
             hts_service: HTSService for token operations
             dry_run: If True, simulate without on-chain execution
+            state_dir: Directory for persistent state (optional)
         """
         self.contracts = contract_service
         self.hts = hts_service
@@ -156,7 +160,14 @@ class EscrowManager:
         self._total_released: float = 0.0
         self._total_refunded: float = 0.0
 
-        logger.info("EscrowManager initialized (dry_run=%s)", dry_run)
+        # Persistence
+        self._state_file: Optional[Path] = None
+        if state_dir:
+            self._state_file = Path(state_dir) / "escrow_state.json"
+            self._state_file.parent.mkdir(parents=True, exist_ok=True)
+            self.load_state()
+
+        logger.info("EscrowManager initialized (dry_run=%s, persistence=%s)", dry_run, self._state_file is not None)
 
     # -----------------------------------------------------------------------
     # Escrow Lifecycle
@@ -230,6 +241,7 @@ class EscrowManager:
 
         self._escrows[task_id] = deposit
         self._total_locked += amount
+        self._auto_save()
         return deposit
 
     def release_escrow(self, task_id: str) -> EscrowDeposit:
@@ -278,6 +290,7 @@ class EscrowManager:
         deposit.released_at = time.time()
         self._total_released += deposit.amount
         self._total_locked = max(0.0, self._total_locked - deposit.amount)
+        self._auto_save()
         return deposit
 
     def refund_escrow(self, task_id: str) -> EscrowDeposit:
@@ -313,6 +326,7 @@ class EscrowManager:
         deposit.released_at = time.time()
         self._total_refunded += deposit.amount
         self._total_locked = max(0.0, self._total_locked - deposit.amount)
+        self._auto_save()
         return deposit
 
     def mark_in_progress(self, task_id: str) -> EscrowDeposit:
@@ -372,3 +386,61 @@ class EscrowManager:
         """
         digest = hashlib.sha256(task_id.encode()).hexdigest()
         return int(digest[:8], 16) % (2**31)
+
+    # -----------------------------------------------------------------------
+    # Persistence
+    # -----------------------------------------------------------------------
+
+    def save_state(self) -> None:
+        """Persist escrow state to JSON file."""
+        if not self._state_file:
+            return
+        state = {
+            "total_locked": self._total_locked,
+            "total_released": self._total_released,
+            "total_refunded": self._total_refunded,
+            "escrows": {k: v.to_dict() for k, v in self._escrows.items()},
+        }
+        try:
+            self._state_file.write_text(json.dumps(state, indent=2))
+            logger.debug("Escrow state saved to %s", self._state_file)
+        except Exception as e:
+            logger.error("Failed to save escrow state: %s", e)
+
+    def load_state(self) -> None:
+        """Load escrow state from JSON file."""
+        if not self._state_file or not self._state_file.exists():
+            return
+        try:
+            state = json.loads(self._state_file.read_text())
+            self._total_locked = state.get("total_locked", 0.0)
+            self._total_released = state.get("total_released", 0.0)
+            self._total_refunded = state.get("total_refunded", 0.0)
+            for task_id, esc_data in state.get("escrows", {}).items():
+                self._escrows[task_id] = EscrowDeposit(
+                    escrow_id=esc_data.get("escrow_id", ""),
+                    task_id=esc_data.get("task_id", ""),
+                    depositor_id=esc_data.get("depositor_id", ""),
+                    amount=esc_data.get("amount", 0.0),
+                    miner_reward=esc_data.get("miner_reward", 0.0),
+                    protocol_fee=esc_data.get("protocol_fee", 0.0),
+                    subnet_fee=esc_data.get("subnet_fee", 0.0),
+                    status=EscrowStatus(esc_data.get("status", "created")),
+                    on_chain_task_id=esc_data.get("on_chain_task_id"),
+                    created_at=esc_data.get("created_at", 0.0),
+                    released_at=esc_data.get("released_at"),
+                    release_tx_id=esc_data.get("release_tx_id"),
+                )
+            logger.info(
+                "Escrow state loaded: %d escrows, locked=%.4f MDT",
+                len(self._escrows), self._total_locked,
+            )
+        except Exception as e:
+            logger.error("Failed to load escrow state: %s", e)
+
+    def _auto_save(self) -> None:
+        """Auto-save state after mutations (non-blocking)."""
+        try:
+            self.save_state()
+        except Exception:
+            pass

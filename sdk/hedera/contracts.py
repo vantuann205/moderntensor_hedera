@@ -60,15 +60,22 @@ class SmartContractService:
         self.client = client
         self.config = client.config
         self._bytecode: Optional[bytes] = None
+        # Local contract ID (overrides config when set)
+        self._contract_id: Optional[str] = None
 
     @property
     def contract_id(self) -> Optional[str]:
         """Get PaymentEscrow contract ID."""
-        return self.config.smart_contracts.get("payment_escrow_contract_id")
+        if self._contract_id:
+            return self._contract_id
+        cid = getattr(self.config.smart_contracts, "payment_escrow_contract_id", None)
+        if cid and cid != "None":
+            return cid
+        return None
 
     @contract_id.setter
     def contract_id(self, value: str):
-        self.config.smart_contracts["payment_escrow_contract_id"] = value
+        self._contract_id = value
 
     # =========================================================================
     # Deployment
@@ -80,9 +87,12 @@ class SmartContractService:
             self._bytecode = bytes.fromhex(f.read().strip())
         logger.info("Loaded contract bytecode")
 
-    def deploy_payment_escrow(self, mdt_token_address: str, gas: int = 500_000) -> str:
+    def deploy_payment_escrow(self, mdt_token_address: str, gas: int = 800_000) -> str:
         """
         Deploy PaymentEscrow contract.
+
+        Constructor: constructor(address _mdtToken)
+        ABI-encodes the address and appends to bytecode.
 
         Args:
             mdt_token_address: EVM address of MDT token
@@ -94,11 +104,14 @@ class SmartContractService:
         if not self._bytecode:
             raise ValueError("Bytecode not loaded. Call load_bytecode() first.")
 
-        # Encode constructor: constructor(address _mdtToken)
-        constructor_params = self._encode_address(mdt_token_address)
+        # ABI-encode constructor: address is left-padded to 32 bytes
+        constructor_abi = self._encode_address(mdt_token_address)
+
+        # Append constructor ABI to bytecode (standard EVM deploy)
+        init_bytecode = self._bytecode + constructor_abi
 
         contract_id = self.client.deploy_contract(
-            bytecode=self._bytecode + constructor_params,
+            bytecode=init_bytecode,
             gas=gas,
         )
 

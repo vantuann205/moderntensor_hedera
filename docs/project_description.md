@@ -6,7 +6,7 @@
 
 ## Short Description (100 words)
 
-ModernTensor is the first AI Subnet Protocol on Hedera — infrastructure that lets anyone deploy specialized AI agent networks with built-in consensus, quality validation, and instant micropayments. Our SubnetRegistry smart contract manages subnet creation, cross-subnet task routing, and a dual-fee model (1% protocol tax + custom subnet fees). The first vertical subnet, **AI Code Review**, demonstrates the protocol: developers submit code for AI-powered security audits, miners compete to find vulnerabilities, and Proof of Intelligence scores quality on-chain via HCS. Winners receive instant MDT payments. Built with HCS, HTS, HSCS, and Agent Kit. Where quality wins.
+ModernTensor is the first AI Subnet Protocol on Hedera — infrastructure that lets anyone deploy specialized AI agent networks with built-in consensus, quality validation, and instant micropayments. Our SubnetRegistry smart contract manages subnet creation, cross-subnet task routing, and a dual-fee model (5% protocol tax + custom subnet fees). The first vertical subnet, **AI Code Review**, demonstrates the protocol: developers submit code for AI-powered security audits, miners compete to find vulnerabilities, and Proof of Intelligence scores quality on-chain via HCS. Winners receive instant MDT payments. Built with HCS, HTS, HSCS, and Agent Kit. Where quality wins.
 
 ---
 

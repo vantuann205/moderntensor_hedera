@@ -2,7 +2,7 @@
 ModernTensor Fee Engine
 
 Handles all fee calculations for the marketplace protocol:
-- Protocol fee (1% of all volume → DAO treasury)
+- Protocol fee (5% of all volume → DAO treasury)
 - Subnet fee (0-20%, set by subnet owner)
 - Priority multipliers
 - Dynamic fee adjustment based on network congestion
@@ -53,11 +53,11 @@ class FeeEngine:
     """
     Fee calculation engine for the ModernTensor marketplace.
 
-    Fee Structure:
-        total_fee = protocol_fee + subnet_fee
-        protocol_fee = reward * protocol_fee_rate (default 1%)
-        subnet_fee = reward * subnet_fee_rate (0–20%)
-        miner_reward = reward - total_fee
+    Fee Structure (matches PaymentEscrow.sol):
+        protocol_fee     = reward * 5%   → DAO treasury
+        validator_reward  = reward * 15%  → Validator pool
+        subnet_fee       = reward * 0-20% → Subnet owner
+        miner_reward     = reward - protocol_fee - validator_reward - subnet_fee
 
     Priority multipliers adjust the effective reward:
         LOW:    0.8x
@@ -76,9 +76,10 @@ class FeeEngine:
             subnet_fee_rate=0.03,
             priority=TaskPriority.NORMAL,
         )
-        # breakdown.protocol_fee = 1.0
-        # breakdown.subnet_fee = 3.0
-        # breakdown.miner_reward = 96.0
+        # breakdown.protocol_fee     = 5.0
+        # breakdown.validator_reward = 15.0
+        # breakdown.subnet_fee       = 3.0
+        # breakdown.miner_reward     = 77.0
     """
 
     def __init__(

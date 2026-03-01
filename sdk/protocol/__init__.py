@@ -30,6 +30,12 @@ from .reward_distributor import RewardDistributor, RewardTransaction, RewardBatc
 from .escrow_manager import EscrowManager, EscrowDeposit, EscrowStatus
 from .treasury import Treasury, PayoutRecord, TreasurySnapshot
 from .heartbeat import MinerHeartbeat
+from .staking import StakingManager, StakeRole
+from .dispute import DisputeManager
+from .badges import BadgeManager, Badge
+from .emissions import EmissionSchedule, EmissionEpoch
+from .axon import Axon
+from .dendrite import Dendrite, DendriteResult
 
 __all__ = [
     # Types
@@ -64,4 +70,19 @@ __all__ = [
     "TreasurySnapshot",
     # Heartbeat
     "MinerHeartbeat",
+    # Staking
+    "StakingManager",
+    "StakeRole",
+    # Dispute
+    "DisputeManager",
+    # Badges
+    "BadgeManager",
+    "Badge",
+    # Emissions
+    "EmissionSchedule",
+    "EmissionEpoch",
+    # Networking
+    "Axon",
+    "Dendrite",
+    "DendriteResult",
 ]

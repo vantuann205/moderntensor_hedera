@@ -10,7 +10,7 @@ from .dimensions import (
     ScoringDimension, DimensionConfig, MultiDimensionScorer,
     CODE_REVIEW_DIMENSIONS, GENERAL_DIMENSIONS,
 )
-from .consensus import ScoreConsensus, ConsensusResult
+from .consensus import ScoreConsensus, ConsensusResult, CommitRevealConsensus, ScoreCommit
 from .weights import WeightCalculator, WeightMatrix
 from .proof_of_intelligence import ProofOfIntelligence, PoIResult
 from .proof_of_quality import ProofOfQuality, PoQResult
@@ -24,6 +24,8 @@ __all__ = [
     "GENERAL_DIMENSIONS",
     "ScoreConsensus",
     "ConsensusResult",
+    "CommitRevealConsensus",
+    "ScoreCommit",
     "WeightCalculator",
     "WeightMatrix",
     "ProofOfIntelligence",

@@ -110,9 +110,10 @@ The MDT token aligns incentives across the ecosystem.
 
 ### 6.2 Fee Structure (Sustainable Model)
 Every task generates revenue:
-*   **1% Protocol Fee:** Goes to the ModernTensor DAO Treasury.
-*   **3% Subnet Fee:** Goes to the Creator/Owner of the Subnet (incentivizes niche markets).
-*   **96% Miner Reward:** Goes to the winning nodes.
+*   **5% Protocol Fee:** Goes to the ModernTensor DAO Treasury.
+*   **15% Validator Reward:** Goes to the Trust Node validators who verify AI outputs.
+*   **Custom Subnet Fee (0-20%):** Goes to the Creator/Owner of the Subnet (incentivizes niche markets).
+*   **80% Miner Reward:** Goes to the winning AI nodes (minus subnet fee).
 
 ### 6.3 Dynamic Calibration
 *   **Bonding Curve:** Miner weight = `sqrt(Stake)`. Prevents "whale" dominance (diminishing returns on large stakes).

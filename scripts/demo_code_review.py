@@ -404,7 +404,7 @@ def main():
     print(f"  MDT Token: {hts.mdt_token_id}")
 
     print("\n💡 Protocol Economics:")
-    print(f"  Protocol Fee (1%): 0.50 MDT")
+    print(f"  Protocol Fee (5%): 2.50 MDT")
     print(f"  Subnet Fee (3%):   1.50 MDT")
     print(f"  Miner Reward:     48.00 MDT")
     print(f"  Total Deposit:    50.00 MDT")

@@ -35,6 +35,21 @@ from .contracts import (
     TaskStatus,
     TaskInfo,
 )
+from .subnet_registry import (
+    SubnetRegistryService,
+)
+from .staking_vault import (
+    StakingVaultService,
+    StakeRole,
+)
+from .governor import (
+    MDTGovernorService,
+    ProposalState,
+)
+from .guard import (
+    OnChainGuard,
+    GuardResult,
+)
 from .subnets import (
     SubnetService,
     SubnetConfig,
@@ -76,6 +91,13 @@ __all__ = [
     "SmartContractService",
     "TaskStatus",
     "TaskInfo",
+    "SubnetRegistryService",
+    "StakingVaultService",
+    "StakeRole",
+    "MDTGovernorService",
+    "ProposalState",
+    "OnChainGuard",
+    "GuardResult",
     # Subnets
     "SubnetService",
     "SubnetConfig",

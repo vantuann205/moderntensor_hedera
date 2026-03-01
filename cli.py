@@ -65,7 +65,7 @@ def get_protocol():
 
         _protocol = MarketplaceProtocol(
             config=ProtocolConfig(
-                protocol_fee_rate=0.01,
+                protocol_fee_rate=0.05,
                 min_stake_amount=100.0,
             ),
             validator_id="0.0.99999",

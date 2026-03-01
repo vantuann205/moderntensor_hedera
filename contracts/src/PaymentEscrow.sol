@@ -55,6 +55,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     /// @dev Maximum task duration
     uint256 public maxTaskDuration = 7 days;
 
+    /// @dev Maximum submissions per task (anti-spam)
+    uint256 public maxSubmissionsPerTask = 10;
+
     /// @dev Task counter for unique IDs
     uint256 private _taskIdCounter;
 
@@ -249,6 +252,23 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     event CommitPhaseConfigUpdated(uint256 commitDuration, uint256 revealDuration);
     event AdaptiveValidationsApplied(uint256 indexed taskId, uint256 baseMin, uint256 adaptiveMin);
 
+    // Dispute events
+    event DisputeOpened(uint256 indexed taskId, address indexed requester, uint256 disputeDeadline);
+    event DisputeResolved(uint256 indexed taskId, address indexed winner, uint256 amount);
+
+    // Burn events
+    event TokensBurned(uint256 indexed taskId, uint256 amount);
+
+    /// @dev Burn address for deflationary mechanism
+    address public constant BURN_ADDRESS = address(0xdEaD);
+
+    /// @dev Dispute deadline extension (7 days)
+    uint256 public disputeDuration = 7 days;
+
+    /// @dev Dispute tracking
+    mapping(uint256 => uint256) public disputeDeadlines;
+    mapping(uint256 => bool) public isDisputed;
+
     // =========================================================================
     // MODIFIERS
     // =========================================================================
@@ -350,6 +370,35 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         mdtToken.safeTransfer(msg.sender, refund);
     }
 
+    /**
+     * @dev Expire a task that has passed its deadline.
+     *      Anyone can call this — trustless cleanup.
+     *      Refunds the full deposit to the requester.
+     * @param taskId The task to expire
+     */
+    function expireTask(uint256 taskId) external nonReentrant taskExists(taskId) {
+        Task storage task = tasks[taskId];
+
+        require(
+            task.status == TaskStatus.Created ||
+            task.status == TaskStatus.InProgress ||
+            task.status == TaskStatus.PendingReview,
+            "Task not expirable"
+        );
+        require(block.timestamp > task.deadline, "Task not yet expired");
+        require(task.winningMiner == address(0), "Task has a winner");
+
+        // Effects before interactions (CEI)
+        uint256 refund = task.rewardAmount + task.platformFee + task.validatorReward;
+        task.status = TaskStatus.Expired;
+        activeTaskCount[task.requester]--;
+
+        emit TaskExpired(taskId);
+
+        // Refund to requester
+        mdtToken.safeTransfer(task.requester, refund);
+    }
+
     // =========================================================================
     // MINER FUNCTIONS
     // =========================================================================
@@ -391,6 +440,7 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         require(block.timestamp < task.deadline, "Task expired");
         require(bytes(resultHash).length > 0, "Empty result hash");
         require(!hasMinerSubmitted[taskId][msg.sender], "Miner already submitted");
+        require(taskSubmissions[taskId].length < maxSubmissionsPerTask, "Max submissions reached");
 
         // Mark miner as submitted (prevent spam)
         hasMinerSubmitted[taskId][msg.sender] = true;
@@ -448,6 +498,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         MinerSubmission storage submission = taskSubmissions[taskId][minerIndex];
         require(!submission.validated, "Submission already has consensus");
+
+        // GUARD: If commit-reveal has started for this submission, block direct scoring
+        require(
+            commitPhaseStart[taskId][minerIndex] == 0,
+            "Commit-reveal active: use commitScore/revealScore"
+        );
 
         // Record this validator's individual score
         validatorScores[taskId][minerIndex][msg.sender] = score;
@@ -743,8 +799,10 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         task.completedAt = block.timestamp;
         activeTaskCount[cachedRequester]--;
 
-        // Collect platform fee
-        collectedFees += cachedFee;
+        // Collect platform fee (burn 50% for deflationary mechanism)
+        uint256 burnAmount = cachedFee / 2;
+        uint256 keepFee = cachedFee - burnAmount;
+        collectedFees += keepFee;
 
         // Record miner earnings + credit pending withdrawal (Pull pattern)
         minerEarnings[cachedWinner] += cachedReward;
@@ -753,10 +811,85 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         // ── EVENTS: Emit before external interactions (CEI pattern) ─────
         emit TaskCompleted(taskId, cachedWinner, cachedReward, cachedScore);
 
+        // ── INTERACTIONS: Burn tokens ────────────────────────────────────
+        if (burnAmount > 0) {
+            mdtToken.safeTransfer(BURN_ADDRESS, burnAmount);
+            emit TokensBurned(taskId, burnAmount);
+        }
+
         // ── INTERACTIONS: Credit validator rewards (Pull pattern) ────────
         if (cachedValReward > 0) {
             _distributeValidatorRewards(taskId, cachedValReward);
         }
+    }
+
+    // =========================================================================
+    // DISPUTE RESOLUTION
+    // =========================================================================
+
+    /**
+     * @dev Open a dispute on a completed task. Only the requester can dispute.
+     *      Locks funds for `disputeDuration` for resolution.
+     * @param taskId Task to dispute
+     */
+    function openDispute(uint256 taskId) external nonReentrant taskExists(taskId) {
+        Task storage task = tasks[taskId];
+
+        require(msg.sender == task.requester, "Only requester can dispute");
+        require(
+            task.status == TaskStatus.Completed,
+            "Can only dispute completed tasks"
+        );
+        require(!isDisputed[taskId], "Already disputed");
+
+        // Effects
+        task.status = TaskStatus.Disputed;
+        isDisputed[taskId] = true;
+        disputeDeadlines[taskId] = block.timestamp + disputeDuration;
+
+        emit DisputeOpened(taskId, msg.sender, disputeDeadlines[taskId]);
+    }
+
+    /**
+     * @dev Resolve a dispute. Owner decides winner.
+     *      If requester wins → miner earnings clawed back, requester refunded.
+     *      If miner wins → no change, task returns to Completed.
+     * @param taskId Task in dispute
+     * @param requesterWins True if requester wins the dispute
+     */
+    function resolveDispute(
+        uint256 taskId,
+        bool requesterWins
+    ) external onlyOwner nonReentrant taskExists(taskId) {
+        Task storage task = tasks[taskId];
+
+        require(task.status == TaskStatus.Disputed, "Not in dispute");
+
+        if (requesterWins) {
+            // Claw back miner earnings (if not yet withdrawn)
+            address miner = task.winningMiner;
+            uint256 reward = task.rewardAmount;
+
+            if (pendingWithdrawals[miner] >= reward) {
+                pendingWithdrawals[miner] -= reward;
+                minerEarnings[miner] -= reward;
+
+                // Refund to requester
+                mdtToken.safeTransfer(task.requester, reward);
+                emit DisputeResolved(taskId, task.requester, reward);
+            } else {
+                // Miner already withdrew — cannot claw back
+                emit DisputeResolved(taskId, task.requester, 0);
+            }
+
+            task.status = TaskStatus.Cancelled;
+        } else {
+            // Miner wins — restore to Completed
+            task.status = TaskStatus.Completed;
+            emit DisputeResolved(taskId, task.winningMiner, 0);
+        }
+
+        isDisputed[taskId] = false;
     }
 
     /**
@@ -1011,34 +1144,8 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         mdtToken.safeTransfer(to, amount);
     }
 
-    /**
-     * @dev Mark expired task
-     * @param taskId Task to expire
-     */
-    function expireTask(uint256 taskId) external taskExists(taskId) whenNotPaused {
-        Task storage task = tasks[taskId];
-
-        require(
-            task.status == TaskStatus.Created ||
-            task.status == TaskStatus.InProgress,
-            "Cannot expire this task"
-        );
-        require(block.timestamp >= task.deadline, "Task not expired yet");
-
-        // ── GAS OPTIMIZATION: Cache storage reads ───────────────────────
-        address cachedRequester = task.requester;
-        uint256 refund = task.rewardAmount + task.platformFee + task.validatorReward;
-
-        // ── EFFECTS ─────────────────────────────────────────────────────
-        task.status = TaskStatus.Expired;
-        activeTaskCount[cachedRequester]--;
-
-        // ── EVENTS (CEI: before external call) ──────────────────────────
-        emit TaskExpired(taskId);
-
-        // ── INTERACTIONS ────────────────────────────────────────────────
-        mdtToken.safeTransfer(cachedRequester, refund);
-    }
+    // NOTE: expireTask() has been moved to the main task lifecycle section (line ~352)
+    // to be alongside cancelTask() for better code organization.
 
     /**
      * @dev Pause contract

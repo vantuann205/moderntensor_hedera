@@ -83,9 +83,9 @@ class Treasury:
     Protocol-level accounting for all token flows.
 
     Tracks every MDT that flows through the protocol:
-    - Protocol fees (1% → DAO treasury)
+    - Protocol fees (5% → DAO treasury)
     - Subnet fees (3% default → subnet owners)
-    - Miner rewards (96% → winning miners)
+    - Miner rewards (77% → winning miners)
 
     Architecture:
         ┌────────────────────────────────────────────────┐
@@ -120,7 +120,7 @@ class Treasury:
         print(f"Miner earned: {earnings} MDT")
     """
 
-    def __init__(self):
+    def __init__(self, state_dir: Optional[str] = None):
         # Running totals
         self._total_protocol_fees: float = 0.0
         self._total_subnet_fees: float = 0.0
@@ -140,7 +140,14 @@ class Treasury:
         self._unique_miners: set = set()
         self._unique_tasks: set = set()
 
-        logger.info("Treasury initialized")
+        # Persistence
+        self._state_file: Optional[Path] = None
+        if state_dir:
+            self._state_file = Path(state_dir) / "treasury_state.json"
+            self._state_file.parent.mkdir(parents=True, exist_ok=True)
+            self.load_state()
+
+        logger.info("Treasury initialized (persistence=%s)", self._state_file is not None)
 
     # -----------------------------------------------------------------------
     # Recording
@@ -217,6 +224,7 @@ class Treasury:
             protocol_fee, subnet_fee,
         )
 
+        self._auto_save()
         return record
 
     # -----------------------------------------------------------------------
@@ -289,3 +297,60 @@ class Treasury:
             "unique_miners": len(self._unique_miners),
             "unique_tasks": len(self._unique_tasks),
         }
+
+    # -----------------------------------------------------------------------
+    # Persistence
+    # -----------------------------------------------------------------------
+
+    def save_state(self) -> None:
+        """Persist treasury state to JSON file."""
+        if not self._state_file:
+            return
+        state = {
+            "total_protocol_fees": self._total_protocol_fees,
+            "total_subnet_fees": self._total_subnet_fees,
+            "total_miner_rewards": self._total_miner_rewards,
+            "total_volume": self._total_volume,
+            "miner_earnings": self._miner_earnings,
+            "miner_task_counts": self._miner_task_counts,
+            "subnet_revenue": {str(k): v for k, v in self._subnet_revenue.items()},
+            "unique_miners": list(self._unique_miners),
+            "unique_tasks": list(self._unique_tasks),
+            "payout_history": [r.to_dict() for r in self._payout_history[-500:]],
+        }
+        try:
+            self._state_file.write_text(json.dumps(state, indent=2))
+            logger.debug("Treasury state saved to %s", self._state_file)
+        except Exception as e:
+            logger.error("Failed to save treasury state: %s", e)
+
+    def load_state(self) -> None:
+        """Load treasury state from JSON file."""
+        if not self._state_file or not self._state_file.exists():
+            return
+        try:
+            state = json.loads(self._state_file.read_text())
+            self._total_protocol_fees = state.get("total_protocol_fees", 0.0)
+            self._total_subnet_fees = state.get("total_subnet_fees", 0.0)
+            self._total_miner_rewards = state.get("total_miner_rewards", 0.0)
+            self._total_volume = state.get("total_volume", 0.0)
+            self._miner_earnings = state.get("miner_earnings", {})
+            self._miner_task_counts = state.get("miner_task_counts", {})
+            self._subnet_revenue = {
+                int(k): v for k, v in state.get("subnet_revenue", {}).items()
+            }
+            self._unique_miners = set(state.get("unique_miners", []))
+            self._unique_tasks = set(state.get("unique_tasks", []))
+            logger.info(
+                "Treasury state loaded: volume=%.4f MDT, %d payouts",
+                self._total_volume, len(state.get("payout_history", [])),
+            )
+        except Exception as e:
+            logger.error("Failed to load treasury state: %s", e)
+
+    def _auto_save(self) -> None:
+        """Auto-save state after mutations (non-blocking)."""
+        try:
+            self.save_state()
+        except Exception:
+            pass  # Never block the main flow

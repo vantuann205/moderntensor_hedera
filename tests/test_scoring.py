@@ -6,7 +6,8 @@ Verifies:
 - 5-dimension scoring with configurable weights
 - Weighted median consensus aggregation
 - Outlier detection via IQR method (index-based)
-- Bonding curve weight calculation (sqrt diminishing returns)
+- Merit-based miner weight calculation
+- Stake-based validator weight calculation
 - Weight normalization and capping
 """
 
@@ -140,30 +141,26 @@ def test_consensus_to_dict():
 
 
 # =========================================================================
-# WeightCalculator Tests
+# WeightCalculator Tests — Miner (Merit-Based)
 # =========================================================================
 
-def test_weight_sqrt_bonding_curve():
-    """Weights use sqrt bonding curve — diminishing returns."""
+def test_weight_merit_based():
+    """Miner weight depends on performance, NOT on stake amount."""
     calc = WeightCalculator(min_stake=100.0, weight_cap=0.99)
 
     miners = [
-        {"miner_id": "miner_a", "reputation_score": 0.8, "stake_amount": 100.0,
-         "success_rate": 0.9, "timeout_rate": 0.0, "total_tasks": 50},
-        {"miner_id": "miner_b", "reputation_score": 0.8, "stake_amount": 400.0,
-         "success_rate": 0.9, "timeout_rate": 0.0, "total_tasks": 50},
-        {"miner_id": "miner_c", "reputation_score": 0.8, "stake_amount": 1600.0,
-         "success_rate": 0.9, "timeout_rate": 0.0, "total_tasks": 50},
+        {"miner_id": "high_rep", "reputation_score": 0.95, "stake_amount": 100.0,
+         "success_rate": 0.95, "timeout_rate": 0.0, "total_tasks": 50},
+        {"miner_id": "med_rep", "reputation_score": 0.70, "stake_amount": 100.0,
+         "success_rate": 0.80, "timeout_rate": 0.0, "total_tasks": 50},
+        {"miner_id": "low_rep", "reputation_score": 0.40, "stake_amount": 100.0,
+         "success_rate": 0.60, "timeout_rate": 0.1, "total_tasks": 50},
     ]
     matrix = calc.calculate(miners)
     raw = matrix.raw_weights
 
-    # miner_c has 16x stake but should NOT have 16x raw weight (sqrt curve)
-    ratio = raw["miner_c"] / raw["miner_a"]
-    assert ratio < 10, f"Bonding curve not working: ratio = {ratio}"
-
-    # Higher stake should give higher raw weight
-    assert raw["miner_c"] > raw["miner_b"] > raw["miner_a"]
+    # Higher reputation → higher weight (merit-based)
+    assert raw["high_rep"] > raw["med_rep"] > raw["low_rep"]
 
 
 def test_weight_normalization():
@@ -184,17 +181,43 @@ def test_weight_normalization():
     assert abs(total - 1.0) < 0.01, f"Weights sum to {total}"
 
 
-def test_weight_below_min_stake():
-    """Miner below min stake gets lower weight."""
+def test_weight_stake_does_not_affect_miners():
+    """Miner stake (agent bond) should NOT affect miner weight."""
     calc = WeightCalculator(min_stake=100.0)
     miners = [
-        {"miner_id": "good", "reputation_score": 0.8, "stake_amount": 500.0,
+        {"miner_id": "rich", "reputation_score": 0.8, "stake_amount": 10000.0,
          "success_rate": 0.9, "timeout_rate": 0.0, "total_tasks": 50},
-        {"miner_id": "poor", "reputation_score": 0.8, "stake_amount": 10.0,
+        {"miner_id": "poor", "reputation_score": 0.8, "stake_amount": 0.0,
          "success_rate": 0.9, "timeout_rate": 0.0, "total_tasks": 50},
     ]
     matrix = calc.calculate(miners)
     raw = matrix.raw_weights
 
-    # Raw weight should clearly favor the well-staked miner
-    assert raw["good"] > raw["poor"]
+    # Same reputation + same reliability = same weight, regardless of stake
+    assert abs(raw["rich"] - raw["poor"]) < 0.001
+
+
+# =========================================================================
+# WeightCalculator Tests — Validator (Stake-Based)
+# =========================================================================
+
+def test_validator_weight_stake_matters():
+    """Validator weight SHOULD depend on stake (skin-in-the-game)."""
+    calc = WeightCalculator(min_stake=100.0, weight_cap=0.99)
+    validators = [
+        {"validator_id": "v1", "stake_amount": 100.0,
+         "reliability_score": 0.9, "dishonesty_rate": 0.0},
+        {"validator_id": "v2", "stake_amount": 400.0,
+         "reliability_score": 0.9, "dishonesty_rate": 0.0},
+        {"validator_id": "v3", "stake_amount": 1600.0,
+         "reliability_score": 0.9, "dishonesty_rate": 0.0},
+    ]
+    matrix = calc.calculate_validator_weights(validators)
+    raw = matrix.raw_weights
+
+    # Higher stake → higher validator weight (sqrt bonding curve)
+    assert raw["v3"] > raw["v2"] > raw["v1"]
+
+    # But diminishing returns: 16x stake should NOT give 16x weight
+    ratio = raw["v3"] / raw["v1"]
+    assert ratio < 10, f"Bonding curve not working: ratio = {ratio}"
