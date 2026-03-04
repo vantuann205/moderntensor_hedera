@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 class StakeRole(IntEnum):
-    """Staking role matching StakingVault.sol"""
-    MINER = 0
-    VALIDATOR = 1
+    """Staking role matching StakingVaultV2.sol (V1 used different ordinals)"""
+
+    NONE = 0
+    MINER = 1
+    VALIDATOR = 2
 
 
 class StakingVaultService:
@@ -39,6 +41,7 @@ class StakingVaultService:
         if self._contract_id:
             return self._contract_id
         import os
+
         cid = os.getenv("HEDERA_STAKING_VAULT_CONTRACT_ID")
         if cid and cid != "None":
             return cid

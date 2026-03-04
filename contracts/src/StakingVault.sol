@@ -47,7 +47,7 @@ contract StakingVault is ReentrancyGuard, Ownable, Pausable {
         uint256 amount;
         StakeRole role;
         uint256 stakedAt;
-        uint256 unstakeRequestedAt;   // 0 if not unstaking
+        uint256 unstakeRequestedAt; // 0 if not unstaking
         bool isActive;
     }
 
@@ -91,7 +91,11 @@ contract StakingVault is ReentrancyGuard, Ownable, Pausable {
     event UnstakeRequested(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
     event Slashed(address indexed user, uint256 amount, string reason);
-    event StakeIncreased(address indexed user, uint256 additionalAmount, uint256 newTotal);
+    event StakeIncreased(
+        address indexed user,
+        uint256 additionalAmount,
+        uint256 newTotal
+    );
 
     // =========================================================================
     // CONSTRUCTOR
@@ -111,8 +115,14 @@ contract StakingVault is ReentrancyGuard, Ownable, Pausable {
      * @param amount Amount of MDT to stake (in smallest unit)
      * @param role The role to stake for (Miner or Validator)
      */
-    function stake(uint256 amount, StakeRole role) external nonReentrant whenNotPaused {
-        require(role == StakeRole.Miner || role == StakeRole.Validator, "Invalid role");
+    function stake(
+        uint256 amount,
+        StakeRole role
+    ) external nonReentrant whenNotPaused {
+        require(
+            role == StakeRole.Miner || role == StakeRole.Validator,
+            "Invalid role"
+        );
         require(amount > 0, "Amount must be > 0");
 
         StakeInfo storage info = stakes[msg.sender];
@@ -131,7 +141,9 @@ contract StakingVault is ReentrancyGuard, Ownable, Pausable {
         }
 
         // New stake
-        uint256 minStake = role == StakeRole.Validator ? minValidatorStake : minMinerStake;
+        uint256 minStake = role == StakeRole.Validator
+            ? minValidatorStake
+            : minMinerStake;
         require(amount >= minStake, "Below minimum stake");
 
         stakes[msg.sender] = StakeInfo({
@@ -217,7 +229,10 @@ contract StakingVault is ReentrancyGuard, Ownable, Pausable {
         uint256 basisPoints,
         string calldata reason
     ) external onlyOwner nonReentrant {
-        require(basisPoints > 0 && basisPoints <= 10000, "Invalid basis points");
+        require(
+            basisPoints > 0 && basisPoints <= 10000,
+            "Invalid basis points"
+        );
 
         StakeInfo storage info = stakes[user];
         require(info.amount > 0, "No stake to slash");
@@ -276,33 +291,65 @@ contract StakingVault is ReentrancyGuard, Ownable, Pausable {
     /**
      * @dev Get stake details for a user.
      */
-    function getStakeInfo(address user) external view returns (
-        uint256 amount,
-        StakeRole role,
-        uint256 stakedAt,
-        uint256 unstakeRequestedAt,
-        bool isActive
-    ) {
+    function getStakeInfo(
+        address user
+    )
+        external
+        view
+        returns (
+            uint256 amount,
+            StakeRole role,
+            uint256 stakedAt,
+            uint256 unstakeRequestedAt,
+            bool isActive
+        )
+    {
         StakeInfo storage info = stakes[user];
-        return (info.amount, info.role, info.stakedAt, info.unstakeRequestedAt, info.isActive);
+        return (
+            info.amount,
+            info.role,
+            info.stakedAt,
+            info.unstakeRequestedAt,
+            info.isActive
+        );
     }
 
     // =========================================================================
     // ADMIN
     // =========================================================================
 
+    event MinMinerStakeUpdated(uint256 oldValue, uint256 newValue);
+    event MinValidatorStakeUpdated(uint256 oldValue, uint256 newValue);
+    event UnstakeCooldownUpdated(uint256 oldValue, uint256 newValue);
+
     function setMinMinerStake(uint256 _min) external onlyOwner {
+        require(_min > 0, "Must be > 0");
+        require(_min <= 100_000 * 1e8, "Too high");
+        uint256 old = minMinerStake;
         minMinerStake = _min;
+        emit MinMinerStakeUpdated(old, _min);
     }
 
     function setMinValidatorStake(uint256 _min) external onlyOwner {
+        require(_min > 0, "Must be > 0");
+        require(_min <= 1_000_000 * 1e8, "Too high");
+        uint256 old = minValidatorStake;
         minValidatorStake = _min;
+        emit MinValidatorStakeUpdated(old, _min);
     }
 
     function setUnstakeCooldown(uint256 _cooldown) external onlyOwner {
+        require(_cooldown >= 1 hours, "Too short");
+        require(_cooldown <= 90 days, "Too long");
+        uint256 old = unstakeCooldown;
         unstakeCooldown = _cooldown;
+        emit UnstakeCooldownUpdated(old, _cooldown);
     }
 
-    function pause() external onlyOwner { _pause(); }
-    function unpause() external onlyOwner { _unpause(); }
+    function pause() external onlyOwner {
+        _pause();
+    }
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 }

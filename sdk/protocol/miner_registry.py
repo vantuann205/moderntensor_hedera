@@ -72,7 +72,10 @@ class MinerRegistry:
         self.state_file = self.data_dir / "miner_registry.json"
 
         self.load_state()
-        logger.info("MinerRegistry initialized — min_stake=%.1f MDT", self.config.min_stake_amount)
+        logger.info(
+            "MinerRegistry initialized — min_stake=%.1f MDT",
+            self.config.min_stake_amount,
+        )
 
     @property
     def total_miners(self) -> int:
@@ -123,8 +126,8 @@ class MinerRegistry:
             )
 
         # M5: enforce max miners per subnet
-        max_per_subnet = getattr(self.config, 'max_miners_per_subnet', 1000)
-        for sid in (subnet_ids or [0]):
+        max_per_subnet = getattr(self.config, "max_miners_per_subnet", 1000)
+        for sid in subnet_ids or [0]:
             current_count = len(self._subnet_miners.get(sid, []))
             if current_count >= max_per_subnet:
                 raise ValueError(
@@ -216,9 +219,7 @@ class MinerRegistry:
         """Reactivate a suspended miner."""
         miner = self._get_miner_or_raise(miner_id)
         if miner.status != MinerStatus.SUSPENDED:
-            raise ValueError(
-                f"Miner {miner_id} is {miner.status.value}, not suspended"
-            )
+            raise ValueError(f"Miner {miner_id} is {miner.status.value}, not suspended")
         miner.status = MinerStatus.ACTIVE
         miner.metadata.pop("suspension_reason", None)
         miner.metadata.pop("suspended_at", None)
@@ -267,10 +268,7 @@ class MinerRegistry:
             List of eligible MinerInfo objects
         """
         miners = self.get_active_miners(subnet_id)
-        return [
-            m for m in miners
-            if capability in m.capabilities or not m.capabilities
-        ]
+        return [m for m in miners if capability in m.capabilities or not m.capabilities]
 
     def update_reputation(
         self,
@@ -306,7 +304,7 @@ class MinerRegistry:
             self.suspend(
                 miner_id,
                 reason=f"Reputation {miner.reputation.score:.2f} below "
-                       f"threshold {self.config.miner_suspension_threshold}",
+                f"threshold {self.config.miner_suspension_threshold}",
             )
 
         logger.debug(
@@ -320,11 +318,7 @@ class MinerRegistry:
     def save_state(self) -> None:
         """Save registry state to JSON file."""
         try:
-            data = {
-                "miners": {
-                    mid: m.to_dict() for mid, m in self._miners.items()
-                }
-            }
+            data = {"miners": {mid: m.to_dict() for mid, m in self._miners.items()}}
             with open(self.state_file, "w") as f:
                 json.dump(data, f, indent=2)
         except Exception as e:
@@ -356,11 +350,9 @@ class MinerRegistry:
                     m_data["status"] = MinerStatus(status_str)
                     # Strip computed @property fields
                     m_data.pop("effective_weight", None)
+                    m_data.pop("axon_endpoint", None)
 
-                    miner = MinerInfo(
-                        reputation=reputation,
-                        **m_data
-                    )
+                    miner = MinerInfo(reputation=reputation, **m_data)
                     self._miners[mid] = miner
 
                     # Rebuild index
@@ -420,9 +412,7 @@ class MinerRegistry:
         total_stake = sum(m.stake_amount for m in self._miners.values())
         active = [m for m in self._miners.values() if m.is_active]
         avg_reputation = (
-            sum(m.reputation.score for m in active) / len(active)
-            if active
-            else 0.0
+            sum(m.reputation.score for m in active) / len(active) if active else 0.0
         )
 
         return {

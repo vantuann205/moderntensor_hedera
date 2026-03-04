@@ -32,6 +32,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./ValidationLib.sol";
 
 contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     using SafeERC20 for IERC20;
@@ -89,14 +90,14 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
     struct Subnet {
         uint256 id;
-        string name;                    // e.g., "General Intelligence", "Data Labeling"
-        string description;             // Subnet purpose
-        address owner;                  // Subnet owner (receives subnet fees)
-        uint256 feeRate;                // Subnet fee in basis points (max 2000 = 20%)
-        uint256 minTaskReward;          // Minimum reward for tasks in this subnet
-        uint256 totalVolume;            // Total MDT volume processed
-        uint256 totalTasks;             // Total tasks completed
-        uint256 activeMiners;           // Registered miners count
+        string name; // e.g., "General Intelligence", "Data Labeling"
+        string description; // Subnet purpose
+        address owner; // Subnet owner (receives subnet fees)
+        uint256 feeRate; // Subnet fee in basis points (max 2000 = 20%)
+        uint256 minTaskReward; // Minimum reward for tasks in this subnet
+        uint256 totalVolume; // Total MDT volume processed
+        uint256 totalTasks; // Total tasks completed
+        uint256 activeMiners; // Registered miners count
         SubnetStatus status;
         uint256 createdAt;
     }
@@ -112,13 +113,13 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
     struct Task {
         uint256 id;
-        uint256 subnetId;               // Which subnet this task belongs to
+        uint256 subnetId; // Which subnet this task belongs to
         address requester;
         string taskHash;
-        uint256 rewardAmount;           // Miner reward (80%)
-        uint256 protocolFee;            // 5% protocol fee
-        uint256 validatorReward;        // 15% validator pool
-        uint256 subnetFee;              // Subnet owner fee
+        uint256 rewardAmount; // Miner reward (80%)
+        uint256 protocolFee; // 5% protocol fee
+        uint256 validatorReward; // 15% validator pool
+        uint256 subnetFee; // Subnet owner fee
         uint256 deadline;
         TaskStatus status;
         address winningMiner;
@@ -129,10 +130,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     struct MinerSubmission {
         address miner;
         string resultHash;
-        uint256 score;                  // Consensus median score (0-10000)
-        bool validated;                 // Has reached consensus (minValidations met)
+        uint256 score; // Consensus median score (0-10000)
+        bool validated; // Has reached consensus (minValidations met)
         uint256 submittedAt;
-        uint256 validationCount;        // Number of validators who have scored
+        uint256 validationCount; // Number of validators who have scored
     }
 
     // =========================================================================
@@ -164,13 +165,16 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     mapping(uint256 => mapping(address => bool)) public hasMinerSubmitted;
 
     /// @dev Task ID => Miner index => Validator address => Score
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public validatorScores;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
+        public validatorScores;
 
     /// @dev Task ID => Miner index => Validator address => has scored
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasValidatorScored;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool)))
+        public hasValidatorScored;
 
     /// @dev Task ID => Miner index => Validator addresses (for median calc)
-    mapping(uint256 => mapping(uint256 => address[])) internal _submissionValidators;
+    mapping(uint256 => mapping(uint256 => address[]))
+        internal _submissionValidators;
 
     /// @dev Validator address => Total earnings
     mapping(address => uint256) public validatorEarnings;
@@ -183,10 +187,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
     /// @dev Validator Reputation tracking
     struct ValidatorReputation {
-        uint256 totalValidations;    // Total times participated in consensus
+        uint256 totalValidations; // Total times participated in consensus
         uint256 accurateValidations; // Times within 20% of median
-        uint256 reputationScore;     // = accurate / total * 10000 (basis points)
-        uint256 lastActiveAt;        // Last activity timestamp
+        uint256 reputationScore; // = accurate / total * 10000 (basis points)
+        uint256 lastActiveAt; // Last activity timestamp
     }
 
     /// @dev Validator address => Reputation data
@@ -203,7 +207,8 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         uint256 revealedScore;
     }
 
-    mapping(uint256 => mapping(uint256 => mapping(address => ValidationCommit))) public validationCommits;
+    mapping(uint256 => mapping(uint256 => mapping(address => ValidationCommit)))
+        public validationCommits;
     mapping(uint256 => mapping(uint256 => uint256)) public commitCount;
     mapping(uint256 => mapping(uint256 => uint256)) public revealCount;
     mapping(uint256 => mapping(uint256 => uint256)) public commitPhaseStart;
@@ -227,20 +232,11 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         SubnetStatus newStatus
     );
 
-    event MinerRegistered(
-        uint256 indexed subnetId,
-        address indexed miner
-    );
+    event MinerRegistered(uint256 indexed subnetId, address indexed miner);
 
-    event ValidatorAdded(
-        uint256 indexed subnetId,
-        address indexed validator
-    );
+    event ValidatorAdded(uint256 indexed subnetId, address indexed validator);
 
-    event ValidatorRemoved(
-        uint256 indexed subnetId,
-        address indexed validator
-    );
+    event ValidatorRemoved(uint256 indexed subnetId, address indexed validator);
 
     event TaskCreated(
         uint256 indexed taskId,
@@ -278,23 +274,55 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         uint256 subnetFee
     );
 
-    event ProtocolFeesWithdrawn(
-        address indexed to,
-        uint256 amount
-    );
+    event ProtocolFeesWithdrawn(address indexed to, uint256 amount);
 
     event EarningsWithdrawn(address indexed account, uint256 amount);
 
-    event ValidatorPenalized(uint256 indexed taskId, address indexed validator, uint256 deviation);
-    event ValidatorRewarded(uint256 indexed taskId, address indexed validator, uint256 amount, uint256 deviation);
+    event ValidatorPenalized(
+        uint256 indexed taskId,
+        address indexed validator,
+        uint256 deviation
+    );
+    event ValidatorRewarded(
+        uint256 indexed taskId,
+        address indexed validator,
+        uint256 amount,
+        uint256 deviation
+    );
 
-    event ReputationUpdated(address indexed validator, uint256 newScore, uint256 totalValidations, uint256 accurateValidations);
+    event ReputationUpdated(
+        address indexed validator,
+        uint256 newScore,
+        uint256 totalValidations,
+        uint256 accurateValidations
+    );
 
-    event ScoreCommitted(uint256 indexed taskId, uint256 minerIndex, address indexed validator);
-    event ScoreRevealed(uint256 indexed taskId, uint256 minerIndex, address indexed validator, uint256 score);
-    event CommitPhaseConfigUpdated(uint256 commitDuration, uint256 revealDuration);
-    event ReputationPorted(address indexed validator, uint256 fromSubnet, uint256 toSubnet, uint256 portedScore);
-    event AdaptiveValidationsApplied(uint256 indexed taskId, uint256 baseMin, uint256 adaptiveMin);
+    event ScoreCommitted(
+        uint256 indexed taskId,
+        uint256 minerIndex,
+        address indexed validator
+    );
+    event ScoreRevealed(
+        uint256 indexed taskId,
+        uint256 minerIndex,
+        address indexed validator,
+        uint256 score
+    );
+    event CommitPhaseConfigUpdated(
+        uint256 commitDuration,
+        uint256 revealDuration
+    );
+    event ReputationPorted(
+        address indexed validator,
+        uint256 fromSubnet,
+        uint256 toSubnet,
+        uint256 portedScore
+    );
+    event AdaptiveValidationsApplied(
+        uint256 indexed taskId,
+        uint256 baseMin,
+        uint256 adaptiveMin
+    );
 
     // =========================================================================
     // CONSTRUCTOR
@@ -307,7 +335,12 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         protocolTreasury = _treasury;
 
         // Create Subnet 0: General Intelligence (owned by protocol)
-        _createSubnet("General Intelligence", "Text, Code, and General AI Tasks", msg.sender, 500);
+        _createSubnet(
+            "General Intelligence",
+            "Text, Code, and General AI Tasks",
+            msg.sender,
+            500
+        );
     }
 
     // =========================================================================
@@ -329,7 +362,11 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         require(feeRate <= MAX_SUBNET_FEE_RATE, "Fee too high");
 
         // Stake registration cost (refundable on unregister)
-        mdtToken.safeTransferFrom(msg.sender, address(this), SUBNET_REGISTRATION_COST);
+        mdtToken.safeTransferFrom(
+            msg.sender,
+            address(this),
+            SUBNET_REGISTRATION_COST
+        );
 
         subnetId = _createSubnet(name, description, msg.sender, feeRate);
     }
@@ -341,7 +378,11 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     function unregisterSubnet(uint256 subnetId) external nonReentrant {
         Subnet storage subnet = subnets[subnetId];
         require(msg.sender == subnet.owner, "Not subnet owner");
-        require(subnet.status == SubnetStatus.Active || subnet.status == SubnetStatus.Paused, "Already deprecated");
+        require(
+            subnet.status == SubnetStatus.Active ||
+                subnet.status == SubnetStatus.Paused,
+            "Already deprecated"
+        );
 
         // Effects first (CEI)
         subnet.status = SubnetStatus.Deprecated;
@@ -416,7 +457,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
      * @dev Register as a miner in a subnet
      */
     function registerMiner(uint256 subnetId) external {
-        require(subnets[subnetId].status == SubnetStatus.Active, "Subnet not active");
+        require(
+            subnets[subnetId].status == SubnetStatus.Active,
+            "Subnet not active"
+        );
         require(!subnetMiners[subnetId][msg.sender], "Already registered");
 
         subnetMiners[subnetId][msg.sender] = true;
@@ -448,13 +492,16 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         uint256 protocolFee = (rewardAmount * PROTOCOL_FEE_RATE) / 10000;
         uint256 valReward = (rewardAmount * VALIDATOR_REWARD_RATE) / 10000;
         uint256 subnetFee = (rewardAmount * subnet.feeRate) / 10000;
-        uint256 totalDeposit = rewardAmount + protocolFee + valReward + subnetFee;
+        uint256 totalDeposit = rewardAmount +
+            protocolFee +
+            valReward +
+            subnetFee;
 
         // Transfer tokens
         mdtToken.safeTransferFrom(msg.sender, address(this), totalDeposit);
 
-        // Create task
-        taskId = _taskIdCounter++;
+        // Create task (start from 1 to distinguish from uninitialized storage)
+        taskId = ++_taskIdCounter;
 
         tasks[taskId] = Task({
             id: taskId,
@@ -485,29 +532,43 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         Task storage task = tasks[taskId];
         require(
             task.status == TaskStatus.Created ||
-            task.status == TaskStatus.InProgress ||
-            task.status == TaskStatus.PendingReview,
+                task.status == TaskStatus.InProgress ||
+                task.status == TaskStatus.PendingReview,
             "Cannot submit"
         );
         require(block.timestamp < task.deadline, "Task expired");
-        require(subnetMiners[task.subnetId][msg.sender], "Not registered in subnet");
-        require(!hasMinerSubmitted[taskId][msg.sender], "Miner already submitted");
-        require(taskSubmissions[taskId].length < maxSubmissionsPerTask, "Max submissions reached");
+        require(
+            subnetMiners[task.subnetId][msg.sender],
+            "Not registered in subnet"
+        );
+        require(
+            !hasMinerSubmitted[taskId][msg.sender],
+            "Miner already submitted"
+        );
+        require(
+            taskSubmissions[taskId].length < maxSubmissionsPerTask,
+            "Max submissions reached"
+        );
 
         // Mark as submitted (anti-spam)
         hasMinerSubmitted[taskId][msg.sender] = true;
 
-        taskSubmissions[taskId].push(MinerSubmission({
-            miner: msg.sender,
-            resultHash: resultHash,
-            score: 0,
-            validated: false,
-            submittedAt: block.timestamp,
-            validationCount: 0
-        }));
+        taskSubmissions[taskId].push(
+            MinerSubmission({
+                miner: msg.sender,
+                resultHash: resultHash,
+                score: 0,
+                validated: false,
+                submittedAt: block.timestamp,
+                validationCount: 0
+            })
+        );
 
         // FIX: transition from BOTH Created and InProgress
-        if (task.status == TaskStatus.Created || task.status == TaskStatus.InProgress) {
+        if (
+            task.status == TaskStatus.Created ||
+            task.status == TaskStatus.InProgress
+        ) {
             task.status = TaskStatus.PendingReview;
         }
 
@@ -525,15 +586,18 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
         require(
             task.status == TaskStatus.Created ||
-            task.status == TaskStatus.InProgress ||
-            task.status == TaskStatus.PendingReview,
+                task.status == TaskStatus.InProgress ||
+                task.status == TaskStatus.PendingReview,
             "Task not expirable"
         );
         require(block.timestamp > task.deadline, "Task not yet expired");
         require(task.winningMiner == address(0), "Task has a winner");
 
         // Effects before interactions (CEI)
-        uint256 refund = task.rewardAmount + task.protocolFee + task.validatorReward + task.subnetFee;
+        uint256 refund = task.rewardAmount +
+            task.protocolFee +
+            task.validatorReward +
+            task.subnetFee;
         task.status = TaskStatus.Expired;
 
         // Refund to requester
@@ -557,22 +621,27 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         uint256 taskId,
         uint256 submissionIndex,
         uint256 score
-    ) external {
+    ) external nonReentrant whenNotPaused {
         Task storage task = tasks[taskId];
         require(
             task.status == TaskStatus.PendingReview ||
-            task.status == TaskStatus.InProgress,
+                task.status == TaskStatus.InProgress,
             "Not pending review"
         );
         require(subnetValidators[task.subnetId][msg.sender], "Not a validator");
-        require(submissionIndex < taskSubmissions[taskId].length, "Invalid index");
+        require(
+            submissionIndex < taskSubmissions[taskId].length,
+            "Invalid index"
+        );
         require(score <= 10000, "Invalid score");
         require(
             !hasValidatorScored[taskId][submissionIndex][msg.sender],
             "Validator already scored this submission"
         );
 
-        MinerSubmission storage submission = taskSubmissions[taskId][submissionIndex];
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            submissionIndex
+        ];
         require(!submission.validated, "Submission already has consensus");
 
         // GUARD: If commit-reveal has started for this submission, block direct scoring
@@ -595,7 +664,11 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
         if (submission.validationCount >= minVals) {
             // Calculate median score from all validator scores
-            uint256 medianScore = _calculateMedianScore(taskId, submissionIndex, submission.validationCount);
+            uint256 medianScore = _calculateMedianScore(
+                taskId,
+                submissionIndex,
+                submission.validationCount
+            );
 
             submission.score = medianScore;
             submission.validated = true;
@@ -606,7 +679,12 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
                 task.winningMiner = submission.miner;
             }
 
-            emit ConsensusReached(taskId, submissionIndex, medianScore, submission.validationCount);
+            emit ConsensusReached(
+                taskId,
+                submissionIndex,
+                medianScore,
+                submission.validationCount
+            );
         }
     }
 
@@ -621,26 +699,34 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     ) external {
         Task storage task = tasks[taskId];
         require(
-            task.status == TaskStatus.PendingReview || task.status == TaskStatus.InProgress,
+            task.status == TaskStatus.PendingReview ||
+                task.status == TaskStatus.InProgress,
             "Not pending review"
         );
         require(subnetValidators[task.subnetId][msg.sender], "Not a validator");
         require(minerIndex < taskSubmissions[taskId].length, "Invalid index");
         require(commitHash != bytes32(0), "Empty commit hash");
 
-        MinerSubmission storage submission = taskSubmissions[taskId][minerIndex];
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
         require(!submission.validated, "Already has consensus");
         require(
-            validationCommits[taskId][minerIndex][msg.sender].commitHash == bytes32(0),
+            validationCommits[taskId][minerIndex][msg.sender].commitHash ==
+                bytes32(0),
             "Already committed"
         );
-        require(!hasValidatorScored[taskId][minerIndex][msg.sender], "Already scored directly");
+        require(
+            !hasValidatorScored[taskId][minerIndex][msg.sender],
+            "Already scored directly"
+        );
 
         if (commitPhaseStart[taskId][minerIndex] == 0) {
             commitPhaseStart[taskId][minerIndex] = block.timestamp;
         }
         require(
-            block.timestamp <= commitPhaseStart[taskId][minerIndex] + commitPhaseDuration,
+            block.timestamp <=
+                commitPhaseStart[taskId][minerIndex] + commitPhaseDuration,
             "Commit phase ended"
         );
 
@@ -663,22 +749,28 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     ) external {
         Task storage task = tasks[taskId];
         require(
-            task.status == TaskStatus.PendingReview || task.status == TaskStatus.InProgress,
+            task.status == TaskStatus.PendingReview ||
+                task.status == TaskStatus.InProgress,
             "Not pending review"
         );
         require(subnetValidators[task.subnetId][msg.sender], "Not a validator");
         require(minerIndex < taskSubmissions[taskId].length, "Invalid index");
         require(score <= 10000, "Invalid score");
 
-        MinerSubmission storage submission = taskSubmissions[taskId][minerIndex];
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
         require(!submission.validated, "Already has consensus");
 
-        uint256 commitEnd = commitPhaseStart[taskId][minerIndex] + commitPhaseDuration;
+        uint256 commitEnd = commitPhaseStart[taskId][minerIndex] +
+            commitPhaseDuration;
         uint256 revealEnd = commitEnd + revealPhaseDuration;
         require(block.timestamp > commitEnd, "Commit phase not ended yet");
         require(block.timestamp <= revealEnd, "Reveal phase ended");
 
-        ValidationCommit storage vc = validationCommits[taskId][minerIndex][msg.sender];
+        ValidationCommit storage vc = validationCommits[taskId][minerIndex][
+            msg.sender
+        ];
         require(vc.commitHash != bytes32(0), "No commit found");
         require(!vc.revealed, "Already revealed");
 
@@ -700,7 +792,11 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         if (minVals == 0) minVals = 2;
 
         if (submission.validationCount >= minVals) {
-            uint256 medianScore = _calculateMedianScore(taskId, minerIndex, submission.validationCount);
+            uint256 medianScore = _calculateMedianScore(
+                taskId,
+                minerIndex,
+                submission.validationCount
+            );
             submission.score = medianScore;
             submission.validated = true;
 
@@ -709,7 +805,12 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
                 task.winningMiner = submission.miner;
             }
 
-            emit ConsensusReached(taskId, minerIndex, medianScore, submission.validationCount);
+            emit ConsensusReached(
+                taskId,
+                minerIndex,
+                medianScore,
+                submission.validationCount
+            );
         }
     }
 
@@ -733,40 +834,26 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @dev Calculate median score from validator scores.
-     *      Uses insertion sort (efficient for small arrays, typically 2-10 validators).
+     *      Delegates to ValidationLib.sortAndMedian.
      */
     function _calculateMedianScore(
         uint256 taskId,
         uint256 minerIndex,
         uint256 count
-    ) internal view returns (uint256 median) {
+    ) internal view returns (uint256) {
         uint256[] memory scores = new uint256[](count);
 
         // Collect scores from validators
-        address[] storage scoringVals = _submissionValidators[taskId][minerIndex];
+        address[] storage scoringVals = _submissionValidators[taskId][
+            minerIndex
+        ];
         require(scoringVals.length == count, "Validator tracking mismatch");
 
         for (uint256 i = 0; i < count; i++) {
             scores[i] = validatorScores[taskId][minerIndex][scoringVals[i]];
         }
 
-        // Sort scores (insertion sort — optimal for small N)
-        for (uint256 i = 1; i < count; i++) {
-            uint256 key = scores[i];
-            uint256 j = i;
-            while (j > 0 && scores[j - 1] > key) {
-                scores[j] = scores[j - 1];
-                j--;
-            }
-            scores[j] = key;
-        }
-
-        // Calculate median
-        if (count % 2 == 1) {
-            median = scores[count / 2];
-        } else {
-            median = (scores[count / 2 - 1] + scores[count / 2]) / 2;
-        }
+        return ValidationLib.sortAndMedian(scores);
     }
 
     /**
@@ -852,7 +939,9 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         }
 
         // Get validators who scored the winning submission
-        address[] storage scoringVals = _submissionValidators[taskId][winnerIndex];
+        address[] storage scoringVals = _submissionValidators[taskId][
+            winnerIndex
+        ];
         uint256 numVals = scoringVals.length;
 
         if (numVals == 0) {
@@ -890,14 +979,21 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
             // Update reputation score
             if (rep.totalValidations > 0) {
-                rep.reputationScore = (rep.accurateValidations * 10000) / rep.totalValidations;
+                rep.reputationScore =
+                    (rep.accurateValidations * 10000) /
+                    rep.totalValidations;
             }
 
             // Apply reputation multiplier
             shares[i] = (shares[i] * rep.reputationScore) / 10000;
             totalShares += shares[i];
 
-            emit ReputationUpdated(valAddr, rep.reputationScore, rep.totalValidations, rep.accurateValidations);
+            emit ReputationUpdated(
+                valAddr,
+                rep.reputationScore,
+                rep.totalValidations,
+                rep.accurateValidations
+            );
         }
 
         if (totalShares == 0) {
@@ -923,6 +1019,7 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @dev Calculate deviation between a score and the median, in basis points.
+     *      Delegates to ValidationLib.calculateDeviation.
      * @param score Individual validator score
      * @param median Consensus median score
      * @return Deviation in basis points (0-10000)
@@ -931,9 +1028,7 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         uint256 score,
         uint256 median
     ) internal pure returns (uint256) {
-        if (median == 0) return 0;
-        uint256 diff = score > median ? score - median : median - score;
-        return (diff * 10000) / median;
+        return ValidationLib.calculateDeviation(score, median);
     }
 
     /**
@@ -961,7 +1056,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
      * @dev Add validator to a subnet
      */
     function addValidator(uint256 subnetId, address validator) external {
-        require(msg.sender == subnets[subnetId].owner || msg.sender == owner(), "Not authorized");
+        require(
+            msg.sender == subnets[subnetId].owner || msg.sender == owner(),
+            "Not authorized"
+        );
         require(validator != address(0), "Invalid address");
         require(!subnetValidators[subnetId][validator], "Already validator");
 
@@ -970,8 +1068,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
         // Initialize default reputation (50% = neutral starting point)
         // If validator already has reputation from another subnet, it carries over
-        if (validatorReputation[validator].reputationScore == 0 &&
-            validatorReputation[validator].totalValidations == 0) {
+        if (
+            validatorReputation[validator].reputationScore == 0 &&
+            validatorReputation[validator].totalValidations == 0
+        ) {
             validatorReputation[validator] = ValidatorReputation({
                 totalValidations: 0,
                 accurateValidations: 0,
@@ -1003,18 +1103,22 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
      * @param toSubnetId Target subnet to port reputation to
      */
     /// @dev Track ported reputation boosts per validator per subnet
-    mapping(address => mapping(uint256 => uint256)) public portedReputationBoost;
+    mapping(address => mapping(uint256 => uint256))
+        public portedReputationBoost;
 
     /// @dev Cooldown: last time a validator ported reputation
     mapping(address => uint256) public lastPortedAt;
     uint256 public constant PORT_COOLDOWN = 1 days;
 
-    function portReputation(
-        uint256 fromSubnetId,
-        uint256 toSubnetId
-    ) external {
-        require(subnetValidators[fromSubnetId][msg.sender], "Not validator in source subnet");
-        require(subnetValidators[toSubnetId][msg.sender], "Not validator in target subnet");
+    function portReputation(uint256 fromSubnetId, uint256 toSubnetId) external {
+        require(
+            subnetValidators[fromSubnetId][msg.sender],
+            "Not validator in source subnet"
+        );
+        require(
+            subnetValidators[toSubnetId][msg.sender],
+            "Not validator in target subnet"
+        );
         require(fromSubnetId != toSubnetId, "Same subnet");
         require(
             block.timestamp >= lastPortedAt[msg.sender] + PORT_COOLDOWN,
@@ -1025,7 +1129,8 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         require(rep.totalValidations > 0, "No reputation to port");
 
         // Calculate ported score with 50% decay
-        uint256 portedScore = (rep.reputationScore * REPUTATION_DECAY_FACTOR) / 10000;
+        uint256 portedScore = (rep.reputationScore * REPUTATION_DECAY_FACTOR) /
+            10000;
 
         // Only apply if ported score is better than default (5000 = 50%)
         require(portedScore >= 5000, "Ported score not better than default");
@@ -1035,7 +1140,12 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         portedReputationBoost[msg.sender][toSubnetId] = portedScore;
         lastPortedAt[msg.sender] = block.timestamp;
 
-        emit ReputationPorted(msg.sender, fromSubnetId, toSubnetId, portedScore);
+        emit ReputationPorted(
+            msg.sender,
+            fromSubnetId,
+            toSubnetId,
+            portedScore
+        );
     }
 
     // =========================================================================
@@ -1043,8 +1153,8 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     // =========================================================================
 
     /// @dev Thresholds for adaptive validation requirements
-    uint256 public constant HIGH_VALUE_THRESHOLD = 1000e8;   // 1000 MDT
-    uint256 public constant ULTRA_VALUE_THRESHOLD = 10000e8;  // 10000 MDT
+    uint256 public constant HIGH_VALUE_THRESHOLD = 1000e8; // 1000 MDT
+    uint256 public constant ULTRA_VALUE_THRESHOLD = 10000e8; // 10000 MDT
 
     /**
      * @dev Calculate adaptive minValidations based on task reward amount.
@@ -1078,7 +1188,10 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
      * @dev Remove validator from a subnet
      */
     function removeValidator(uint256 subnetId, address validator) external {
-        require(msg.sender == subnets[subnetId].owner || msg.sender == owner(), "Not authorized");
+        require(
+            msg.sender == subnets[subnetId].owner || msg.sender == owner(),
+            "Not authorized"
+        );
         require(subnetValidators[subnetId][validator], "Not a validator");
 
         subnetValidators[subnetId][validator] = false;
@@ -1131,28 +1244,38 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     /**
      * @dev Get submissions for a task
      */
-    function getSubmissions(uint256 taskId) external view returns (MinerSubmission[] memory) {
+    function getSubmissions(
+        uint256 taskId
+    ) external view returns (MinerSubmission[] memory) {
         return taskSubmissions[taskId];
     }
 
     /**
      * @dev Get submission count for a task
      */
-    function getSubmissionCount(uint256 taskId) external view returns (uint256) {
+    function getSubmissionCount(
+        uint256 taskId
+    ) external view returns (uint256) {
         return taskSubmissions[taskId].length;
     }
 
     /**
      * @dev Check if address is miner in subnet
      */
-    function isMiner(uint256 subnetId, address miner) external view returns (bool) {
+    function isMiner(
+        uint256 subnetId,
+        address miner
+    ) external view returns (bool) {
         return subnetMiners[subnetId][miner];
     }
 
     /**
      * @dev Check if address is validator in subnet
      */
-    function isValidator(uint256 subnetId, address validator) external view returns (bool) {
+    function isValidator(
+        uint256 subnetId,
+        address validator
+    ) external view returns (bool) {
         return subnetValidators[subnetId][validator];
     }
 

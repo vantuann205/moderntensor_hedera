@@ -21,6 +21,7 @@ import logging
 import time
 import json
 import signal
+import platform
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -88,7 +89,9 @@ class ValidatorNode:
 
         logger.info(
             "ValidatorNode initialized — id=%s, stake=%.0f MDT, subnets=%s",
-            validator_id, stake, subnet_ids,
+            validator_id,
+            stake,
+            subnet_ids,
         )
 
     def send_task_to_miners(
@@ -112,7 +115,9 @@ class ValidatorNode:
         """
         logger.info(
             "Sending task %s (type=%s) to %d miners",
-            task_id[:8], task_type, len(miners),
+            task_id[:8],
+            task_type,
+            len(miners),
         )
 
         results = self.dendrite.broadcast(
@@ -127,7 +132,9 @@ class ValidatorNode:
         successful = [r for r in results if r.success]
         logger.info(
             "Task %s: %d/%d miners responded",
-            task_id[:8], len(successful), len(results),
+            task_id[:8],
+            len(successful),
+            len(results),
         )
 
         return results
@@ -186,7 +193,9 @@ class ValidatorNode:
 
         logger.info(
             "Task %s validated: winner=%s (score=%.3f), consensus=%.3f",
-            task_id[:8], winner_id, result["winner_score"],
+            task_id[:8],
+            winner_id,
+            result["winner_score"],
             consensus_result.consensus_score,
         )
 
@@ -216,14 +225,30 @@ class ValidatorNode:
 
 def main():
     parser = argparse.ArgumentParser(description="ModernTensor Validator Node")
-    parser.add_argument("--validator-id", default="0.0.9001", help="Validator Hedera account ID")
-    parser.add_argument("--stake", type=float, default=50_000.0, help="Stake amount (MDT)")
+    parser.add_argument(
+        "--validator-id", default="0.0.9001", help="Validator Hedera account ID"
+    )
+    parser.add_argument(
+        "--stake", type=float, default=50_000.0, help="Stake amount (MDT)"
+    )
     parser.add_argument("--subnets", default="1", help="Subnet IDs (comma-separated)")
-    parser.add_argument("--timeout", type=float, default=30.0, help="Task timeout (seconds)")
-    parser.add_argument("--auto-register", action="store_true",
-                        help="Auto-register and stake on-chain before starting")
-    parser.add_argument("--skip-checks", action="store_true",
-                        help="Skip on-chain pre-flight checks")
+    parser.add_argument(
+        "--timeout", type=float, default=30.0, help="Task timeout (seconds)"
+    )
+    parser.add_argument(
+        "--poll-interval",
+        type=float,
+        default=10.0,
+        help="Seconds between polling for tasks",
+    )
+    parser.add_argument(
+        "--auto-register",
+        action="store_true",
+        help="Auto-register and stake on-chain before starting",
+    )
+    parser.add_argument(
+        "--skip-checks", action="store_true", help="Skip on-chain pre-flight checks"
+    )
     args = parser.parse_args()
 
     subnet_ids = [int(s.strip()) for s in args.subnets.split(",")]
@@ -240,7 +265,9 @@ def main():
     # ── On-Chain Pre-flight Checks ──
     if not args.skip_checks:
         try:
-            from dotenv import load_dotenv; load_dotenv()
+            from dotenv import load_dotenv
+
+            load_dotenv()
             from sdk.hedera.config import load_hedera_config
             from sdk.hedera.client import HederaClient
             from sdk.hedera.guard import OnChainGuard
@@ -258,13 +285,17 @@ def main():
                 )
                 print(f"  {result}")
                 if not result.passed:
-                    logger.warning("Some auto-registration steps failed, continuing anyway")
+                    logger.warning(
+                        "Some auto-registration steps failed, continuing anyway"
+                    )
             else:
                 print("\n  🔍 On-chain pre-flight checks...")
                 result = guard.check_validator()
                 print(f"  {result}")
                 if not result.passed:
-                    logger.warning("Pre-flight checks incomplete (use --auto-register to fix)")
+                    logger.warning(
+                        "Pre-flight checks incomplete (use --auto-register to fix)"
+                    )
             print()
         except Exception as e:
             logger.warning("On-chain checks skipped: %s", e)
@@ -284,8 +315,169 @@ def main():
     print(f"  🔍 Dendrite client for sending tasks to miners")
     print(f"  ⚖️  Weight calculator for miner selection")
     print(f"  🤝 Consensus engine for score aggregation")
-    print(f"\n  Usage: Import ValidatorNode or configure with miner endpoints")
-    print(f"  See demo_subnet.py for full flow demo\n")
+    print(f"\n  📡 Entering validation loop (poll every {args.poll_interval}s)")
+    print(f"  Press Ctrl+C to stop\n")
+
+    # Graceful shutdown
+    validator._running = True
+
+    def shutdown(sig, frame):
+        logger.info("Shutting down validator...")
+        validator._running = False
+
+    signal.signal(signal.SIGINT, shutdown)
+    if platform.system() != "Windows":
+        signal.signal(signal.SIGTERM, shutdown)
+
+    # ── Validation Loop ──
+    # Poll HCS task topic for pending tasks, send to miners, score, report
+    hcs_service = None
+    mirror_base = "https://testnet.mirrornode.hedera.com"
+    task_topic = os.environ.get("HCS_TASK_TOPIC_ID", "0.0.7852337")
+    scoring_topic = os.environ.get("HCS_SCORING_TOPIC_ID", "0.0.7852336")
+    last_sequence = 0  # Track last processed HCS message
+
+    try:
+        from sdk.hedera.hcs import HCSService
+        from dotenv import load_dotenv
+
+        load_dotenv()
+        from sdk.hedera.config import load_hedera_config
+        from sdk.hedera.client import HederaClient
+
+        config = load_hedera_config()
+        client = HederaClient(config)
+        hcs_service = HCSService(client)
+        logger.info("HCS service initialized — polling topic %s", task_topic)
+    except Exception as e:
+        logger.warning("HCS service unavailable, using Mirror Node REST: %s", e)
+
+    try:
+        while validator._running:
+            try:
+                # ── Poll HCS task topic via Mirror Node REST API ──
+                import urllib.request
+
+                url = (
+                    f"{mirror_base}/api/v1/topics/{task_topic}/messages"
+                    f"?limit=10&order=desc"
+                )
+                if last_sequence > 0:
+                    url += f"&sequencenumber=gt:{last_sequence}"
+
+                try:
+                    req = urllib.request.Request(url)
+                    with urllib.request.urlopen(req, timeout=10) as resp:
+                        import json as _json
+
+                        data = _json.loads(resp.read().decode())
+                        messages = data.get("messages", [])
+
+                    new_tasks = []
+                    for msg in messages:
+                        seq = msg.get("sequence_number", 0)
+                        if seq > last_sequence:
+                            last_sequence = seq
+                        try:
+                            import base64
+
+                            payload = _json.loads(
+                                base64.b64decode(msg["message"]).decode()
+                            )
+                            if (
+                                payload.get("type") == "task_create"
+                                and payload.get("status", "pending") == "pending"
+                            ):
+                                new_tasks.append(payload)
+                        except Exception:
+                            continue
+
+                    if new_tasks:
+                        logger.info(
+                            "Found %d new task(s) from HCS topic %s",
+                            len(new_tasks),
+                            task_topic,
+                        )
+
+                    for task in new_tasks:
+                        task_id = task.get("task_id", f"task-{last_sequence}")
+                        task_type = task.get("task_type", "code_review")
+                        logger.info(
+                            "Processing task %s (type=%s)",
+                            task_id[:16],
+                            task_type,
+                        )
+
+                        # Get registered miners for this subnet
+                        # For now use the validator's own endpoint as a self-test
+                        miners = [
+                            {
+                                "miner_id": f"miner-{validator.validator_id}",
+                                "endpoint": f"http://localhost:8091",
+                            }
+                        ]
+
+                        results = validator.send_task_to_miners(
+                            task_id=task_id,
+                            task_type=task_type,
+                            payload=task,
+                            miners=miners,
+                        )
+
+                        scoring = validator.score_results(task_id, results)
+
+                        # Submit scores to HCS scoring topic
+                        if hcs_service and scoring.get("winner"):
+                            try:
+                                score_msg = {
+                                    "type": "score_report",
+                                    "task_id": task_id,
+                                    "validator_id": validator.validator_id,
+                                    "scores": scoring["scores"],
+                                    "winner": scoring["winner"],
+                                    "winner_score": scoring["winner_score"],
+                                    "consensus": scoring.get("consensus", {}),
+                                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                }
+                                hcs_service.submit_message(
+                                    scoring_topic,
+                                    json.dumps(score_msg),
+                                )
+                                logger.info(
+                                    "Score report submitted to HCS topic %s",
+                                    scoring_topic,
+                                )
+                            except Exception as e:
+                                logger.warning("Failed to submit score to HCS: %s", e)
+
+                except urllib.error.URLError as e:
+                    logger.debug("Mirror Node poll failed: %s", e)
+
+                # Periodic stats
+                stats = validator.get_stats()
+                if stats["tasks_validated"] > 0 and stats["tasks_validated"] % 5 == 0:
+                    logger.info(
+                        "Validator stats: sent=%d, validated=%d",
+                        stats["tasks_sent"],
+                        stats["tasks_validated"],
+                    )
+
+            except Exception as e:
+                logger.error("Error in validation loop: %s", e)
+
+            # Sleep in chunks for responsive shutdown
+            for _ in range(int(args.poll_interval)):
+                if not validator._running:
+                    break
+                time.sleep(1.0)
+    except KeyboardInterrupt:
+        pass
+
+    logger.info("Validator %s stopped", args.validator_id)
+    print(f"\n  🛑 Validator stopped. Final stats:")
+    final = validator.get_stats()
+    print(f"     Tasks sent:      {final['tasks_sent']}")
+    print(f"     Tasks validated: {final['tasks_validated']}")
 
 
 if __name__ == "__main__":

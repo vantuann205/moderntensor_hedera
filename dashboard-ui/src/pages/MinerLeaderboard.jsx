@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trophy, Medal, Search, Filter, TrendingUp, Users, Sparkles, Coins, ExternalLink, Hammer, Activity } from 'lucide-react';
 import SpotlightCard from '../components/SpotlightCard';
 import SubnetIcon from '../components/SubnetIcon';
@@ -21,8 +21,20 @@ export default function MinerLeaderboard() {
     const [registerForm, setRegisterForm] = useState({ address: '', subnet: '0', stake: 100 });
     const { addToast } = useToast();
 
-    const subnets = getSubnets().data;
-    const allMiners = getMinerLeaderboard({ subnet: subnetFilter }).data;
+    // Async data loading from Mirror Node
+    const [subnets, setSubnets] = useState([]);
+    const [allMiners, setAllMiners] = useState([]);
+
+    useEffect(() => {
+        (async () => {
+            const [subnetsRes, minersRes] = await Promise.allSettled([
+                getSubnets(),
+                getMinerLeaderboard({ subnet: subnetFilter }),
+            ]);
+            if (subnetsRes.status === 'fulfilled' && subnetsRes.value.data) setSubnets(subnetsRes.value.data);
+            if (minersRes.status === 'fulfilled' && minersRes.value.data) setAllMiners(minersRes.value.data);
+        })();
+    }, [subnetFilter]);
 
     const miners = allMiners.filter(m =>
         searchQuery === '' ||

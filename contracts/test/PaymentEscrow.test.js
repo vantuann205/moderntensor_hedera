@@ -32,6 +32,9 @@ describe("PaymentEscrow", function () {
         const PaymentEscrow = await ethers.getContractFactory("PaymentEscrow");
         const escrow = await PaymentEscrow.deploy(await token.getAddress());
 
+        // Disable dispute grace period for test simplicity
+        await escrow.setDisputeGracePeriod(0);
+
         // Mint tokens to requester (large amount to cover fees)
         const mintAmount = ethers.parseUnits("100000", 8); // 100,000 MDT
         await token.mint(requester.address, mintAmount);

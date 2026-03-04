@@ -32,6 +32,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./ValidationLib.sol";
 
 contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     using SafeERC20 for IERC20;
@@ -73,38 +74,38 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     // =========================================================================
 
     enum TaskStatus {
-        Created,        // Task created, waiting for miners
-        InProgress,     // Miner working on task
-        PendingReview,  // Submitted, waiting for AI validation
-        Completed,      // Validated and paid
-        Cancelled,      // Cancelled by requester
-        Expired,        // Deadline passed without completion
-        Disputed        // Under dispute resolution
+        Created, // Task created, waiting for miners
+        InProgress, // Miner working on task
+        PendingReview, // Submitted, waiting for AI validation
+        Completed, // Validated and paid
+        Cancelled, // Cancelled by requester
+        Expired, // Deadline passed without completion
+        Disputed // Under dispute resolution
     }
 
     struct Task {
         uint256 id;
-        address requester;          // Who created the task
-        string taskHash;            // IPFS hash or HCS message reference
-        uint256 rewardAmount;       // MDT locked for miner reward (80%)
-        uint256 platformFee;        // Protocol fee (5%)
-        uint256 validatorReward;    // Total validator pool (15%)
-        uint256 deadline;           // Task expiration timestamp
-        TaskStatus status;          // Current status
-        address assignedMiner;      // Miner who accepted (if any)
-        address winningMiner;       // Miner who won (after validation)
-        uint256 winningScore;       // Consensus median score of winning miner
-        uint256 createdAt;          // Creation timestamp
-        uint256 completedAt;        // Completion timestamp (if completed)
+        address requester; // Who created the task
+        string taskHash; // IPFS hash or HCS message reference
+        uint256 rewardAmount; // MDT locked for miner reward (80%)
+        uint256 platformFee; // Protocol fee (5%)
+        uint256 validatorReward; // Total validator pool (15%)
+        uint256 deadline; // Task expiration timestamp
+        TaskStatus status; // Current status
+        address assignedMiner; // Miner who accepted (if any)
+        address winningMiner; // Miner who won (after validation)
+        uint256 winningScore; // Consensus median score of winning miner
+        uint256 createdAt; // Creation timestamp
+        uint256 completedAt; // Completion timestamp (if completed)
     }
 
     struct MinerSubmission {
         address miner;
-        string resultHash;          // IPFS hash of result
-        uint256 score;              // Consensus median score (0-10000, basis points)
-        bool validated;             // Has reached consensus (minValidations met)
-        uint256 submittedAt;        // Submission timestamp
-        uint256 validationCount;    // Number of validators who have scored
+        string resultHash; // IPFS hash of result
+        uint256 score; // Consensus median score (0-10000, basis points)
+        bool validated; // Has reached consensus (minValidations met)
+        uint256 submittedAt; // Submission timestamp
+        uint256 validationCount; // Number of validators who have scored
     }
 
     // =========================================================================
@@ -119,10 +120,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
     /// @dev Task ID => Miner index => Validator address => Score
     ///      Tracks individual validator scores for consensus calculation
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public validatorScores;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256)))
+        public validatorScores;
 
     /// @dev Task ID => Miner index => Validator address => has scored
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasValidatorScored;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool)))
+        public hasValidatorScored;
 
     /// @dev Requester => Active task count
     mapping(address => uint256) public activeTaskCount;
@@ -138,10 +141,10 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
     /// @dev Validator Reputation tracking
     struct ValidatorReputation {
-        uint256 totalValidations;    // Total times participated in consensus
+        uint256 totalValidations; // Total times participated in consensus
         uint256 accurateValidations; // Times within 20% of median
-        uint256 reputationScore;     // = accurate / total * 10000 (basis points)
-        uint256 lastActiveAt;        // Last activity timestamp
+        uint256 reputationScore; // = accurate / total * 10000 (basis points)
+        uint256 lastActiveAt; // Last activity timestamp
     }
 
     /// @dev Validator address => Reputation data
@@ -159,14 +162,15 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
     /// @dev Commit-Reveal data per validator per submission
     struct ValidationCommit {
-        bytes32 commitHash;      // keccak256(abi.encodePacked(score, salt))
-        uint256 committedAt;     // Timestamp of commit
-        bool revealed;           // Has been revealed
-        uint256 revealedScore;   // Score after reveal
+        bytes32 commitHash; // keccak256(abi.encodePacked(score, salt))
+        uint256 committedAt; // Timestamp of commit
+        bool revealed; // Has been revealed
+        uint256 revealedScore; // Score after reveal
     }
 
     /// @dev Task ID => Miner index => Validator address => Commit data
-    mapping(uint256 => mapping(uint256 => mapping(address => ValidationCommit))) public validationCommits;
+    mapping(uint256 => mapping(uint256 => mapping(address => ValidationCommit)))
+        public validationCommits;
 
     /// @dev Task ID => Miner index => Number of commits received
     mapping(uint256 => mapping(uint256 => uint256)) public commitCount;
@@ -195,10 +199,7 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         string taskHash
     );
 
-    event TaskAccepted(
-        uint256 indexed taskId,
-        address indexed miner
-    );
+    event TaskAccepted(uint256 indexed taskId, address indexed miner);
 
     event SubmissionReceived(
         uint256 indexed taskId,
@@ -234,9 +235,7 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         uint256 refundAmount
     );
 
-    event TaskExpired(
-        uint256 indexed taskId
-    );
+    event TaskExpired(uint256 indexed taskId);
 
     event ValidatorAdded(address indexed validator);
     event ValidatorRemoved(address indexed validator);
@@ -244,17 +243,55 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     event PlatformFeeUpdated(uint256 oldRate, uint256 newRate);
     event MinValidationsUpdated(uint256 oldMin, uint256 newMin);
     event EarningsWithdrawn(address indexed account, uint256 amount);
-    event ValidatorPenalized(uint256 indexed taskId, address indexed validator, uint256 deviation);
-    event ValidatorRewarded(uint256 indexed taskId, address indexed validator, uint256 amount, uint256 deviation);
-    event ReputationUpdated(address indexed validator, uint256 newScore, uint256 totalValidations, uint256 accurateValidations);
-    event ScoreCommitted(uint256 indexed taskId, uint256 minerIndex, address indexed validator);
-    event ScoreRevealed(uint256 indexed taskId, uint256 minerIndex, address indexed validator, uint256 score);
-    event CommitPhaseConfigUpdated(uint256 commitDuration, uint256 revealDuration);
-    event AdaptiveValidationsApplied(uint256 indexed taskId, uint256 baseMin, uint256 adaptiveMin);
+    event ValidatorPenalized(
+        uint256 indexed taskId,
+        address indexed validator,
+        uint256 deviation
+    );
+    event ValidatorRewarded(
+        uint256 indexed taskId,
+        address indexed validator,
+        uint256 amount,
+        uint256 deviation
+    );
+    event ReputationUpdated(
+        address indexed validator,
+        uint256 newScore,
+        uint256 totalValidations,
+        uint256 accurateValidations
+    );
+    event ScoreCommitted(
+        uint256 indexed taskId,
+        uint256 minerIndex,
+        address indexed validator
+    );
+    event ScoreRevealed(
+        uint256 indexed taskId,
+        uint256 minerIndex,
+        address indexed validator,
+        uint256 score
+    );
+    event CommitPhaseConfigUpdated(
+        uint256 commitDuration,
+        uint256 revealDuration
+    );
+    event AdaptiveValidationsApplied(
+        uint256 indexed taskId,
+        uint256 baseMin,
+        uint256 adaptiveMin
+    );
 
     // Dispute events
-    event DisputeOpened(uint256 indexed taskId, address indexed requester, uint256 disputeDeadline);
-    event DisputeResolved(uint256 indexed taskId, address indexed winner, uint256 amount);
+    event DisputeOpened(
+        uint256 indexed taskId,
+        address indexed requester,
+        uint256 disputeDeadline
+    );
+    event DisputeResolved(
+        uint256 indexed taskId,
+        address indexed winner,
+        uint256 amount
+    );
 
     // Burn events
     event TokensBurned(uint256 indexed taskId, uint256 amount);
@@ -265,9 +302,26 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     /// @dev Dispute deadline extension (7 days)
     uint256 public disputeDuration = 7 days;
 
+    /// @dev Dispute grace period — miner cannot withdraw for this duration
+    ///      after task completion, giving requester time to open a dispute.
+    uint256 public disputeGracePeriod = 48 hours;
+
     /// @dev Dispute tracking
     mapping(uint256 => uint256) public disputeDeadlines;
     mapping(uint256 => bool) public isDisputed;
+
+    /// @dev Per-task reward hold: taskId => amount held until dispute window passes
+    mapping(uint256 => uint256) public taskRewardHold;
+
+    /// @dev Per-task claimable timestamp: taskId => earliest claimable time
+    mapping(uint256 => uint256) public taskClaimableAt;
+
+    event TaskRewardClaimed(
+        uint256 indexed taskId,
+        address indexed miner,
+        uint256 amount
+    );
+    event DisputeGracePeriodUpdated(uint256 oldPeriod, uint256 newPeriod);
 
     // =========================================================================
     // MODIFIERS
@@ -314,7 +368,10 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
     ) external nonReentrant whenNotPaused returns (uint256 taskId) {
         require(bytes(taskHash).length > 0, "Empty task hash");
         require(rewardAmount >= minTaskReward, "Reward too low");
-        require(duration > 0 && duration <= maxTaskDuration, "Invalid duration");
+        require(
+            duration > 0 && duration <= maxTaskDuration,
+            "Invalid duration"
+        );
 
         // Calculate fees: 5% protocol + 15% validator pool
         uint256 fee = (rewardAmount * platformFeeRate) / 10000;
@@ -344,24 +401,31 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         activeTaskCount[msg.sender]++;
 
-        emit TaskCreated(taskId, msg.sender, rewardAmount, tasks[taskId].deadline, taskHash);
+        emit TaskCreated(
+            taskId,
+            msg.sender,
+            rewardAmount,
+            tasks[taskId].deadline,
+            taskHash
+        );
     }
 
     /**
      * @dev Cancel a task and get refund (only if not completed)
      * @param taskId The task to cancel
      */
-    function cancelTask(uint256 taskId) external nonReentrant taskExists(taskId) {
+    function cancelTask(
+        uint256 taskId
+    ) external nonReentrant taskExists(taskId) {
         Task storage task = tasks[taskId];
 
         require(msg.sender == task.requester, "Not task owner");
-        require(
-            task.status == TaskStatus.Created,
-            "Cannot cancel this task"
-        );
+        require(task.status == TaskStatus.Created, "Cannot cancel this task");
 
         // Refund tokens — CEI: Effects before Interactions
-        uint256 refund = task.rewardAmount + task.platformFee + task.validatorReward;
+        uint256 refund = task.rewardAmount +
+            task.platformFee +
+            task.validatorReward;
         task.status = TaskStatus.Cancelled;
         activeTaskCount[msg.sender]--;
 
@@ -376,20 +440,24 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      *      Refunds the full deposit to the requester.
      * @param taskId The task to expire
      */
-    function expireTask(uint256 taskId) external nonReentrant taskExists(taskId) {
+    function expireTask(
+        uint256 taskId
+    ) external nonReentrant taskExists(taskId) {
         Task storage task = tasks[taskId];
 
         require(
             task.status == TaskStatus.Created ||
-            task.status == TaskStatus.InProgress ||
-            task.status == TaskStatus.PendingReview,
+                task.status == TaskStatus.InProgress ||
+                task.status == TaskStatus.PendingReview,
             "Task not expirable"
         );
         require(block.timestamp > task.deadline, "Task not yet expired");
         require(task.winningMiner == address(0), "Task has a winner");
 
         // Effects before interactions (CEI)
-        uint256 refund = task.rewardAmount + task.platformFee + task.validatorReward;
+        uint256 refund = task.rewardAmount +
+            task.platformFee +
+            task.validatorReward;
         task.status = TaskStatus.Expired;
         activeTaskCount[task.requester]--;
 
@@ -407,7 +475,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      * @dev Accept a task (optional: assigns task to specific miner)
      * @param taskId Task to accept
      */
-    function acceptTask(uint256 taskId) external taskExists(taskId) whenNotPaused {
+    function acceptTask(
+        uint256 taskId
+    ) external taskExists(taskId) whenNotPaused {
         Task storage task = tasks[taskId];
 
         require(task.status == TaskStatus.Created, "Task not available");
@@ -433,30 +503,41 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         require(
             task.status == TaskStatus.Created ||
-            task.status == TaskStatus.InProgress ||
-            task.status == TaskStatus.PendingReview,
+                task.status == TaskStatus.InProgress ||
+                task.status == TaskStatus.PendingReview,
             "Cannot submit to this task"
         );
         require(block.timestamp < task.deadline, "Task expired");
         require(bytes(resultHash).length > 0, "Empty result hash");
-        require(!hasMinerSubmitted[taskId][msg.sender], "Miner already submitted");
-        require(taskSubmissions[taskId].length < maxSubmissionsPerTask, "Max submissions reached");
+        require(
+            !hasMinerSubmitted[taskId][msg.sender],
+            "Miner already submitted"
+        );
+        require(
+            taskSubmissions[taskId].length < maxSubmissionsPerTask,
+            "Max submissions reached"
+        );
 
         // Mark miner as submitted (prevent spam)
         hasMinerSubmitted[taskId][msg.sender] = true;
 
         // Add submission
-        taskSubmissions[taskId].push(MinerSubmission({
-            miner: msg.sender,
-            resultHash: resultHash,
-            score: 0,
-            validated: false,
-            submittedAt: block.timestamp,
-            validationCount: 0
-        }));
+        taskSubmissions[taskId].push(
+            MinerSubmission({
+                miner: msg.sender,
+                resultHash: resultHash,
+                score: 0,
+                validated: false,
+                submittedAt: block.timestamp,
+                validationCount: 0
+            })
+        );
 
         // Update status — FIX: transition from BOTH Created and InProgress
-        if (task.status == TaskStatus.Created || task.status == TaskStatus.InProgress) {
+        if (
+            task.status == TaskStatus.Created ||
+            task.status == TaskStatus.InProgress
+        ) {
             task.status = TaskStatus.PendingReview;
         }
 
@@ -486,17 +567,22 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         require(
             task.status == TaskStatus.PendingReview ||
-            task.status == TaskStatus.InProgress,
+                task.status == TaskStatus.InProgress,
             "Task not pending review"
         );
-        require(minerIndex < taskSubmissions[taskId].length, "Invalid miner index");
+        require(
+            minerIndex < taskSubmissions[taskId].length,
+            "Invalid miner index"
+        );
         require(score <= 10000, "Score must be 0-10000");
         require(
             !hasValidatorScored[taskId][minerIndex][msg.sender],
             "Validator already scored this submission"
         );
 
-        MinerSubmission storage submission = taskSubmissions[taskId][minerIndex];
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
         require(!submission.validated, "Submission already has consensus");
 
         // GUARD: If commit-reveal has started for this submission, block direct scoring
@@ -516,7 +602,11 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         // Check if we've reached consensus threshold
         if (submission.validationCount >= minValidations) {
             // Calculate median score from all validator scores
-            uint256 medianScore = _calculateMedianScore(taskId, minerIndex, submission.validationCount);
+            uint256 medianScore = _calculateMedianScore(
+                taskId,
+                minerIndex,
+                submission.validationCount
+            );
 
             submission.score = medianScore;
             submission.validated = true;
@@ -527,7 +617,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
                 task.winningMiner = submission.miner;
             }
 
-            emit ConsensusReached(taskId, minerIndex, medianScore, submission.validationCount);
+            emit ConsensusReached(
+                taskId,
+                minerIndex,
+                medianScore,
+                submission.validationCount
+            );
         }
     }
 
@@ -553,18 +648,24 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         require(
             task.status == TaskStatus.PendingReview ||
-            task.status == TaskStatus.InProgress,
+                task.status == TaskStatus.InProgress,
             "Task not pending review"
         );
-        require(minerIndex < taskSubmissions[taskId].length, "Invalid miner index");
+        require(
+            minerIndex < taskSubmissions[taskId].length,
+            "Invalid miner index"
+        );
         require(commitHash != bytes32(0), "Empty commit hash");
 
-        MinerSubmission storage submission = taskSubmissions[taskId][minerIndex];
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
         require(!submission.validated, "Already has consensus");
 
         // Cannot commit if already committed or already used direct validateSubmission
         require(
-            validationCommits[taskId][minerIndex][msg.sender].commitHash == bytes32(0),
+            validationCommits[taskId][minerIndex][msg.sender].commitHash ==
+                bytes32(0),
             "Already committed"
         );
         require(
@@ -578,7 +679,8 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         }
 
         // Must be within commit phase
-        uint256 commitDeadline = commitPhaseStart[taskId][minerIndex] + commitPhaseDuration;
+        uint256 commitDeadline = commitPhaseStart[taskId][minerIndex] +
+            commitPhaseDuration;
         require(block.timestamp <= commitDeadline, "Commit phase ended");
 
         // Store commit
@@ -614,23 +716,31 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         require(
             task.status == TaskStatus.PendingReview ||
-            task.status == TaskStatus.InProgress,
+                task.status == TaskStatus.InProgress,
             "Task not pending review"
         );
-        require(minerIndex < taskSubmissions[taskId].length, "Invalid miner index");
+        require(
+            minerIndex < taskSubmissions[taskId].length,
+            "Invalid miner index"
+        );
         require(score <= 10000, "Score must be 0-10000");
 
-        MinerSubmission storage submission = taskSubmissions[taskId][minerIndex];
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
         require(!submission.validated, "Already has consensus");
 
         // Must be in reveal phase (after commit phase ends)
-        uint256 commitEnd = commitPhaseStart[taskId][minerIndex] + commitPhaseDuration;
+        uint256 commitEnd = commitPhaseStart[taskId][minerIndex] +
+            commitPhaseDuration;
         uint256 revealEnd = commitEnd + revealPhaseDuration;
         require(block.timestamp > commitEnd, "Commit phase not ended yet");
         require(block.timestamp <= revealEnd, "Reveal phase ended");
 
         // Verify commit exists and not yet revealed
-        ValidationCommit storage vc = validationCommits[taskId][minerIndex][msg.sender];
+        ValidationCommit storage vc = validationCommits[taskId][minerIndex][
+            msg.sender
+        ];
         require(vc.commitHash != bytes32(0), "No commit found");
         require(!vc.revealed, "Already revealed");
 
@@ -653,7 +763,11 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
         // Check consensus (same logic as validateSubmission)
         if (submission.validationCount >= minValidations) {
-            uint256 medianScore = _calculateMedianScore(taskId, minerIndex, submission.validationCount);
+            uint256 medianScore = _calculateMedianScore(
+                taskId,
+                minerIndex,
+                submission.validationCount
+            );
             submission.score = medianScore;
             submission.validated = true;
 
@@ -662,7 +776,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
                 task.winningMiner = submission.miner;
             }
 
-            emit ConsensusReached(taskId, minerIndex, medianScore, submission.validationCount);
+            emit ConsensusReached(
+                taskId,
+                minerIndex,
+                medianScore,
+                submission.validationCount
+            );
         }
     }
 
@@ -710,50 +829,26 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         uint256 taskId,
         uint256 minerIndex,
         uint256 count
-    ) internal view returns (uint256 median) {
-        // Collect all validator scores into a memory array
+    ) internal view returns (uint256) {
         uint256[] memory scores = new uint256[](count);
-        uint256 idx = 0;
 
-        // Iterate through known validators to collect scores
-        // NOTE: We iterate the validator mapping — for gas efficiency with
-        // small validator sets (typically 2-10 in the protocol)
+        address[] memory scoringValidators = _getScoringValidators(
+            taskId,
+            minerIndex,
+            count
+        );
         for (uint256 i = 0; i < count; i++) {
-            scores[i] = 0; // Initialize
+            scores[i] = validatorScores[taskId][minerIndex][
+                scoringValidators[i]
+            ];
         }
 
-        // Collect scores from validators who have scored this submission
-        idx = 0;
-        // We need to iterate validators — use a helper approach:
-        // Store validator addresses per submission for efficient median calc
-        address[] memory scoringValidators = _getScoringValidators(taskId, minerIndex, count);
-        for (uint256 i = 0; i < count; i++) {
-            scores[i] = validatorScores[taskId][minerIndex][scoringValidators[i]];
-        }
-
-        // Sort scores (insertion sort — optimal for small N)
-        for (uint256 i = 1; i < count; i++) {
-            uint256 key = scores[i];
-            uint256 j = i;
-            while (j > 0 && scores[j - 1] > key) {
-                scores[j] = scores[j - 1];
-                j--;
-            }
-            scores[j] = key;
-        }
-
-        // Calculate median
-        if (count % 2 == 1) {
-            // Odd: take middle element
-            median = scores[count / 2];
-        } else {
-            // Even: average of two middle elements
-            median = (scores[count / 2 - 1] + scores[count / 2]) / 2;
-        }
+        return ValidationLib.sortAndMedian(scores);
     }
 
     /// @dev Tracking validator addresses per submission for median calculation
-    mapping(uint256 => mapping(uint256 => address[])) internal _submissionValidators;
+    mapping(uint256 => mapping(uint256 => address[]))
+        internal _submissionValidators;
 
     /**
      * @dev Get validators who scored a specific submission
@@ -775,7 +870,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      *
      * @param taskId Task to finalize
      */
-    function finalizeTask(uint256 taskId) external nonReentrant taskExists(taskId) {
+    function finalizeTask(
+        uint256 taskId
+    ) external nonReentrant taskExists(taskId) {
         Task storage task = tasks[taskId];
 
         // ── CHECKS ──────────────────────────────────────────────────────
@@ -804,9 +901,15 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         uint256 keepFee = cachedFee - burnAmount;
         collectedFees += keepFee;
 
-        // Record miner earnings + credit pending withdrawal (Pull pattern)
+        // Record miner earnings + hold reward until dispute grace period passes
         minerEarnings[cachedWinner] += cachedReward;
-        pendingWithdrawals[cachedWinner] += cachedReward;
+        if (disputeGracePeriod == 0) {
+            // No grace period — credit immediately (backwards compatible)
+            pendingWithdrawals[cachedWinner] += cachedReward;
+        } else {
+            taskRewardHold[taskId] = cachedReward;
+            taskClaimableAt[taskId] = block.timestamp + disputeGracePeriod;
+        }
 
         // ── EVENTS: Emit before external interactions (CEI pattern) ─────
         emit TaskCompleted(taskId, cachedWinner, cachedReward, cachedScore);
@@ -832,7 +935,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      *      Locks funds for `disputeDuration` for resolution.
      * @param taskId Task to dispute
      */
-    function openDispute(uint256 taskId) external nonReentrant taskExists(taskId) {
+    function openDispute(
+        uint256 taskId
+    ) external nonReentrant taskExists(taskId) {
         Task storage task = tasks[taskId];
 
         require(msg.sender == task.requester, "Only requester can dispute");
@@ -866,20 +971,20 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         require(task.status == TaskStatus.Disputed, "Not in dispute");
 
         if (requesterWins) {
-            // Claw back miner earnings (if not yet withdrawn)
+            // Claw back from per-task reward hold (funds never left the contract)
             address miner = task.winningMiner;
-            uint256 reward = task.rewardAmount;
+            uint256 held = taskRewardHold[taskId];
 
-            if (pendingWithdrawals[miner] >= reward) {
-                pendingWithdrawals[miner] -= reward;
-                minerEarnings[miner] -= reward;
+            if (held > 0) {
+                taskRewardHold[taskId] = 0;
+                minerEarnings[miner] -= held;
 
                 // Refund to requester
-                mdtToken.safeTransfer(task.requester, reward);
-                emit DisputeResolved(taskId, task.requester, reward);
+                mdtToken.safeTransfer(task.requester, held);
+                emit DisputeResolved(taskId, task.requester, held);
             } else {
-                // Miner already withdrew — cannot claw back
-                emit DisputeResolved(taskId, task.requester, 0);
+                // Already claimed (shouldn't happen — dispute blocks claim)
+                revert("Reward already claimed - cannot claw back");
             }
 
             task.status = TaskStatus.Cancelled;
@@ -921,7 +1026,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         }
 
         // Get validators who scored the winning submission
-        address[] storage scoringVals = _submissionValidators[taskId][winnerIndex];
+        address[] storage scoringVals = _submissionValidators[taskId][
+            winnerIndex
+        ];
         uint256 numVals = scoringVals.length;
 
         if (numVals == 0) {
@@ -963,7 +1070,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
             // Update reputation score: (accurate / total) * 10000
             if (rep.totalValidations > 0) {
-                rep.reputationScore = (rep.accurateValidations * 10000) / rep.totalValidations;
+                rep.reputationScore =
+                    (rep.accurateValidations * 10000) /
+                    rep.totalValidations;
             }
 
             // Apply reputation multiplier to share weight
@@ -973,7 +1082,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
             totalShares += shares[i];
 
-            emit ReputationUpdated(valAddr, rep.reputationScore, rep.totalValidations, rep.accurateValidations);
+            emit ReputationUpdated(
+                valAddr,
+                rep.reputationScore,
+                rep.totalValidations,
+                rep.accurateValidations
+            );
         }
 
         if (totalShares == 0) {
@@ -1000,7 +1114,7 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
 
     /**
      * @dev Calculate deviation between a score and the median, in basis points.
-     *      Returns value 0-10000 where 10000 = 100% deviation.
+     *      Delegates to ValidationLib.calculateDeviation.
      * @param score Individual validator score
      * @param median Consensus median score
      * @return Deviation in basis points
@@ -1009,17 +1123,15 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         uint256 score,
         uint256 median
     ) internal pure returns (uint256) {
-        if (median == 0) return 0;
-        uint256 diff = score > median ? score - median : median - score;
-        return (diff * 10000) / median;
+        return ValidationLib.calculateDeviation(score, median);
     }
 
     // =========================================================================
     // PROOF-OF-INTELLIGENCE: Adaptive minValidations
     // =========================================================================
 
-    uint256 public constant HIGH_VALUE_THRESHOLD = 1000e8;   // 1000 MDT
-    uint256 public constant ULTRA_VALUE_THRESHOLD = 10000e8;  // 10000 MDT
+    uint256 public constant HIGH_VALUE_THRESHOLD = 1000e8; // 1000 MDT
+    uint256 public constant ULTRA_VALUE_THRESHOLD = 10000e8; // 10000 MDT
 
     /**
      * @dev Calculate adaptive minValidations based on task reward.
@@ -1039,6 +1151,34 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
             return baseMin + 1;
         }
         return baseMin;
+    }
+
+    /**
+     * @dev Claim a task reward after the dispute grace period has passed.
+     *      Moves funds from taskRewardHold to pendingWithdrawals.
+     *      Cannot be called while a dispute is active.
+     * @param taskId Task whose reward to claim
+     */
+    function claimTaskReward(
+        uint256 taskId
+    ) external nonReentrant taskExists(taskId) {
+        Task storage task = tasks[taskId];
+        require(msg.sender == task.winningMiner, "Not the winning miner");
+        require(task.status == TaskStatus.Completed, "Task not completed");
+        require(!isDisputed[taskId], "Task is under dispute");
+        require(
+            block.timestamp >= taskClaimableAt[taskId],
+            "Dispute grace period active"
+        );
+
+        uint256 amount = taskRewardHold[taskId];
+        require(amount > 0, "Already claimed");
+
+        // Effects
+        taskRewardHold[taskId] = 0;
+        pendingWithdrawals[msg.sender] += amount;
+
+        emit TaskRewardClaimed(taskId, msg.sender, amount);
     }
 
     /**
@@ -1105,7 +1245,10 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      */
     function setMinValidations(uint256 newMin) external onlyOwner {
         require(newMin >= 1, "Min validations must be >= 1");
-        require(newMin <= validatorCount || validatorCount == 0, "Cannot exceed validator count");
+        require(
+            newMin <= validatorCount || validatorCount == 0,
+            "Cannot exceed validator count"
+        );
 
         uint256 oldMin = minValidations;
         minValidations = newMin;
@@ -1124,6 +1267,19 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         platformFeeRate = newRate;
 
         emit PlatformFeeUpdated(oldRate, newRate);
+    }
+
+    /**
+     * @dev Update dispute grace period
+     * @param newPeriod New grace period in seconds (min 1 hour, max 14 days)
+     */
+    function setDisputeGracePeriod(uint256 newPeriod) external onlyOwner {
+        require(newPeriod <= 14 days, "Grace period too long");
+
+        uint256 oldPeriod = disputeGracePeriod;
+        disputeGracePeriod = newPeriod;
+
+        emit DisputeGracePeriodUpdated(oldPeriod, newPeriod);
     }
 
     /**
@@ -1177,7 +1333,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      * @dev Get submissions for a task
      * @param taskId Task ID
      */
-    function getSubmissions(uint256 taskId) external view returns (MinerSubmission[] memory) {
+    function getSubmissions(
+        uint256 taskId
+    ) external view returns (MinerSubmission[] memory) {
         return taskSubmissions[taskId];
     }
 
@@ -1185,7 +1343,9 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
      * @dev Get submission count for a task
      * @param taskId Task ID
      */
-    function getSubmissionCount(uint256 taskId) external view returns (uint256) {
+    function getSubmissionCount(
+        uint256 taskId
+    ) external view returns (uint256) {
         return taskSubmissions[taskId].length;
     }
 

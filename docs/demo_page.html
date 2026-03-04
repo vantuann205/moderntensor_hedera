@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModernTensor — Decentralized AI Marketplace on Hedera</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface-2: #1a1a28;
+            --border: #2a2a3a;
+            --text: #e4e4f0;
+            --text-dim: #8888a0;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.3);
+            --green: #00b894;
+            --yellow: #fdcb6e;
+            --red: #e17055;
+            --cyan: #00cec9;
+            --gradient: linear-gradient(135deg, #6c5ce7 0%, #00cec9 100%);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 2rem;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 40%, rgba(108,92,231,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 60%, rgba(0,206,201,0.06) 0%, transparent 50%);
+            animation: aurora 20s ease-in-out infinite;
+        }
+        @keyframes aurora {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, -2%) rotate(1deg); }
+            66% { transform: translate(-1%, 1%) rotate(-1deg); }
+        }
+        .hero-content { position: relative; z-index: 1; text-align: center; max-width: 900px; }
+        .logo {
+            font-size: 4.5rem;
+            font-weight: 900;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -2px;
+            margin-bottom: 1rem;
+        }
+        .tagline {
+            font-size: 1.5rem;
+            font-weight: 300;
+            color: var(--text-dim);
+            margin-bottom: 3rem;
+        }
+        .badge-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+        .badge {
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .badge.live { border-color: var(--green); color: var(--green); }
+        .badge.hedera { border-color: var(--accent); color: var(--accent); }
+
+        /* Sections */
+        section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .section-subtitle { color: var(--text-dim); margin-bottom: 3rem; font-size: 1.1rem; }
+
+        /* Cards */
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 30px var(--accent-glow);
+        }
+        .card-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .card h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .card p { color: var(--text-dim); font-size: 0.95rem; line-height: 1.6; }
+
+        /* Fee diagram */
+        .fee-bar { display: flex; height: 56px; border-radius: 12px; overflow: hidden; margin: 2rem 0; }
+        .fee-segment {
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.85rem; color: #fff;
+            transition: flex 0.5s;
+        }
+        .fee-miner { flex: 85; background: linear-gradient(135deg, #00b894, #00cec9); }
+        .fee-validator { flex: 8; background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+        .fee-staking { flex: 5; background: linear-gradient(135deg, #fdcb6e, #ffa502); }
+        .fee-protocol { flex: 2; background: linear-gradient(135deg, #e17055, #d63031); }
+        .fee-labels { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+        .fee-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
+        .fee-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+        /* Assets table */
+        .assets-table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
+        .assets-table th, .assets-table td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .assets-table th {
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .assets-table td { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+        .status-live {
+            color: var(--green);
+            font-weight: 600;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .status-live::before {
+            content: '';
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        a { color: var(--cyan); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        /* Reputation formula */
+        .formula-box {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .formula-main {
+            font-size: 1.4rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .formula-main .var-dev { color: var(--yellow); }
+        .formula-main .var-rep { color: var(--green); }
+        .formula-main .var-stk { color: var(--cyan); }
+        .threshold-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .threshold {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 12px;
+            background: var(--surface);
+        }
+        .threshold-val { font-size: 2rem; font-weight: 800; }
+        .threshold-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 0.3rem; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-dim);
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-content">
+        <div class="logo">ModernTensor</div>
+        <div class="tagline">Decentralized AI Marketplace on Hedera</div>
+        <div class="badge-row">
+            <span class="badge live">● LIVE on Testnet</span>
+            <span class="badge hedera">Hedera Hashgraph</span>
+            <span class="badge">Hello Future 2026</span>
+        </div>
+    </div>
+</div>
+
+<!-- FEATURES -->
+<section>
+    <div class="section-title">Core Features</div>
+    <div class="section-subtitle">A complete AI marketplace with reputation-driven incentives</div>
+
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-icon">🏆</div>
+            <h3>Reputation-Weighted Rewards</h3>
+            <p>Validators earn based on accuracy, stake amount, and accumulated reputation. Accurate validators with more skin-in-the-game earn exponentially more.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🌐</div>
+            <h3>Cross-Subnet Portability</h3>
+            <p>Port 50% of your reputation to new subnets. Proven validators are incentivized to participate across multiple AI domains.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">⚡</div>
+            <h3>Adaptive Validation</h3>
+            <p>High-value tasks automatically require more validators. Tasks over 10,000 MDT need 4 validators instead of the standard 2.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🔥</div>
+            <h3>Dynamic Registration Fee</h3>
+            <p>EIP-1559-style registration fee that increases during spam and decreases over time. All fees are permanently burned.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">💰</div>
+            <h3>Passive Staking Rewards</h3>
+            <p>5% of all task fees go to the staking pool. Miners, validators, and holders all earn passive rewards proportional to their stake.</p>
+        </div>
+        <div class="card">
+            <div class="card-icon">🛡️</div>
+            <h3>On-Chain Security</h3>
+            <p>ReentrancyGuard, Pausable, CEI pattern. 7-day unstake cooldown. OpenZeppelin-based. Deployed and verified on Hedera.</p>
+        </div>
+    </div>
+</section>
+
+<!-- FEE DISTRIBUTION -->
+<section>
+    <div class="section-title">Fee Distribution</div>
+    <div class="section-subtitle">Fair, transparent, and incentive-aligned</div>
+
+    <div class="fee-bar">
+        <div class="fee-segment fee-miner">85% Miner</div>
+        <div class="fee-segment fee-validator">8%</div>
+        <div class="fee-segment fee-staking">5%</div>
+        <div class="fee-segment fee-protocol">2%</div>
+    </div>
+    <div class="fee-labels">
+        <span class="fee-label"><span class="fee-dot" style="background:#00b894"></span> 85% — Miner (task performer)</span>
+        <span class="fee-label"><span class="fee-dot" style="background:#6c5ce7"></span> 8% — Validators (reputation-weighted)</span>
+        <span class="fee-label"><span class="fee-dot" style="background:#fdcb6e"></span> 5% — Staking Pool (passive rewards)</span>
+        <span class="fee-label"><span class="fee-dot" style="background:#e17055"></span> 2% — Protocol Treasury</span>
+    </div>
+</section>
+
+<!-- REPUTATION -->
+<section>
+    <div class="section-title">Validator Reputation Formula</div>
+    <div class="section-subtitle">Three factors determine validator earnings</div>
+
+    <div class="formula-box">
+        <div class="formula-main">
+            share = <span class="var-dev">deviation_weight</span> × <span class="var-rep">reputation</span> × <span class="var-stk">stakeAmount</span> / 10000
+        </div>
+        <div class="threshold-grid">
+            <div class="threshold">
+                <div class="threshold-val" style="color: var(--green)">100</div>
+                <div class="threshold-label">≤ 20% deviation<br>✅ Accurate</div>
+            </div>
+            <div class="threshold">
+                <div class="threshold-val" style="color: var(--yellow)">50</div>
+                <div class="threshold-label">20% — 50% deviation<br>⚠️ Partial</div>
+            </div>
+            <div class="threshold">
+                <div class="threshold-val" style="color: var(--red)">0</div>
+                <div class="threshold-label">> 50% deviation<br>❌ Penalized</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ON-CHAIN ASSETS -->
+<section>
+    <div class="section-title">On-Chain Assets</div>
+    <div class="section-subtitle">All verified live on Hedera Testnet</div>
+
+    <table class="assets-table">
+        <thead>
+            <tr>
+                <th>Asset</th>
+                <th>Hedera ID</th>
+                <th>Type</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>SubnetRegistryV2</td>
+                <td><a href="https://hashscan.io/testnet/contract/0.0.8054802" target="_blank">0.0.8054802</a></td>
+                <td>Smart Contract</td>
+                <td><span class="status-live">LIVE</span></td>
+            </tr>
+            <tr>
+                <td>StakingVaultV2</td>
+                <td><a href="https://hashscan.io/testnet/contract/0.0.8054801" target="_blank">0.0.8054801</a></td>
+                <td>Smart Contract</td>
+                <td><span class="status-live">LIVE</span></td>
+            </tr>
+            <tr>
+                <td>MDT Token</td>
+                <td><a href="https://hashscan.io/testnet/token/0.0.7852345" target="_blank">0.0.7852345</a></td>
+                <td>HTS Token</td>
+                <td><span class="status-live">LIVE</span></td>
+            </tr>
+            <tr>
+                <td>HCS Registration</td>
+                <td><a href="https://hashscan.io/testnet/topic/0.0.7852335" target="_blank">0.0.7852335</a></td>
+                <td>HCS Topic</td>
+                <td><span class="status-live">LIVE</span></td>
+            </tr>
+            <tr>
+                <td>HCS Scoring</td>
+                <td><a href="https://hashscan.io/testnet/topic/0.0.7852336" target="_blank">0.0.7852336</a></td>
+                <td>HCS Topic</td>
+                <td><span class="status-live">LIVE</span></td>
+            </tr>
+            <tr>
+                <td>HCS Task</td>
+                <td><a href="https://hashscan.io/testnet/topic/0.0.7852337" target="_blank">0.0.7852337</a></td>
+                <td>HCS Topic</td>
+                <td><span class="status-live">LIVE</span></td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- FOOTER -->
+<div class="footer">
+    <p>ModernTensor — Hello Future Hackathon 2026</p>
+    <p style="margin-top: 0.5rem">Built with Hedera Hashgraph • Solidity • Python SDK</p>
+</div>
+
+</body>
+</html>

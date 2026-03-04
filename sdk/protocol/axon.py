@@ -17,6 +17,8 @@ For ModernTensor on Hedera — Hello Future Hackathon 2026
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import logging
 import threading
@@ -29,6 +31,9 @@ logger = logging.getLogger(__name__)
 # Type alias: handler receives (task_payload, task_type) and returns output dict
 TaskHandler = Callable[[Dict[str, Any], str], Dict[str, Any]]
 
+# Shared secret for HMAC authentication (set via env or config)
+_DEFAULT_AUTH_SECRET = "moderntensor-hackathon-2026"
+
 
 class _AxonRequestHandler(BaseHTTPRequestHandler):
     """Internal HTTP request handler for the Axon server."""
@@ -39,19 +44,27 @@ class _AxonRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            self._respond(200, {
-                "status": "online",
-                "miner_id": self.server.axon_config["miner_id"],
-                "uptime": round(time.time() - self.server.axon_config["started_at"], 1),
-                "tasks_processed": self.server.axon_config["tasks_processed"],
-            })
+            self._respond(
+                200,
+                {
+                    "status": "online",
+                    "miner_id": self.server.axon_config["miner_id"],
+                    "uptime": round(
+                        time.time() - self.server.axon_config["started_at"], 1
+                    ),
+                    "tasks_processed": self.server.axon_config["tasks_processed"],
+                },
+            )
         elif self.path == "/info":
-            self._respond(200, {
-                "miner_id": self.server.axon_config["miner_id"],
-                "subnet_ids": self.server.axon_config["subnet_ids"],
-                "capabilities": self.server.axon_config["capabilities"],
-                "version": "1.0.0",
-            })
+            self._respond(
+                200,
+                {
+                    "miner_id": self.server.axon_config["miner_id"],
+                    "subnet_ids": self.server.axon_config["subnet_ids"],
+                    "capabilities": self.server.axon_config["capabilities"],
+                    "version": "1.0.0",
+                },
+            )
         else:
             self._respond(404, {"error": "Not found"})
 
@@ -63,6 +76,18 @@ class _AxonRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_task(self):
         """Process incoming task from a validator."""
+        # Authentication: verify HMAC signature if auth is enabled
+        auth_secret = self.server.axon_config.get("auth_secret")
+        if auth_secret:
+            sig = self.headers.get("X-Auth-Signature", "")
+            validator_id = self.headers.get("X-Validator-ID", "")
+            expected = hmac.new(
+                auth_secret.encode(), validator_id.encode(), hashlib.sha256
+            ).hexdigest()
+            if not hmac.compare_digest(sig, expected):
+                self._respond(403, {"error": "Invalid authentication signature"})
+                return
+
         try:
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length)
@@ -77,7 +102,8 @@ class _AxonRequestHandler(BaseHTTPRequestHandler):
 
         logger.info(
             "Axon received task %s (type=%s) from validator",
-            task_id[:8] if len(task_id) > 8 else task_id, task_type,
+            task_id[:8] if len(task_id) > 8 else task_id,
+            task_type,
         )
 
         handler = self.server.axon_config.get("handler")
@@ -92,13 +118,16 @@ class _AxonRequestHandler(BaseHTTPRequestHandler):
 
             self.server.axon_config["tasks_processed"] += 1
 
-            self._respond(200, {
-                "task_id": task_id,
-                "miner_id": self.server.axon_config["miner_id"],
-                "output": output,
-                "execution_time": round(execution_time, 3),
-                "status": "completed",
-            })
+            self._respond(
+                200,
+                {
+                    "task_id": task_id,
+                    "miner_id": self.server.axon_config["miner_id"],
+                    "output": output,
+                    "execution_time": round(execution_time, 3),
+                    "status": "completed",
+                },
+            )
 
             logger.info(
                 "Task %s completed in %.2fs",
@@ -108,12 +137,15 @@ class _AxonRequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             execution_time = time.time() - start_time
             logger.error("Handler error for task %s: %s", task_id[:8], e)
-            self._respond(500, {
-                "task_id": task_id,
-                "error": str(e),
-                "execution_time": round(execution_time, 3),
-                "status": "failed",
-            })
+            self._respond(
+                500,
+                {
+                    "task_id": task_id,
+                    "error": str(e),
+                    "execution_time": round(execution_time, 3),
+                    "status": "failed",
+                },
+            )
 
     def _respond(self, status_code: int, data: Dict[str, Any]):
         """Send JSON response."""
@@ -216,7 +248,9 @@ class Axon:
 
         logger.info(
             "Axon started — miner=%s, endpoint=%s, subnets=%s",
-            self.miner_id, self.endpoint, self.subnet_ids,
+            self.miner_id,
+            self.endpoint,
+            self.subnet_ids,
         )
 
     def stop(self) -> None:
@@ -234,10 +268,11 @@ class Axon:
             "miner_id": self.miner_id,
             "endpoint": self.endpoint,
             "is_running": self._running,
-            "uptime": round(time.time() - self._started_at, 1) if self._started_at else 0,
+            "uptime": (
+                round(time.time() - self._started_at, 1) if self._started_at else 0
+            ),
             "tasks_processed": (
-                self._server.axon_config["tasks_processed"]
-                if self._server else 0
+                self._server.axon_config["tasks_processed"] if self._server else 0
             ),
             "subnet_ids": self.subnet_ids,
         }

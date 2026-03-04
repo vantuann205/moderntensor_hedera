@@ -3,6 +3,9 @@ ModernTensor - Subnet Service
 
 SDK module for interacting with SubnetRegistry on Hedera.
 Handles subnet creation, miner registration, and task management.
+
+NOTE: All methods are synchronous — they call HederaClient.execute_contract /
+      call_contract which are themselves synchronous (blocking).
 """
 
 from dataclasses import dataclass
@@ -12,6 +15,7 @@ from enum import IntEnum
 
 class SubnetStatus(IntEnum):
     """Subnet statuses"""
+
     ACTIVE = 0
     PAUSED = 1
     DEPRECATED = 2
@@ -19,6 +23,7 @@ class SubnetStatus(IntEnum):
 
 class TaskStatus(IntEnum):
     """Task statuses"""
+
     CREATED = 0
     IN_PROGRESS = 1
     PENDING_REVIEW = 2
@@ -30,6 +35,7 @@ class TaskStatus(IntEnum):
 @dataclass
 class SubnetInfo:
     """Subnet information from contract"""
+
     id: int
     name: str
     description: str
@@ -46,6 +52,7 @@ class SubnetInfo:
 @dataclass
 class TaskInfo:
     """Task information from contract"""
+
     id: int
     subnet_id: int
     requester: str
@@ -63,6 +70,7 @@ class TaskInfo:
 @dataclass
 class SubnetConfig:
     """Configuration for a subnet"""
+
     name: str
     description: str
     fee_rate: int = 500  # 5% default
@@ -90,7 +98,7 @@ class SubnetService:
         Initialize SubnetService.
 
         Args:
-            contract_service: SmartContractService instance
+            contract_service: HederaClient (or compatible) instance
             contract_id: SubnetRegistry contract ID
         """
         self.contract_service = contract_service
@@ -101,10 +109,7 @@ class SubnetService:
     # SUBNET MANAGEMENT
     # =========================================================================
 
-    async def register_subnet(
-        self,
-        config: SubnetConfig
-    ) -> int:
+    def register_subnet(self, config: SubnetConfig) -> int:
         """
         Register a new subnet.
 
@@ -118,22 +123,20 @@ class SubnetService:
             raise ValueError(f"Fee rate exceeds max: {self.MAX_SUBNET_FEE_RATE}")
 
         # Call contract
-        result = await self.contract_service.execute_contract(
+        result = self.contract_service.execute_contract(
             self.contract_id,
             "registerSubnet",
-            [config.name, config.description, config.fee_rate]
+            [config.name, config.description, config.fee_rate],
         )
 
         # Extract subnet ID from event
         subnet_id = self._parse_subnet_created_event(result)
         return subnet_id
 
-    async def get_subnet(self, subnet_id: int) -> SubnetInfo:
+    def get_subnet(self, subnet_id: int) -> SubnetInfo:
         """Get subnet information."""
-        result = await self.contract_service.call_contract(
-            self.contract_id,
-            "getSubnet",
-            [subnet_id]
+        result = self.contract_service.call_contract(
+            self.contract_id, "getSubnet", [subnet_id]
         )
 
         return SubnetInfo(
@@ -147,40 +150,35 @@ class SubnetService:
             total_tasks=result[7],
             active_miners=result[8],
             status=SubnetStatus(result[9]),
-            created_at=result[10]
+            created_at=result[10],
         )
 
-    async def get_subnet_count(self) -> int:
+    def get_subnet_count(self) -> int:
         """Get total number of subnets."""
-        result = await self.contract_service.call_contract(
-            self.contract_id,
-            "subnetCount",
-            []
+        result = self.contract_service.call_contract(
+            self.contract_id, "subnetCount", []
         )
         return int(result)
 
-    async def list_subnets(self) -> List[SubnetInfo]:
+    def list_subnets(self) -> List[SubnetInfo]:
         """List all subnets."""
-        count = await self.get_subnet_count()
+        count = self.get_subnet_count()
         subnets = []
 
         for i in range(count):
-            subnet = await self.get_subnet(i)
+            subnet = self.get_subnet(i)
             subnets.append(subnet)
 
         return subnets
 
-    async def update_subnet(
-        self,
-        subnet_id: int,
-        new_fee_rate: int,
-        new_status: SubnetStatus
+    def update_subnet(
+        self, subnet_id: int, new_fee_rate: int, new_status: SubnetStatus
     ) -> bool:
         """Update subnet configuration (owner only)."""
-        await self.contract_service.execute_contract(
+        self.contract_service.execute_contract(
             self.contract_id,
             "updateSubnet",
-            [subnet_id, new_fee_rate, new_status.value]
+            [subnet_id, new_fee_rate, new_status.value],
         )
         return True
 
@@ -188,21 +186,17 @@ class SubnetService:
     # MINER REGISTRATION
     # =========================================================================
 
-    async def register_miner(self, subnet_id: int) -> bool:
+    def register_miner(self, subnet_id: int) -> bool:
         """Register as miner in a subnet."""
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "registerMiner",
-            [subnet_id]
+        self.contract_service.execute_contract(
+            self.contract_id, "registerMiner", [subnet_id]
         )
         return True
 
-    async def is_miner(self, subnet_id: int, address: str) -> bool:
+    def is_miner(self, subnet_id: int, address: str) -> bool:
         """Check if address is registered miner in subnet."""
-        result = await self.contract_service.call_contract(
-            self.contract_id,
-            "isMiner",
-            [subnet_id, address]
+        result = self.contract_service.call_contract(
+            self.contract_id, "isMiner", [subnet_id, address]
         )
         return bool(result)
 
@@ -210,12 +204,8 @@ class SubnetService:
     # TASK MANAGEMENT
     # =========================================================================
 
-    async def create_task(
-        self,
-        subnet_id: int,
-        task_hash: str,
-        reward_amount: int,
-        duration_seconds: int
+    def create_task(
+        self, subnet_id: int, task_hash: str, reward_amount: int, duration_seconds: int
     ) -> int:
         """
         Create a task in a specific subnet.
@@ -229,21 +219,19 @@ class SubnetService:
         Returns:
             Task ID
         """
-        result = await self.contract_service.execute_contract(
+        result = self.contract_service.execute_contract(
             self.contract_id,
             "createTask",
-            [subnet_id, task_hash, reward_amount, duration_seconds]
+            [subnet_id, task_hash, reward_amount, duration_seconds],
         )
 
         task_id = self._parse_task_created_event(result)
         return task_id
 
-    async def get_task(self, task_id: int) -> TaskInfo:
+    def get_task(self, task_id: int) -> TaskInfo:
         """Get task information."""
-        result = await self.contract_service.call_contract(
-            self.contract_id,
-            "getTask",
-            [task_id]
+        result = self.contract_service.call_contract(
+            self.contract_id, "getTask", [task_id]
         )
 
         return TaskInfo(
@@ -256,30 +244,26 @@ class SubnetService:
             subnet_fee=result[6],
             deadline=result[7],
             status=TaskStatus(result[8]),
-            winning_miner=result[9] if result[9] != "0x0000000000000000000000000000000000000000" else None,
+            winning_miner=(
+                result[9]
+                if result[9] != "0x0000000000000000000000000000000000000000"
+                else None
+            ),
             winning_score=result[10],
-            created_at=result[11]
+            created_at=result[11],
         )
 
-    async def submit_result(
-        self,
-        task_id: int,
-        result_hash: str
-    ) -> bool:
+    def submit_result(self, task_id: int, result_hash: str) -> bool:
         """Submit result for a task."""
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "submitResult",
-            [task_id, result_hash]
+        self.contract_service.execute_contract(
+            self.contract_id, "submitResult", [task_id, result_hash]
         )
         return True
 
-    async def finalize_task(self, task_id: int) -> bool:
+    def finalize_task(self, task_id: int) -> bool:
         """Finalize task and trigger payment distribution."""
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "finalizeTask",
-            [task_id]
+        self.contract_service.execute_contract(
+            self.contract_id, "finalizeTask", [task_id]
         )
         return True
 
@@ -287,11 +271,7 @@ class SubnetService:
     # FEE CALCULATIONS
     # =========================================================================
 
-    def calculate_fees(
-        self,
-        reward_amount: int,
-        subnet_fee_rate: int
-    ) -> dict:
+    def calculate_fees(self, reward_amount: int, subnet_fee_rate: int) -> dict:
         """
         Calculate fee breakdown for a task.
 
@@ -307,28 +287,22 @@ class SubnetService:
             "protocol_fee": protocol_fee,
             "subnet_fee": subnet_fee,
             "miner_reward": miner_reward,
-            "total_deposit": total_deposit
+            "total_deposit": total_deposit,
         }
 
     # =========================================================================
     # PULL PATTERN: WITHDRAWALS
     # =========================================================================
 
-    async def withdraw_earnings(self) -> bool:
+    def withdraw_earnings(self) -> bool:
         """Withdraw pending earnings (miner/validator Pull pattern)."""
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "withdrawEarnings",
-            []
-        )
+        self.contract_service.execute_contract(self.contract_id, "withdrawEarnings", [])
         return True
 
-    async def get_pending_withdrawals(self, address: str) -> int:
+    def get_pending_withdrawals(self, address: str) -> int:
         """Get pending withdrawable balance for an address."""
-        result = await self.contract_service.query_contract(
-            self.contract_id,
-            "pendingWithdrawals",
-            [address]
+        result = self.contract_service.call_contract(
+            self.contract_id, "pendingWithdrawals", [address]
         )
         return result
 
@@ -336,12 +310,7 @@ class SubnetService:
     # COMMIT-REVEAL SCHEME
     # =========================================================================
 
-    async def commit_score(
-        self,
-        task_id: int,
-        miner_index: int,
-        commit_hash: bytes
-    ) -> bool:
+    def commit_score(self, task_id: int, miner_index: int, commit_hash: bytes) -> bool:
         """
         Phase A: Commit a hashed score (anti-front-running).
 
@@ -350,19 +319,13 @@ class SubnetService:
             miner_index: Index of miner submission
             commit_hash: keccak256(abi.encodePacked(score, salt))
         """
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "commitScore",
-            [task_id, miner_index, commit_hash]
+        self.contract_service.execute_contract(
+            self.contract_id, "commitScore", [task_id, miner_index, commit_hash]
         )
         return True
 
-    async def reveal_score(
-        self,
-        task_id: int,
-        miner_index: int,
-        score: int,
-        salt: bytes
+    def reveal_score(
+        self, task_id: int, miner_index: int, score: int, salt: bytes
     ) -> bool:
         """
         Phase B: Reveal the committed score.
@@ -373,19 +336,15 @@ class SubnetService:
             score: The actual validation score (0-10000)
             salt: The random salt used when committing
         """
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "revealScore",
-            [task_id, miner_index, score, salt]
+        self.contract_service.execute_contract(
+            self.contract_id, "revealScore", [task_id, miner_index, score, salt]
         )
         return True
 
-    async def get_commit_hash(self, score: int, salt: bytes) -> bytes:
+    def get_commit_hash(self, score: int, salt: bytes) -> bytes:
         """Generate commit hash for off-chain verification."""
-        result = await self.contract_service.query_contract(
-            self.contract_id,
-            "getCommitHash",
-            [score, salt]
+        result = self.contract_service.call_contract(
+            self.contract_id, "getCommitHash", [score, salt]
         )
         return result
 
@@ -393,7 +352,7 @@ class SubnetService:
     # PROOF-OF-INTELLIGENCE: REPUTATION
     # =========================================================================
 
-    async def get_validator_reputation(self, address: str) -> dict:
+    def get_validator_reputation(self, address: str) -> dict:
         """
         Get on-chain reputation data for a validator.
 
@@ -401,24 +360,18 @@ class SubnetService:
             dict with totalValidations, accurateValidations,
             reputationScore (basis points), lastActiveAt
         """
-        result = await self.contract_service.query_contract(
-            self.contract_id,
-            "validatorReputation",
-            [address]
+        result = self.contract_service.call_contract(
+            self.contract_id, "validatorReputation", [address]
         )
         return {
             "total_validations": result[0],
             "accurate_validations": result[1],
             "reputation_score": result[2],
             "last_active_at": result[3],
-            "reputation_percent": result[2] / 100  # Convert basis points to %
+            "reputation_percent": result[2] / 100,  # Convert basis points to %
         }
 
-    async def port_reputation(
-        self,
-        from_subnet_id: int,
-        to_subnet_id: int
-    ) -> bool:
+    def port_reputation(self, from_subnet_id: int, to_subnet_id: int) -> bool:
         """
         Port reputation from one subnet to another (50% decay).
 
@@ -426,10 +379,8 @@ class SubnetService:
         Validators who proved themselves in one AI domain can carry
         50% of their reputation to a new domain.
         """
-        await self.contract_service.execute_contract(
-            self.contract_id,
-            "portReputation",
-            [from_subnet_id, to_subnet_id]
+        self.contract_service.execute_contract(
+            self.contract_id, "portReputation", [from_subnet_id, to_subnet_id]
         )
         return True
 
@@ -437,20 +388,14 @@ class SubnetService:
     # PROOF-OF-INTELLIGENCE: ADAPTIVE VALIDATION
     # =========================================================================
 
-    async def get_adaptive_min_validations(
-        self,
-        subnet_id: int,
-        reward_amount: int
-    ) -> int:
+    def get_adaptive_min_validations(self, subnet_id: int, reward_amount: int) -> int:
         """
         Get adaptive minValidations based on task reward.
 
         Higher-value tasks require more validators (security scales with value).
         """
-        result = await self.contract_service.query_contract(
-            self.contract_id,
-            "getAdaptiveMinValidations",
-            [subnet_id, reward_amount]
+        result = self.contract_service.call_contract(
+            self.contract_id, "getAdaptiveMinValidations", [subnet_id, reward_amount]
         )
         return result
 
@@ -459,14 +404,41 @@ class SubnetService:
     # =========================================================================
 
     def _parse_subnet_created_event(self, tx_result) -> int:
-        """Parse SubnetCreated event to get subnet ID."""
-        # Implementation depends on Hedera SDK event parsing
-        # For now, return from logs
-        return 0  # Placeholder
+        """Parse SubnetCreated event to get subnet ID.
+
+        The TransactionReceipt from Hedera contains a ContractFunctionResult
+        which logs the event: SubnetCreated(uint256 indexed subnetId, ...).
+        We read the first uint256 from the receipt's contract_function_result.
+        """
+        try:
+            if hasattr(tx_result, "contract_function_result"):
+                fn_result = tx_result.contract_function_result
+                if fn_result and hasattr(fn_result, "get_uint256"):
+                    return fn_result.get_uint256(0)
+            # Fallback: return current subnetCount (the id just assigned)
+            count_result = self.contract_service.call_contract(
+                self.contract_id, "subnetCount", []
+            )
+            if hasattr(count_result, "get_uint256"):
+                return count_result.get_uint256(0)
+            return int(count_result)
+        except Exception:
+            return 0
 
     def _parse_task_created_event(self, tx_result) -> int:
-        """Parse TaskCreated event to get task ID."""
-        return 0  # Placeholder
+        """Parse TaskCreated event to get task ID.
+
+        Reads the first uint256 from the receipt's contract_function_result,
+        which corresponds to the emitted taskId.
+        """
+        try:
+            if hasattr(tx_result, "contract_function_result"):
+                fn_result = tx_result.contract_function_result
+                if fn_result and hasattr(fn_result, "get_uint256"):
+                    return fn_result.get_uint256(0)
+            return 0
+        except Exception:
+            return 0
 
 
 # Convenience factory

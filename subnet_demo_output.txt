@@ -1,0 +1,300 @@
+﻿python : No subnet_owner_id in FeeBreakdown for task 46071c09, skipping subnet 
+fee transfer
+At line:1 char:32
++ $env:PYTHONIOENCODING='utf-8'; python run_subnet_demo.py 2>&1 | Out-F ...
++                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (No subnet_owner...et fee transfer 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+No subnet_owner_id in FeeBreakdown for task 6d8ca5ba, skipping subnet fee 
+transfer
+No subnet_owner_id in FeeBreakdown for task 6fbedbb6, skipping subnet fee 
+transfer
+No subnet_owner_id in FeeBreakdown for task f07475e6, skipping subnet fee 
+transfer
+No subnet_owner_id in FeeBreakdown for task e13876fb, skipping subnet fee 
+transfer
+
+================================================================
+  [1mModernTensor ΓÇö Subnet Demo (On-Chain)[0m
+================================================================
+  Subnet:     #1  ModernTensor-AI-Subnet
+  Miners:     4 nodes, ports 19701-19704
+  Validator:  1 node, stake 50,000 MDT
+  Tasks:      5 per epoch
+  Reward:     100 MDT/task
+================================================================
+
+================================================================
+  Phase 0  [1mConnect to Hedera Testnet[0m
+================================================================
+  [92m[OK][0m Operator     : 0.0.7851838
+  [92m[OK][0m Balance      : 833.67525178 ΓäÅ
+  [92m[OK][0m EVM address  : 0x000000000000...
+
+  [96mContracts:[0m
+  [92m[OK][0m   PaymentEscrow       0.0.8045890
+  [92m[OK][0m   SubnetRegistry      0.0.8046035
+  [92m[OK][0m   StakingVault        0.0.8046039
+  [92m[OK][0m   MDTGovernor         0.0.8046041
+  [96mHCS Topics:[0m
+  [92m[OK][0m   Registration      0.0.7852335
+  [92m[OK][0m   Scoring           0.0.7852336
+  [92m[OK][0m   Tasks             0.0.7852337
+  [92m[OK][0m   Escrow oracle set
+
+================================================================
+  Phase 1  [1mRegister Subnet on SubnetRegistry[0m
+================================================================
+  [92m[OK][0m Subnet registered on-chain (SubnetRegistry 0.0.8046035)
+
+================================================================
+  Phase 2  [1mCreate & Register Miner Nodes[0m
+================================================================
+  [92m[OK][0m Miner-Alpha staked 800 MDT (on-chain)
+  [92m[OK][0m Miner-Alpha registered on HCS (on-chain)
+  [92m[OK][0m Miner-Alpha Axon online -> http://127.0.0.1:19701
+  [92m[OK][0m Miner-Beta staked 400 MDT (on-chain)
+  [92m[OK][0m Miner-Beta registered on HCS (on-chain)
+  [92m[OK][0m Miner-Beta Axon online -> http://127.0.0.1:19702
+  [92m[OK][0m Miner-Gamma staked 200 MDT (on-chain)
+  [92m[OK][0m Miner-Gamma registered on HCS (on-chain)
+  [92m[OK][0m Miner-Gamma Axon online -> http://127.0.0.1:19703
+  [92m[OK][0m Miner-Delta staked 150 MDT (on-chain)
+  [92m[OK][0m Miner-Delta registered on HCS (on-chain)
+  [92m[OK][0m Miner-Delta Axon online -> http://127.0.0.1:19704
+  [92m[OK][0m All 4 miner nodes online
+
+================================================================
+  Phase 3  [1mCreate & Register Validator Node[0m
+================================================================
+  [92m[OK][0m Validator staked 50,000 MDT (on-chain)
+  [92m[OK][0m Validator ready: <SubnetValidator id=0.0.9001 stake=50,000 MDT tasks=0>
+
+================================================================
+  Phase 4  [1mProtocol Layer Initialization[0m
+================================================================
+  [92m[OK][0m Miner-Alpha -> local MinerRegistry
+  [92m[OK][0m Miner-Beta -> local MinerRegistry
+  [92m[OK][0m Miner-Gamma -> local MinerRegistry
+  [92m[OK][0m Miner-Delta -> local MinerRegistry
+  [92m[OK][0m Protocol layer ready (FeeEngine, TaskManager, WeightCalculator)
+
+================================================================
+  Phase 5  [1mPre-Epoch Weights (equal ΓÇö no history)[0m
+================================================================
+    Miner-Alpha     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê  w=0.2500
+    Miner-Beta      ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê  w=0.2500
+    Miner-Gamma     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê  w=0.2500
+    Miner-Delta     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê  w=0.2500
+
+================================================================
+  Phase 6  [1mFee Calculation[0m
+================================================================
+
+  For 100 MDT task (subnet_fee=3%):
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  Miner reward:         77.00 MDT  (77%)
+  Validator pool:       15.00 MDT  (15%)
+  Protocol fee:          5.00 MDT  (5%)
+  Subnet fee:            3.00 MDT  (3%)
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  Total:               100.00 MDT
+
+
+================================================================
+  Phase 7  [1mRun 5 Tasks (full lifecycle)[0m
+================================================================
+
+  [1m--- Task 1/5 ---[0m
+  [92m[OK][0m HCS task log (on-chain)
+  [92m[OK][0m PaymentEscrow.deposit  100 MDT (on-chain)
+  [92m[OK][0m SubnetRegistry.createTask (on-chain)
+  [96m[..][0m Matched to 4 miners
+  [92m[OK][0m Winner: [92mMiner-Beta[0m  score=1.000
+  [93m[$][0m  Split: miner=77.00  val=15.00  proto=5.00  subnet=3.00
+  [92m[OK][0m PaymentEscrow.release (on-chain)
+  [92m[OK][0m SubnetRegistry.validateSubmission (on-chain)
+
+  [1m--- Task 2/5 ---[0m
+  [92m[OK][0m HCS task log (on-chain)
+  [92m[OK][0m PaymentEscrow.deposit  100 MDT (on-chain)
+  [92m[OK][0m SubnetRegistry.createTask (on-chain)
+  [96m[..][0m Matched to 4 miners
+  [92m[OK][0m Winner: [92mMiner-Beta[0m  score=1.000
+  [93m[$][0m  Split: miner=77.00  val=15.00  proto=5.00  subnet=3.00
+  [92m[OK][0m PaymentEscrow.release (on-chain)
+  [92m[OK][0m SubnetRegistry.validateSubmission (on-chain)
+
+  [1m--- Task 3/5 ---[0m
+  [92m[OK][0m HCS task log (on-chain)
+  [92m[OK][0m PaymentEscrow.deposit  100 MDT (on-chain)
+  [92m[OK][0m SubnetRegistry.createTask (on-chain)
+  [96m[..][0m Matched to 4 miners
+  [92m[OK][0m Winner: [92mMiner-Beta[0m  score=1.000
+  [93m[$][0m  Split: miner=77.00  val=15.00  proto=5.00  subnet=3.00
+  [92m[OK][0m PaymentEscrow.release (on-chain)
+  [92m[OK][0m SubnetRegistry.validateSubmission (on-chain)
+
+  [1m--- Task 4/5 ---[0m
+  [92m[OK][0m HCS task log (on-chain)
+  [92m[OK][0m PaymentEscrow.deposit  100 MDT (on-chain)
+  [92m[OK][0m SubnetRegistry.createTask (on-chain)
+  [96m[..][0m Matched to 4 miners
+  [92m[OK][0m Winner: [92mMiner-Alpha[0m  score=1.000
+  [93m[$][0m  Split: miner=77.00  val=15.00  proto=5.00  subnet=3.00
+  [92m[OK][0m PaymentEscrow.release (on-chain)
+  [92m[OK][0m SubnetRegistry.validateSubmission (on-chain)
+
+  [1m--- Task 5/5 ---[0m
+  [92m[OK][0m HCS task log (on-chain)
+  [92m[OK][0m PaymentEscrow.deposit  100 MDT (on-chain)
+  [92m[OK][0m SubnetRegistry.createTask (on-chain)
+  [96m[..][0m Matched to 4 miners
+  [92m[OK][0m Winner: [92mMiner-Beta[0m  score=1.000
+  [93m[$][0m  Split: miner=77.00  val=15.00  proto=5.00  subnet=3.00
+  [92m[OK][0m PaymentEscrow.release (on-chain)
+  [92m[OK][0m SubnetRegistry.validateSubmission (on-chain)
+
+  [92mTasks completed: 5/5[0m
+
+================================================================
+  Phase 8  [1mIncentive Weight Update (post-task)[0m
+================================================================
+  [96mScores from 5 tasks:[0m
+    Miner-Alpha     avg_score=1.000  tasks=5
+    Miner-Beta      avg_score=1.000  tasks=5
+    Miner-Gamma     avg_score=0.940  tasks=5
+    Miner-Delta     avg_score=0.872  tasks=5
+
+  [96mUpdated Weights (merit-based):[0m
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    Miner-Alpha     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûæΓûæΓûæ  w=0.2500 (=0.0000)  score=1.000
+    Miner-Beta      ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûæΓûæΓûæ  w=0.2500 (=0.0000)  score=1.000
+    Miner-Gamma     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûæΓûæΓûæ  w=0.2500 (=0.0000)  score=0.940
+    Miner-Delta     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûæΓûæΓûæ  w=0.2500 (=0.0000)  score=0.872
+
+    Validator     ΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê  w=1.0000  stake=50,000 MDT
+
+================================================================
+  Phase 9  [1mGovernance ΓÇö Set Incentive (MDTGovernor)[0m
+================================================================
+  [92m[OK][0m Governance proposal created (on-chain)
+  [92m[OK][0m Voted FOR incentive update (on-chain)
+
+================================================================
+  Phase 10  [1mMetagraph Update -> HCS[0m
+================================================================
+    Miner-Alpha     w=0.2500  score=1.000  stake=800
+    Miner-Beta      w=0.2500  score=1.000  stake=400
+    Miner-Gamma     w=0.2500  score=0.940  stake=200
+    Miner-Delta     w=0.2500  score=0.872  stake=150
+  [92m[OK][0m Metagraph -> HCS 0.0.7852336 (on-chain)
+
+================================================================
+  Phase 11  [1mEpoch Finalization + Staking Rewards[0m
+================================================================
+
+  Epoch 1 ΓÇö Year 1
+  Daily emission: 68,493.15 MDT
+  Total staked:   51,550 MDT
+
+  Role        Entity                 Stake    Share        Reward
+  ==============================================================
+  Miner       Miner-Alpha            800 MDT    1.6%    1,062.94 MDT
+  Miner       Miner-Beta             400 MDT    0.8%      531.47 MDT
+  Miner       Miner-Gamma            200 MDT    0.4%      265.73 MDT
+  Miner       Miner-Delta            150 MDT    0.3%      199.30 MDT
+  Validator   Val-Prime           50,000 MDT   97.0%   66,433.71 MDT
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              TOTAL               51,550 MDT     100%   68,493.15 MDT
+  [92m[OK][0m Epoch 1 finalized: 68,493.15 MDT distributed
+  [92m[OK][0m Epoch log -> HCS (on-chain)
+
+================================================================
+  Phase 12  [1mTreasury & Full P&L Report[0m
+================================================================
+
+  [96mProtocol Treasury Summary:[0m
+  ==================================================
+  Total Volume:                  500.00 MDT
+  Protocol Fees (5%):             25.00 MDT
+  Subnet Fees (3%):               15.00 MDT
+  Miner Task Rewards (77%):      100.99 MDT
+  Total Payouts:                      5
+  ==================================================
+
+  [96mFull P&L (task rewards + staking):[0m
+  Role        Entity                  Task       Staking         Total
+  ==================================================================
+  Miner       Miner-Alpha        20.1980    1,062.94  1,083.1372
+  Miner       Miner-Beta         80.7921      531.47    612.2617
+  Miner       Miner-Gamma         0.0000      265.73    265.7348
+  Miner       Miner-Delta         0.0000      199.30    199.3011
+  Validator   Val-Prime          75.0000   66,433.71  66,508.7058
+  Protocol    DAO                25.0000           ---     25.0000
+  Subnet      Owner              15.0000           ---     15.0000
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+              GRAND TOTAL                                 68,709.1407 MDT
+
+================================================================
+  Phase 13  [1mMirror Node Verification[0m
+================================================================
+  [96m[..][0m Waiting 3s for Mirror Node sync...
+  [92m[OK][0m Registrations: 5 recent messages on 0.0.7852335
+  [92m[OK][0m Scores: 5 recent messages on 0.0.7852336
+  [92m[OK][0m Tasks: 5 recent messages on 0.0.7852337
+
+================================================================
+  Phase 14  [1mCleanup[0m
+================================================================
+  [92m[OK][0m All 4 Axon servers stopped
+  [92m[OK][0m Treasury state saved
+  [92m[OK][0m Hedera client closed
+
+================================================================
+  [1mSubnet Demo Complete[0m
+================================================================
+
+  [96mSubnet #1 ΓÇö ModernTensor-AI-Subnet[0m
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+
+  [1mNodes:[0m
+    4 Miners:   Miner-Alpha, Miner-Beta, Miner-Gamma, Miner-Delta
+    1 Validator: Val-Prime (stake 50,000 MDT)
+
+  [1mOn-Chain Transactions:[0m
+    SubnetRegistry  0.0.8046035
+      1 subnet registered, 5 tasks created,
+      5 validated
+
+    StakingVault    0.0.8046039
+      4 miner stakes, 1 validator stake
+
+    PaymentEscrow   0.0.8045890
+      5 deposits, 5 releases
+
+    MDTGovernor     0.0.8046041
+      1 proposal, 1 vote
+
+  [1mHCS Messages:[0m
+    4 registrations  -> 0.0.7852335
+    5 task logs       -> 0.0.7852337
+    20 score submissions -> 0.0.7852336
+    1 metagraph       -> 0.0.7852336
+    1 epoch log       -> 0.0.7852336
+
+  [1mIncentive:[0m
+    Weights recalculated from 5-task performance
+    Top: Miner-Alpha w=0.2500
+
+  [1mEpoch Rewards:[0m
+    Emission: 68,493.15 MDT -> 5 stakers
+    Total: 68,493.15 MDT
+
+  [1mTreasury:[0m
+    Volume: 500.00 MDT
+    Fees: 25.00 protocol + 15.00 subnet
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+

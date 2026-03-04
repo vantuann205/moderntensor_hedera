@@ -14,6 +14,9 @@ describe("Attack Vector Tests — Post-Security-Patch", function () {
         const Escrow = await ethers.getContractFactory("PaymentEscrow");
         escrow = await Escrow.deploy(token.target || token.address);
 
+        // Disable dispute grace period for test simplicity
+        await escrow.setDisputeGracePeriod(0);
+
         // Setup validators
         await escrow.addValidator(validator1.address);
         await escrow.addValidator(validator2.address);

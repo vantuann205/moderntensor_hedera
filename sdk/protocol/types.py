@@ -18,8 +18,10 @@ from typing import Any, Dict, List, Optional
 # Enums
 # ---------------------------------------------------------------------------
 
+
 class TaskStatus(str, Enum):
     """Lifecycle states for a task in the protocol."""
+
     PENDING = "pending"
     MATCHING = "matching"
     ASSIGNED = "assigned"
@@ -33,6 +35,7 @@ class TaskStatus(str, Enum):
 
 class TaskPriority(str, Enum):
     """Priority levels affecting matching and fees."""
+
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
@@ -51,6 +54,7 @@ class TaskPriority(str, Enum):
 
 class MinerStatus(str, Enum):
     """Registration status of a miner in the protocol."""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     SUSPENDED = "suspended"
@@ -59,6 +63,7 @@ class MinerStatus(str, Enum):
 
 class ScoreDimension(str, Enum):
     """Standard scoring dimensions for AI task evaluation."""
+
     SECURITY = "security"
     CORRECTNESS = "correctness"
     READABILITY = "readability"
@@ -71,6 +76,7 @@ class ScoreDimension(str, Enum):
 # ---------------------------------------------------------------------------
 # Task Types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class TaskRequest:
@@ -90,6 +96,7 @@ class TaskRequest:
         metadata: Additional task metadata
         created_at: Timestamp of creation
     """
+
     subnet_id: int
     task_type: str
     payload: Dict[str, Any]
@@ -135,6 +142,7 @@ class TaskResult:
         metadata: Additional result metadata
         submitted_at: Timestamp of submission
     """
+
     task_id: str
     miner_id: str
     output: Dict[str, Any]
@@ -164,6 +172,7 @@ class TaskAssignment:
 
     Tracks the assignment lifecycle from creation to completion.
     """
+
     task_id: str
     miner_id: str
     subnet_id: int
@@ -200,6 +209,7 @@ class TaskAssignment:
 # Miner Types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MinerReputation:
     """
@@ -208,6 +218,7 @@ class MinerReputation:
     EMA gives more weight to recent performance while preserving history.
     Formula: EMA_new = alpha * current_score + (1 - alpha) * EMA_old
     """
+
     score: float = 0.5
     total_tasks: int = 0
     successful_tasks: int = 0
@@ -244,16 +255,12 @@ class MinerReputation:
         if success:
             self.successful_tasks += 1
             # EMA update for reputation score
-            self.score = (
-                self.ema_alpha * task_score
-                + (1 - self.ema_alpha) * self.score
-            )
+            self.score = self.ema_alpha * task_score + (1 - self.ema_alpha) * self.score
         else:
             self.failed_tasks += 1
             # Penalty for failures — larger drop
             self.score = (
-                self.ema_alpha * (task_score * 0.5)
-                + (1 - self.ema_alpha) * self.score
+                self.ema_alpha * (task_score * 0.5) + (1 - self.ema_alpha) * self.score
             )
 
         # EMA for response time
@@ -297,6 +304,7 @@ class MinerInfo:
         registered_at: When the miner first registered
         last_active_at: Last time the miner completed a task
     """
+
     miner_id: str
     subnet_ids: List[int] = field(default_factory=list)
     stake_amount: float = 0.0
@@ -328,7 +336,7 @@ class MinerInfo:
         Merit-based weight: performance x reliability.
         Miners earn weight through quality of work, not stake.
         """
-        performance = self.reputation.score ** 2
+        performance = self.reputation.score**2
         reliability = self.reputation.success_rate
         return performance * max(0.01, reliability)
 
@@ -343,13 +351,13 @@ class MinerInfo:
             "registered_at": self.registered_at,
             "last_active_at": self.last_active_at,
             "effective_weight": round(self.effective_weight, 4),
-            "axon_endpoint": self.axon_endpoint,
         }
 
 
 # ---------------------------------------------------------------------------
 # Scoring Types
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ScoreBreakdown:
@@ -359,6 +367,7 @@ class ScoreBreakdown:
     Each dimension is scored 0.0–1.0, and the final score is a
     weighted combination.
     """
+
     dimensions: Dict[str, float] = field(default_factory=dict)
     weights: Dict[str, float] = field(default_factory=dict)
     final_score: float = 0.0
@@ -370,15 +379,12 @@ class ScoreBreakdown:
         if not self.dimensions or not self.weights:
             return 0.0
 
-        total_weight = sum(
-            self.weights.get(dim, 0.0) for dim in self.dimensions
-        )
+        total_weight = sum(self.weights.get(dim, 0.0) for dim in self.dimensions)
         if total_weight == 0:
             return 0.0
 
         weighted_sum = sum(
-            score * self.weights.get(dim, 0.0)
-            for dim, score in self.dimensions.items()
+            score * self.weights.get(dim, 0.0) for dim, score in self.dimensions.items()
         )
         self.final_score = weighted_sum / total_weight
         return self.final_score
@@ -401,6 +407,7 @@ class ValidatorScore:
     Validators independently score each miner's output, and these
     scores are then aggregated via consensus.
     """
+
     validator_id: str
     task_id: str
     miner_id: str
@@ -427,6 +434,7 @@ class ValidatorScore:
 # Fee & Payment Types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class FeeBreakdown:
     """
@@ -438,6 +446,7 @@ class FeeBreakdown:
         validator_reward = 15% of base reward
         protocol_fee   =  5% of base reward
     """
+
     reward_amount: float
     protocol_fee: float
     subnet_fee: float
@@ -454,12 +463,19 @@ class FeeBreakdown:
 
     @property
     def total_fee_rate(self) -> float:
-        return self.protocol_fee_rate + self.subnet_fee_rate + self.validator_reward_rate
+        return (
+            self.protocol_fee_rate + self.subnet_fee_rate + self.validator_reward_rate
+        )
 
     @property
     def total_deposit(self) -> float:
         """Total amount deposited to escrow (reward + all fees)."""
-        return self.miner_reward + self.validator_reward + self.protocol_fee + self.subnet_fee
+        return (
+            self.miner_reward
+            + self.validator_reward
+            + self.protocol_fee
+            + self.subnet_fee
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -483,6 +499,7 @@ class PaymentInfo:
     """
     Payment record for a completed task.
     """
+
     payment_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     task_id: str = ""
     miner_id: str = ""
@@ -498,7 +515,9 @@ class PaymentInfo:
             "task_id": self.task_id,
             "miner_id": self.miner_id,
             "amount": round(self.amount, 6),
-            "fee_breakdown": self.fee_breakdown.to_dict() if self.fee_breakdown else None,
+            "fee_breakdown": (
+                self.fee_breakdown.to_dict() if self.fee_breakdown else None
+            ),
             "transaction_id": self.transaction_id,
             "paid_at": self.paid_at,
             "is_paid": self.is_paid,
@@ -508,6 +527,7 @@ class PaymentInfo:
 # ---------------------------------------------------------------------------
 # Protocol Configuration
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ProtocolConfig:
@@ -519,6 +539,7 @@ class ProtocolConfig:
         - 15% → Validator reward pool
         -  5% → Protocol treasury
     """
+
     protocol_fee_rate: float = 0.05  # 5% of base reward → protocol treasury
     validator_reward_rate: float = 0.15  # 15% of base reward → validator pool
     min_subnet_fee_rate: float = 0.0

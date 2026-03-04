@@ -42,12 +42,14 @@ ARROW = f"{CYAN}→{RESET}"
 
 
 def banner():
-    print(f"""
+    print(
+        f"""
 {CYAN}{BOLD}  ╔══════════════════════════════════════════════╗
   ║        ⚡ ModernTensor Protocol CLI          ║
   ║    AI Marketplace on Hedera • Apex 2026      ║
   ╚══════════════════════════════════════════════╝{RESET}
-""")
+"""
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -93,17 +95,22 @@ def cmd_demo(args):
         miner_id = f"0.0.{1001 + i}"
         stake = 500 - (i * 50)
         m = protocol.register_miner(
-            miner_id, subnet_ids=[1], stake=stake,
+            miner_id,
+            subnet_ids=[1],
+            stake=stake,
             capabilities=["code_review", "security_audit"],
         )
         miners.append(m)
-        print(f"  {CHECK} Miner {CYAN}{miner_id}{RESET} registered "
-              f"({DIM}stake={stake} MDT{RESET})")
+        print(
+            f"  {CHECK} Miner {CYAN}{miner_id}{RESET} registered "
+            f"({DIM}stake={stake} MDT{RESET})"
+        )
     print()
 
     # ── Step 2: Submit task ──
     print(f"{BOLD}▶ Step 2: Submitting code review task{RESET}")
-    sample_code = textwrap.dedent("""\
+    sample_code = textwrap.dedent(
+        """\
         // SPDX-License-Identifier: MIT
         pragma solidity ^0.8.0;
 
@@ -126,7 +133,8 @@ def cmd_demo(args):
                 return address(this).balance;
             }
         }
-    """)
+    """
+    )
 
     task = protocol.submit_task(
         subnet_id=1,
@@ -145,9 +153,11 @@ def cmd_demo(args):
     print(f"    Subnet:  {DIM}#1 AI Code Review{RESET}")
     fee_bd = protocol.task_manager.get_fee_breakdown(task.task_id)
     if fee_bd:
-        print(f"    Fee:     {DIM}{fee_bd.total_fee:.2f} MDT "
-              f"(protocol {fee_bd.protocol_fee:.2f} + "
-              f"subnet {fee_bd.subnet_fee:.2f}){RESET}")
+        print(
+            f"    Fee:     {DIM}{fee_bd.total_fee:.2f} MDT "
+            f"(protocol {fee_bd.protocol_fee:.2f} + "
+            f"subnet {fee_bd.subnet_fee:.2f}){RESET}"
+        )
     print()
 
     # ── Step 3: Match ──
@@ -218,9 +228,7 @@ def cmd_demo(args):
             ),
             "gas_analysis": "No significant gas optimizations needed.",
             "gas_optimizations": [
-                {
-                    "suggestion": "Use unchecked block for balance math (Solidity ≥0.8.0)"
-                }
+                {"suggestion": "Use unchecked block for balance math (Solidity ≥0.8.0)"}
             ],
         }
 
@@ -231,8 +239,10 @@ def cmd_demo(args):
             output=output,
             execution_time=exec_time,
         )
-        print(f"  {CHECK} {CYAN}{a.miner_id}{RESET} submitted result "
-              f"({DIM}{exec_time:.1f}s{RESET})")
+        print(
+            f"  {CHECK} {CYAN}{a.miner_id}{RESET} submitted result "
+            f"({DIM}{exec_time:.1f}s{RESET})"
+        )
     print()
 
     # ── Step 5: Validate + PoI ──
@@ -241,8 +251,10 @@ def cmd_demo(args):
     print(f"  {CHECK} Validation complete!")
     print(f"    Winner:     {GREEN}{BOLD}{validation.winner_miner_id}{RESET}")
     print(f"    Score:      {YELLOW}{validation.winner_score:.4f}{RESET}")
-    print(f"    Valid:      {GREEN if validation.is_valid else RED}"
-          f"{validation.is_valid}{RESET}")
+    print(
+        f"    Valid:      {GREEN if validation.is_valid else RED}"
+        f"{validation.is_valid}{RESET}"
+    )
 
     if verbose and validation.consensus_scores:
         print(f"\n  {DIM}Score breakdown:{RESET}")
@@ -306,11 +318,13 @@ def cmd_miner_list(args):
     print(f"  {'ID':<14} {'Stake':>8} {'Reputation':>12} {'Tasks':>7} {'Status'}")
     print(f"  {'─' * 14} {'─' * 8} {'─' * 12} {'─' * 7} {'─' * 8}")
     for m in miners:
-        print(f"  {CYAN}{m.miner_id:<14}{RESET} "
-              f"{YELLOW}{m.stake_amount:>7.0f}{RESET}  "
-              f"{m.reputation.score:>11.4f}  "
-              f"{m.reputation.total_tasks:>6}  "
-              f"{GREEN}{m.status.value}{RESET}")
+        print(
+            f"  {CYAN}{m.miner_id:<14}{RESET} "
+            f"{YELLOW}{m.stake_amount:>7.0f}{RESET}  "
+            f"{m.reputation.score:>11.4f}  "
+            f"{m.reputation.total_tasks:>6}  "
+            f"{GREEN}{m.status.value}{RESET}"
+        )
 
 
 def cmd_miner_leaderboard(args):
@@ -345,10 +359,12 @@ def cmd_miner_sync(args):
     print(f"  {'ID':<14} {'Stake':>8} {'Subnets':<12} {'Source'}")
     print(f"  {'─' * 14} {'─' * 8} {'─' * 12} {'─' * 6}")
     for m in new_miners:
-        print(f"  {CYAN}{m.miner_id:<14}{RESET} "
-              f"{YELLOW}{m.stake_amount:>7.0f}{RESET}  "
-              f"{str(m.subnet_ids):<12} "
-              f"{DIM}HCS{RESET}")
+        print(
+            f"  {CYAN}{m.miner_id:<14}{RESET} "
+            f"{YELLOW}{m.stake_amount:>7.0f}{RESET}  "
+            f"{str(m.subnet_ids):<12} "
+            f"{DIM}HCS{RESET}"
+        )
 
     print(f"\n  Total local miners: {protocol.miner_registry.total_miners}")
 
@@ -377,11 +393,14 @@ def cmd_miner_tasks(args):
         print(f"  {'Task ID':<12} {'Subnet':>6} {'Deadline'}")
         print(f"  {'─' * 12} {'─' * 6} {'─' * 10}")
         import time as _t
+
         for a in pending:
             remaining = max(0, a.deadline - _t.time())
-            print(f"  {CYAN}{a.task_id[:10]:<12}{RESET} "
-                  f"{a.subnet_id:>6}  "
-                  f"{DIM}{remaining:.0f}s left{RESET}")
+            print(
+                f"  {CYAN}{a.task_id[:10]:<12}{RESET} "
+                f"{a.subnet_id:>6}  "
+                f"{DIM}{remaining:.0f}s left{RESET}"
+            )
     else:
         print(f"  {DIM}No active assignments.{RESET}")
 
@@ -393,9 +412,11 @@ def cmd_miner_tasks(args):
             won = f"{GREEN}✓{RESET}" if h.get("is_winner") else f"{DIM}—{RESET}"
             score = h.get("score") or 0
             earned = h.get("earnings", 0)
-            print(f"  {CYAN}{h['task_id'][:10]:<12}{RESET} "
-                  f"{score:>7.4f}  {won:>5}  "
-                  f"{YELLOW}{earned:>7.2f}{RESET}")
+            print(
+                f"  {CYAN}{h['task_id'][:10]:<12}{RESET} "
+                f"{score:>7.4f}  {won:>5}  "
+                f"{YELLOW}{earned:>7.2f}{RESET}"
+            )
 
 
 def cmd_miner_earnings(args):
@@ -433,7 +454,8 @@ def cmd_miner_run(args):
 
     # Default handler: uses the code review scorer from the demo
     def default_handler(payload, task_type):
-        from sdk.scoring.code_review import CodeReviewAgent
+        from sdk.hedera.code_review import CodeReviewAgent
+
         agent = CodeReviewAgent()
         code = payload.get("code", "")
         language = payload.get("language", "solidity")
@@ -482,13 +504,15 @@ def cmd_task_submit(args):
             code = f.read()
 
     if not code:
-        code = textwrap.dedent("""\
+        code = textwrap.dedent(
+            """\
             pragma solidity ^0.8.0;
             contract Example {
                 uint256 public value;
                 function set(uint256 _val) external { value = _val; }
             }
-        """)
+        """
+        )
         print(f"  {DIM}No code provided, using example contract{RESET}\n")
 
     task = protocol.submit_task(
@@ -535,11 +559,13 @@ def cmd_task_list(args):
         tid = t.task_id[:12] + ".."
         winner = getattr(t, "winner_miner_id", "-") or "-"
         status_color = GREEN if t.status.value == "completed" else YELLOW
-        print(f"  {CYAN}{tid:<14}{RESET} "
-              f"#{t.subnet_id:>6}  "
-              f"{YELLOW}{t.reward_amount:>7.1f}{RESET}  "
-              f"{status_color}{t.status.value:<12}{RESET} "
-              f"{winner}")
+        print(
+            f"  {CYAN}{tid:<14}{RESET} "
+            f"#{t.subnet_id:>6}  "
+            f"{YELLOW}{t.reward_amount:>7.1f}{RESET}  "
+            f"{status_color}{t.status.value:<12}{RESET} "
+            f"{winner}"
+        )
 
 
 def cmd_task_status(args):
@@ -561,8 +587,10 @@ def cmd_task_status(args):
         print(f"  {CROSS} Task not found: {task_id}")
         return
 
-    status = detail['status']
-    status_color = GREEN if status == 'completed' else (RED if status == 'failed' else YELLOW)
+    status = detail["status"]
+    status_color = (
+        GREEN if status == "completed" else (RED if status == "failed" else YELLOW)
+    )
 
     print(f"  {BOLD}Task Detail{RESET}")
     print(f"  ID:        {CYAN}{detail['task_id'][:16]}...{RESET}")
@@ -574,34 +602,36 @@ def cmd_task_status(args):
     print(f"  Priority:  {detail['priority']}")
     print(f"  Miners:    {detail['max_miners']}")
 
-    if detail.get('fee_breakdown'):
-        fb = detail['fee_breakdown']
+    if detail.get("fee_breakdown"):
+        fb = detail["fee_breakdown"]
         print(f"\n  {BOLD}Fee Breakdown:{RESET}")
         print(f"  Miner reward:  {YELLOW}{fb.get('reward_amount', 0):.2f}{RESET}")
         print(f"  Protocol fee:  {fb.get('protocol_fee', 0):.2f}")
         print(f"  Subnet fee:    {fb.get('subnet_fee', 0):.2f}")
 
-    if detail['assignments']:
+    if detail["assignments"]:
         print(f"\n  {BOLD}Assignments ({len(detail['assignments'])}):{RESET}")
         print(f"  {'Miner':<14} {'Done?':>6} {'Timeout?':>9} {'Score':>8}")
         print(f"  {'─' * 14} {'─' * 6} {'─' * 9} {'─' * 8}")
-        for a in detail['assignments']:
-            done = f"{GREEN}✓{RESET}" if a['is_completed'] else f"{DIM}—{RESET}"
-            tout = f"{RED}✓{RESET}" if a['is_timeout'] else f"{DIM}—{RESET}"
-            score = f"{a['score']:.4f}" if a['score'] else "—"
-            print(f"  {CYAN}{a['miner_id']:<14}{RESET} "
-                  f"{done:>6}  {tout:>9}  {score:>8}")
+        for a in detail["assignments"]:
+            done = f"{GREEN}✓{RESET}" if a["is_completed"] else f"{DIM}—{RESET}"
+            tout = f"{RED}✓{RESET}" if a["is_timeout"] else f"{DIM}—{RESET}"
+            score = f"{a['score']:.4f}" if a["score"] else "—"
+            print(
+                f"  {CYAN}{a['miner_id']:<14}{RESET} "
+                f"{done:>6}  {tout:>9}  {score:>8}"
+            )
 
-    if detail.get('validation'):
-        v = detail['validation']
-        icon = CHECK if v['is_valid'] else CROSS
+    if detail.get("validation"):
+        v = detail["validation"]
+        icon = CHECK if v["is_valid"] else CROSS
         print(f"\n  {BOLD}Validation:{RESET}")
         print(f"  Valid:   {icon} {v['is_valid']}")
         print(f"  Winner:  {CYAN}{v['winner_miner_id']}{RESET}")
         print(f"  Score:   {YELLOW}{v['winner_score']:.4f}{RESET}")
 
-    if detail.get('payment'):
-        p = detail['payment']
+    if detail.get("payment"):
+        p = detail["payment"]
         print(f"\n  {BOLD}Payment:{RESET}")
         print(f"  Miner:   {CYAN}{p['miner_id']}{RESET}")
         print(f"  Amount:  {YELLOW}{p['amount']:.4f} MDT{RESET}")
@@ -623,28 +653,29 @@ def cmd_task_results(args):
     full_id = matched[0].task_id
 
     detail = protocol.get_task_detail(full_id)
-    if not detail or not detail['results']:
+    if not detail or not detail["results"]:
         print(f"  {DIM}No results submitted yet for task {task_id[:12]}{RESET}")
         return
 
     print(f"  {BOLD}Results for task {CYAN}{full_id[:12]}...{RESET}")
     print()
 
-    for i, r in enumerate(detail['results'], 1):
-        is_winner = (
-            detail.get('validation', {}) or {}
-        ).get('winner_miner_id') == r['miner_id']
+    for i, r in enumerate(detail["results"], 1):
+        is_winner = (detail.get("validation", {}) or {}).get("winner_miner_id") == r[
+            "miner_id"
+        ]
         winner_badge = f" {GREEN}★ WINNER{RESET}" if is_winner else ""
 
         print(f"  {BOLD}Result #{i} — {CYAN}{r['miner_id']}{RESET}{winner_badge}")
-        if r.get('execution_time'):
+        if r.get("execution_time"):
             print(f"  Time: {r['execution_time']:.2f}s")
 
-        output = r.get('output', {})
+        output = r.get("output", {})
         if isinstance(output, dict):
             import json
+
             formatted = json.dumps(output, indent=4, ensure_ascii=False)
-            for line in formatted.split('\n'):
+            for line in formatted.split("\n"):
                 print(f"    {DIM}{line}{RESET}")
         else:
             print(f"    {DIM}{output}{RESET}")
@@ -658,26 +689,32 @@ def cmd_subnet_list(args):
     """List all subnets."""
     banner()
     from sdk.marketplace import SubnetManager
+
     manager = SubnetManager()
 
     subnets = manager.list_subnets(active_only=not args.all)
 
     print(f"  {BOLD}Subnets ({len(subnets)}){RESET}\n")
-    print(f"  {'ID':>4} {'Name':<20} {'Type':<16} {'Fee':>6} {'Miners':>8} {'Tasks':>7}")
+    print(
+        f"  {'ID':>4} {'Name':<20} {'Type':<16} {'Fee':>6} {'Miners':>8} {'Tasks':>7}"
+    )
     print(f"  {'─' * 4} {'─' * 20} {'─' * 16} {'─' * 6} {'─' * 8} {'─' * 7}")
     for s in subnets:
-        print(f"  {CYAN}{s.subnet_id:>4}{RESET} "
-              f"{s.name:<20} "
-              f"{s.task_type:<16} "
-              f"{YELLOW}{s.fee_rate * 100:>5.1f}%{RESET} "
-              f"{s.active_miners:>8} "
-              f"{s.total_tasks:>7}")
+        print(
+            f"  {CYAN}{s.subnet_id:>4}{RESET} "
+            f"{s.name:<20} "
+            f"{s.task_type:<16} "
+            f"{YELLOW}{s.fee_rate * 100:>5.1f}%{RESET} "
+            f"{s.active_miners:>8} "
+            f"{s.total_tasks:>7}"
+        )
 
 
 def cmd_subnet_create(args):
     """Create a new subnet."""
     banner()
     from sdk.marketplace import SubnetManager
+
     manager = SubnetManager()
 
     subnet = manager.create_subnet(
@@ -698,6 +735,7 @@ def cmd_subnet_info(args):
     """Show detailed info about a subnet."""
     banner()
     from sdk.marketplace import SubnetManager
+
     manager = SubnetManager()
 
     subnet = manager.get_subnet(args.subnet_id)
@@ -705,7 +743,9 @@ def cmd_subnet_info(args):
         print(f"  {CROSS} Subnet #{args.subnet_id} not found.")
         return
 
-    active_label = f"{GREEN}active{RESET}" if subnet.is_active else f"{RED}inactive{RESET}"
+    active_label = (
+        f"{GREEN}active{RESET}" if subnet.is_active else f"{RED}inactive{RESET}"
+    )
     print(f"  {BOLD}Subnet #{subnet.subnet_id} — {subnet.name}{RESET}")
     print(f"  Status:     {active_label}")
     print(f"  Owner:      {CYAN}{subnet.owner_id}{RESET}")
@@ -721,7 +761,9 @@ def cmd_subnet_info(args):
     print(f"  Avg Score:     {subnet.avg_score:.4f}")
 
     if subnet.scoring_dimensions:
-        print(f"\n  {BOLD}Scoring Dimensions ({len(subnet.scoring_dimensions)}):{RESET}")
+        print(
+            f"\n  {BOLD}Scoring Dimensions ({len(subnet.scoring_dimensions)}):{RESET}"
+        )
         for d in subnet.scoring_dimensions:
             print(f"    • {d.name:<20} weight={YELLOW}{d.weight:.2f}{RESET}")
 
@@ -752,7 +794,7 @@ def cmd_scoring_test(args):
 
     result_output = {
         "analysis": "The contract is minimal with no security issues found. "
-                    "The function bar() is empty and has no access control.",
+        "The function bar() is empty and has no access control.",
         "findings": [
             {
                 "type": "best_practices",
@@ -793,8 +835,10 @@ def cmd_scoring_test(args):
         dimension_scores=scored["dimensions"],
         task_payload=task_payload,
     )
-    print(f"  Verified:     {GREEN if poi_result.is_verified else RED}"
-          f"{poi_result.is_verified}{RESET}")
+    print(
+        f"  Verified:     {GREEN if poi_result.is_verified else RED}"
+        f"{poi_result.is_verified}{RESET}"
+    )
     print(f"  PoI Score:    {YELLOW}{poi_result.poi_score:.4f}{RESET}")
     print(f"  Knowledge:    {poi_result.knowledge_score:.4f}")
     print(f"  Entropy:      {poi_result.entropy_score:.4f}")
@@ -811,8 +855,10 @@ def cmd_scoring_test(args):
     poq.submit_score("val_3", "miner-test", quality=0.1, relevance=0.1, depth=0.1)
     poq_result = poq.aggregate("miner-test")
     print(f"  Consensus:    {YELLOW}{poq_result.consensus_score:.4f}{RESET}")
-    print(f"  Quality:      {GREEN if poq_result.is_quality else RED}"
-          f"{poq_result.is_quality}{RESET}")
+    print(
+        f"  Quality:      {GREEN if poq_result.is_quality else RED}"
+        f"{poq_result.is_quality}{RESET}"
+    )
     print(f"  Validators:   {len(poq_result.individual_scores)}")
     if poq_result.clipped_validators:
         print(f"  Clipped:      {RED}{', '.join(poq_result.clipped_validators)}{RESET}")
@@ -850,18 +896,23 @@ def cmd_scoring_benchmark(args):
     # Simulate a GOOD miner who finds all bugs
     good_output = {
         "vulnerabilities": [
-            {"name": v.name, "severity": v.severity}
-            for v in challenge.vulnerabilities
+            {"name": v.name, "severity": v.severity} for v in challenge.vulnerabilities
         ]
     }
     good_result = pool.score_response(
-        challenge.challenge_id, "miner-good", good_output, 2.5,
+        challenge.challenge_id,
+        "miner-good",
+        good_output,
+        2.5,
     )
 
     # Simulate a BAD miner who finds nothing
     bad_output = {"vulnerabilities": [], "analysis": "Code looks fine"}
     bad_result = pool.score_response(
-        challenge.challenge_id, "miner-bad", bad_output, 0.5,
+        challenge.challenge_id,
+        "miner-bad",
+        bad_output,
+        0.5,
     )
 
     print(f"  {BOLD}Scoring Results:{RESET}\n")
@@ -869,11 +920,17 @@ def cmd_scoring_benchmark(args):
     print(f"  {'─' * 16} {'─' * 10} {'─' * 9} {'─' * 8}")
 
     for label, r in [("miner-good ★", good_result), ("miner-bad", bad_result)]:
-        det_color = GREEN if r.detection_rate >= 0.8 else (YELLOW if r.detection_rate >= 0.5 else RED)
-        print(f"  {CYAN}{label:<16}{RESET} "
-              f"{det_color}{r.detection_rate:>9.0%}{RESET}  "
-              f"{r.false_positive_rate:>8.0%}  "
-              f"{YELLOW}{r.overall_score:>7.4f}{RESET}")
+        det_color = (
+            GREEN
+            if r.detection_rate >= 0.8
+            else (YELLOW if r.detection_rate >= 0.5 else RED)
+        )
+        print(
+            f"  {CYAN}{label:<16}{RESET} "
+            f"{det_color}{r.detection_rate:>9.0%}{RESET}  "
+            f"{r.false_positive_rate:>8.0%}  "
+            f"{YELLOW}{r.overall_score:>7.4f}{RESET}"
+        )
 
     print(f"\n  {DIM}Good miner found: {', '.join(good_result.found_bugs)}{RESET}")
     print(f"  {DIM}Bad miner missed: {', '.join(bad_result.missed_bugs)}{RESET}")
@@ -909,7 +966,9 @@ def _print_stats(protocol):
     print(f"  {'Total volume:':<24} {YELLOW}{ts.get('total_volume', 0):.2f} MDT{RESET}")
     print(f"  {'Active miners:':<24} {CYAN}{ms.get('active_miners', 0)}{RESET}")
     print(f"  {'Suspended miners:':<24} {RED}{ms.get('suspended_miners', 0)}{RESET}")
-    print(f"  {'Protocol revenue:':<24} {GREEN}{fs.get('total_protocol_fees', 0):.4f} MDT{RESET}")
+    print(
+        f"  {'Protocol revenue:':<24} {GREEN}{fs.get('total_protocol_fees', 0):.4f} MDT{RESET}"
+    )
     print(f"  {'Epoch:':<24} {stats.get('epoch', 0)}")
 
     poi_stats = stats.get("poi_stats")
@@ -924,9 +983,13 @@ def _print_stats(protocol):
 
     bench_stats = stats.get("benchmark_stats")
     if bench_stats:
-        print(f"  {'Benchmark challenges:':<24} {bench_stats.get('total_challenges', 0)}")
+        print(
+            f"  {'Benchmark challenges:':<24} {bench_stats.get('total_challenges', 0)}"
+        )
         print(f"  {'Benchmark tests run:':<24} {bench_stats.get('total_results', 0)}")
-        print(f"  {'Avg detection rate:':<24} {bench_stats.get('avg_detection_rate', 0):.1%}")
+        print(
+            f"  {'Avg detection rate:':<24} {bench_stats.get('avg_detection_rate', 0):.1%}"
+        )
     print()
 
 
@@ -943,10 +1006,12 @@ def _print_leaderboard(protocol, subnet_id=None, top_n=10):
     print(f"  {'─' * 6} {'─' * 14} {'─' * 8} {'─' * 12} {'─' * 7}")
     for i, m in enumerate(leaderboard[:top_n], 1):
         medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f" {i}"
-        print(f"  {medal:<6} {CYAN}{m.miner_id:<14}{RESET} "
-              f"{YELLOW}{m.effective_weight:>7.4f}{RESET}  "
-              f"{m.reputation.score:>11.4f}  "
-              f"{m.reputation.total_tasks:>6}")
+        print(
+            f"  {medal:<6} {CYAN}{m.miner_id:<14}{RESET} "
+            f"{YELLOW}{m.effective_weight:>7.4f}{RESET}  "
+            f"{m.reputation.score:>11.4f}  "
+            f"{m.reputation.total_tasks:>6}"
+        )
     print()
 
 
@@ -958,7 +1023,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="moderntensor",
         description="⚡ ModernTensor — AI Marketplace Protocol on Hedera",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=textwrap.dedent("""\
+        epilog=textwrap.dedent(
+            """\
             Examples:
               python cli.py demo                     Full end-to-end demo
               python cli.py demo --miners 5          Demo with 5 miners
@@ -967,16 +1033,23 @@ def build_parser() -> argparse.ArgumentParser:
               python cli.py task submit --file code.sol
               python cli.py scoring test              Test scoring engine
               python cli.py subnet list               List all subnets
-        """),
+        """
+        ),
     )
 
     sub = parser.add_subparsers(dest="command", help="Available commands")
 
     # ── demo ──
     demo = sub.add_parser("demo", help="Run full end-to-end demo")
-    demo.add_argument("--miners", type=int, default=3, help="Number of miners (default: 3)")
-    demo.add_argument("--reward", type=float, default=50.0, help="Task reward in MDT (default: 50)")
-    demo.add_argument("-v", "--verbose", action="store_true", help="Show detailed score breakdown")
+    demo.add_argument(
+        "--miners", type=int, default=3, help="Number of miners (default: 3)"
+    )
+    demo.add_argument(
+        "--reward", type=float, default=50.0, help="Task reward in MDT (default: 50)"
+    )
+    demo.add_argument(
+        "-v", "--verbose", action="store_true", help="Show detailed score breakdown"
+    )
     demo.set_defaults(func=cmd_demo)
 
     # ── miner ──
@@ -985,10 +1058,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     m_reg = miner_sub.add_parser("register", help="Register a miner")
     m_reg.add_argument("miner_id", help="Miner account ID (e.g. 0.0.1001)")
-    m_reg.add_argument("--subnets", default="1", help="Comma-separated subnet IDs (default: 1)")
-    m_reg.add_argument("--stake", type=float, default=500.0, help="Stake amount (default: 500)")
-    m_reg.add_argument("--capabilities", default="code_review", help="Capabilities (comma-separated)")
-    m_reg.add_argument("--on-chain", action="store_true", help="Also publish to HCS on-chain")
+    m_reg.add_argument(
+        "--subnets", default="1", help="Comma-separated subnet IDs (default: 1)"
+    )
+    m_reg.add_argument(
+        "--stake", type=float, default=500.0, help="Stake amount (default: 500)"
+    )
+    m_reg.add_argument(
+        "--capabilities", default="code_review", help="Capabilities (comma-separated)"
+    )
+    m_reg.add_argument(
+        "--on-chain", action="store_true", help="Also publish to HCS on-chain"
+    )
     m_reg.set_defaults(func=cmd_miner_register)
 
     m_list = miner_sub.add_parser("list", help="List all miners")
@@ -1013,8 +1094,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     m_run = miner_sub.add_parser("run", help="Start miner worker loop")
     m_run.add_argument("miner_id", help="Miner account ID")
-    m_run.add_argument("--interval", type=float, default=5.0, help="Poll interval in seconds (default: 5)")
-    m_run.add_argument("--max-iter", type=int, default=0, help="Max iterations (0=unlimited)")
+    m_run.add_argument(
+        "--interval",
+        type=float,
+        default=5.0,
+        help="Poll interval in seconds (default: 5)",
+    )
+    m_run.add_argument(
+        "--max-iter", type=int, default=0, help="Max iterations (0=unlimited)"
+    )
     m_run.set_defaults(func=cmd_miner_run)
 
     # ── task ──
@@ -1024,9 +1112,13 @@ def build_parser() -> argparse.ArgumentParser:
     t_submit = task_sub.add_parser("submit", help="Submit a code review task")
     t_submit.add_argument("--code", default="", help="Inline code to review")
     t_submit.add_argument("--file", default="", help="File path to review")
-    t_submit.add_argument("--language", default="solidity", help="Language (default: solidity)")
+    t_submit.add_argument(
+        "--language", default="solidity", help="Language (default: solidity)"
+    )
     t_submit.add_argument("--reward", type=float, default=50.0, help="Reward in MDT")
-    t_submit.add_argument("--subnet", type=int, default=1, help="Subnet ID (default: 1)")
+    t_submit.add_argument(
+        "--subnet", type=int, default=1, help="Subnet ID (default: 1)"
+    )
     t_submit.add_argument("--requester", default="0.0.2001", help="Requester ID")
     t_submit.set_defaults(func=cmd_task_submit)
 
@@ -1052,9 +1144,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     s_create = subnet_sub.add_parser("create", help="Create a new subnet")
     s_create.add_argument("--name", required=True, help="Subnet name")
-    s_create.add_argument("--type", required=True, help="Task type (e.g. text_generation)")
+    s_create.add_argument(
+        "--type", required=True, help="Task type (e.g. text_generation)"
+    )
     s_create.add_argument("--owner", default="0.0.5555", help="Owner account ID")
-    s_create.add_argument("--fee", type=float, default=5.0, help="Fee rate in percent (default: 5)")
+    s_create.add_argument(
+        "--fee", type=float, default=5.0, help="Fee rate in percent (default: 5)"
+    )
     s_create.set_defaults(func=cmd_subnet_create)
 
     s_info = subnet_sub.add_parser("info", help="Show subnet detail")
@@ -1069,9 +1165,12 @@ def build_parser() -> argparse.ArgumentParser:
     s_test.set_defaults(func=cmd_scoring_test)
 
     s_bench = scoring_sub.add_parser("benchmark", help="Run benchmark challenge test")
-    s_bench.add_argument("--difficulty", default="easy",
-                         choices=["easy", "medium", "hard"],
-                         help="Challenge difficulty (default: easy)")
+    s_bench.add_argument(
+        "--difficulty",
+        default="easy",
+        choices=["easy", "medium", "hard"],
+        help="Challenge difficulty (default: easy)",
+    )
     s_bench.set_defaults(func=cmd_scoring_benchmark)
 
     # ── protocol ──

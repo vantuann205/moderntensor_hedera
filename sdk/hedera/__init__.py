@@ -30,6 +30,10 @@ from .hcs_sync import (
 from .hts import (
     HTSService,
 )
+from .payment_escrow import (
+    PaymentEscrowService,
+    EscrowEntry,
+)
 from .contracts import (
     SmartContractService,
     TaskStatus,
@@ -89,6 +93,8 @@ __all__ = [
     "HTSService",
     # Smart Contracts
     "SmartContractService",
+    "PaymentEscrowService",
+    "EscrowEntry",
     "TaskStatus",
     "TaskInfo",
     "SubnetRegistryService",
@@ -115,4 +121,3 @@ __all__ = [
     "ContractCallError",
     "ContractExecuteError",
 ]
-

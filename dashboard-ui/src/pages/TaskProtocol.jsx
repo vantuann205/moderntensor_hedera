@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, UploadCloud, Clock, Coins, Zap, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
 import SubnetIcon from '../components/SubnetIcon';
 import SpotlightCard from '../components/SpotlightCard';
@@ -23,12 +23,21 @@ export default function TaskProtocol() {
     const [lastTx, setLastTx] = useState(null);
     const { addToast } = useToast();
 
-    // Data
-    const subnets = getSubnets().data;
-    const tasks = getTaskFeed().data;
+    // Async data loading from Mirror Node
+    const [subnets, setSubnets] = useState([]);
+    const [tasks, setTasks] = useState([]);
+
+    useEffect(() => {
+        (async () => {
+            const [subnetsRes, tasksRes] = await Promise.allSettled([getSubnets(), getTaskFeed()]);
+            if (subnetsRes.status === 'fulfilled' && subnetsRes.value.data) setSubnets(subnetsRes.value.data);
+            if (tasksRes.status === 'fulfilled' && tasksRes.value.data) setTasks(tasksRes.value.data);
+        })();
+    }, []);
+
     const activeSubnet = subnets.find(s => s.id === subnet);
     const subnetFee = activeSubnet ? (reward * activeSubnet.fee) / 100 : 0;
-    const protocolFee = reward * 0.01;
+    const protocolFee = reward * 0.05;
     const totalCost = (reward + subnetFee + protocolFee).toFixed(2);
 
     // Mutation

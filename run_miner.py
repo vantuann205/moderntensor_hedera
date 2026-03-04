@@ -23,6 +23,7 @@ import argparse
 import logging
 import time
 import signal
+import platform
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -40,6 +41,7 @@ logger = logging.getLogger("miner")
 # ──────────────────────────────────────────────────────────────
 # AI Handler — This is where the miner's AI model lives
 # ──────────────────────────────────────────────────────────────
+
 
 def ai_handler(payload: dict, task_type: str) -> dict:
     """
@@ -86,15 +88,23 @@ def ai_handler(payload: dict, task_type: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="ModernTensor Miner Node")
-    parser.add_argument("--miner-id", default="0.0.1001", help="Miner Hedera account ID")
+    parser.add_argument(
+        "--miner-id", default="0.0.1001", help="Miner Hedera account ID"
+    )
     parser.add_argument("--host", default="0.0.0.0", help="Axon bind address")
     parser.add_argument("--port", type=int, default=8091, help="Axon port")
     parser.add_argument("--subnets", default="1", help="Subnet IDs (comma-separated)")
-    parser.add_argument("--stake", type=float, default=0.0, help="Agent bond amount (MDT)")
-    parser.add_argument("--auto-register", action="store_true",
-                        help="Auto-register and stake on-chain before starting")
-    parser.add_argument("--skip-checks", action="store_true",
-                        help="Skip on-chain pre-flight checks")
+    parser.add_argument(
+        "--stake", type=float, default=0.0, help="Agent bond amount (MDT)"
+    )
+    parser.add_argument(
+        "--auto-register",
+        action="store_true",
+        help="Auto-register and stake on-chain before starting",
+    )
+    parser.add_argument(
+        "--skip-checks", action="store_true", help="Skip on-chain pre-flight checks"
+    )
     args = parser.parse_args()
 
     subnet_ids = [int(s.strip()) for s in args.subnets.split(",")]
@@ -111,7 +121,9 @@ def main():
     # ── On-Chain Pre-flight Checks ──
     if not args.skip_checks:
         try:
-            from dotenv import load_dotenv; load_dotenv()
+            from dotenv import load_dotenv
+
+            load_dotenv()
             from sdk.hedera.config import load_hedera_config
             from sdk.hedera.client import HederaClient
             from sdk.hedera.guard import OnChainGuard
@@ -122,20 +134,26 @@ def main():
 
             if args.auto_register:
                 print("\n  🔄 Auto-registering on-chain...")
-                stake_amount = int(args.stake * 10**8) if args.stake > 0 else 50_00000000
+                stake_amount = (
+                    int(args.stake * 10**8) if args.stake > 0 else 50_00000000
+                )
                 result = guard.auto_register_miner(
                     subnet_id=subnet_ids[0],
                     stake_amount=stake_amount,
                 )
                 print(f"  {result}")
                 if not result.passed:
-                    logger.warning("Some auto-registration steps failed, continuing anyway")
+                    logger.warning(
+                        "Some auto-registration steps failed, continuing anyway"
+                    )
             else:
                 print("\n  🔍 On-chain pre-flight checks...")
                 result = guard.check_miner()
                 print(f"  {result}")
                 if not result.passed:
-                    logger.warning("Pre-flight checks incomplete (use --auto-register to fix)")
+                    logger.warning(
+                        "Pre-flight checks incomplete (use --auto-register to fix)"
+                    )
             print()
         except Exception as e:
             logger.warning("On-chain checks skipped: %s", e)
@@ -157,13 +175,15 @@ def main():
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
+    if platform.system() != "Windows":
+        signal.signal(signal.SIGTERM, shutdown)
 
     axon.start()
 
     logger.info(
         "Miner %s is online at %s — waiting for tasks from validators",
-        args.miner_id, axon.endpoint,
+        args.miner_id,
+        axon.endpoint,
     )
     print(f"\n  ✅ Axon server running on {axon.endpoint}")
     print(f"  📡 Endpoints:")
@@ -180,7 +200,8 @@ def main():
             if stats["tasks_processed"] > 0:
                 logger.info(
                     "Stats: %d tasks processed, uptime=%.0fs",
-                    stats["tasks_processed"], stats["uptime"],
+                    stats["tasks_processed"],
+                    stats["uptime"],
                 )
     except KeyboardInterrupt:
         pass

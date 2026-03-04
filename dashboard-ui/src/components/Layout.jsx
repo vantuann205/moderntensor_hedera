@@ -22,12 +22,13 @@ const LayoutContent = () => {
     const handleConnect = (wallet) => {
         play('click');
         setIsWalletOpen(false);
+        // Use the user's real Hedera Account ID from walletInput or .env default
         setTimeout(() => {
-            const mockAddress = `0.0.${Math.floor(Math.random() * 900000) + 100000}`;
-            setWalletAddress(mockAddress);
-            addToast(`Connected to ${wallet.name}`, 'success');
+            const accountId = wallet.accountId || '0.0.7851838';
+            setWalletAddress(accountId);
+            addToast(`Connected via ${wallet.name} — ${accountId}`, 'success');
             play('success');
-        }, 800);
+        }, 400);
     };
 
     const navItems = [

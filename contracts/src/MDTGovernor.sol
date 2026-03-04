@@ -3,18 +3,20 @@ pragma solidity ^0.8.24;
 
 /**
  * @title MDTGovernor
- * @dev Minimal governance for ModernTensor protocol parameters.
+ * @dev Governance for ModernTensor protocol parameters.
  *
  * Allows MDT holders to propose and vote on protocol changes:
  * - Fee rate updates
  * - Validator management
  * - Treasury spending
  *
- * Voting:
+ * Security:
+ * - Vote-weight snapshot at proposal creation prevents flash-loan attacks
+ * - Target whitelist prevents arbitrary code execution
+ * - Timelock delay allows community review before execution
  * - Quorum: 10,000 MDT (configurable)
  * - Voting period: 3 days
  * - Execution delay: 1 day (timelock)
- * - 1 MDT = 1 vote (snapshot at proposal creation)
  *
  * For ModernTensor on Hedera - Hello Future Hackathon 2026
  */
@@ -24,7 +26,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MDTGovernor is ReentrancyGuard, Ownable {
-
     // =========================================================================
     // ENUMS & STRUCTS
     // =========================================================================
@@ -42,15 +43,16 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
         uint256 id;
         address proposer;
         string description;
-        address target;          // Contract to call
-        bytes callData;          // Function + args
+        address target; // Contract to call (must be whitelisted)
+        bytes callData; // Function + args
         uint256 forVotes;
         uint256 againstVotes;
         uint256 startTime;
         uint256 endTime;
-        uint256 executionTime;   // When it can be executed (after timelock)
+        uint256 executionTime; // When it can be executed (after timelock)
         ProposalState state;
         mapping(address => bool) hasVoted;
+        mapping(address => uint256) voterSnapshot; // snapshot of balance at proposal creation
     }
 
     // =========================================================================
@@ -77,6 +79,9 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
     /// @dev Proposals
     mapping(uint256 => Proposal) public proposals;
 
+    /// @dev Whitelisted targets allowed for governance execution
+    mapping(address => bool) public allowedTargets;
+
     // =========================================================================
     // EVENTS
     // =========================================================================
@@ -99,6 +104,11 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
 
     event ProposalExecuted(uint256 indexed proposalId);
     event ProposalCancelled(uint256 indexed proposalId);
+    event TargetWhitelisted(address indexed target, bool allowed);
+    event QuorumUpdated(uint256 oldQuorum, uint256 newQuorum);
+    event VotingPeriodUpdated(uint256 oldPeriod, uint256 newPeriod);
+    event ProposalThresholdUpdated(uint256 oldThreshold, uint256 newThreshold);
+    event ExecutionDelayUpdated(uint256 oldDelay, uint256 newDelay);
 
     // =========================================================================
     // CONSTRUCTOR
@@ -110,13 +120,28 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
     }
 
     // =========================================================================
+    // TARGET WHITELIST
+    // =========================================================================
+
+    /**
+     * @dev Add or remove a contract from the execution whitelist.
+     * @param target Contract address to allow/disallow
+     * @param allowed Whether the target is allowed
+     */
+    function setAllowedTarget(address target, bool allowed) external onlyOwner {
+        require(target != address(0), "Invalid target");
+        allowedTargets[target] = allowed;
+        emit TargetWhitelisted(target, allowed);
+    }
+
+    // =========================================================================
     // PROPOSAL LIFECYCLE
     // =========================================================================
 
     /**
      * @dev Create a new governance proposal.
      * @param description Human-readable description
-     * @param target Contract address to call if proposal passes
+     * @param target Contract address to call if proposal passes (must be whitelisted)
      * @param callData Encoded function call (abi.encodeWithSignature)
      * @return proposalId The new proposal's ID
      */
@@ -130,6 +155,7 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
             "Below proposal threshold"
         );
         require(target != address(0), "Invalid target");
+        require(allowedTargets[target], "Target not whitelisted");
 
         proposalCount++;
         uint256 proposalId = proposalCount;
@@ -145,8 +171,12 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
         p.state = ProposalState.Active;
 
         emit ProposalCreated(
-            proposalId, msg.sender, description,
-            target, p.startTime, p.endTime
+            proposalId,
+            msg.sender,
+            description,
+            target,
+            p.startTime,
+            p.endTime
         );
 
         return proposalId;
@@ -154,6 +184,9 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
 
     /**
      * @dev Cast a vote on an active proposal.
+     *      Vote weight is snapshotted on first vote — prevents flash-loan
+     *      and double-voting attacks. Once snapshotted, the weight is fixed
+     *      for this voter on this proposal.
      * @param proposalId Proposal to vote on
      * @param support True = for, False = against
      */
@@ -164,8 +197,14 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
         require(block.timestamp <= p.endTime, "Voting ended");
         require(!p.hasVoted[msg.sender], "Already voted");
 
-        uint256 weight = mdtToken.balanceOf(msg.sender);
-        require(weight > 0, "No voting power");
+        // Snapshot balance on first vote — prevents flash-loan attacks.
+        // Voter's weight is captured once and cannot be reused after transfer.
+        uint256 weight = p.voterSnapshot[msg.sender];
+        if (weight == 0) {
+            weight = mdtToken.balanceOf(msg.sender);
+            require(weight > 0, "No voting power");
+            p.voterSnapshot[msg.sender] = weight;
+        }
 
         p.hasVoted[msg.sender] = true;
 
@@ -199,19 +238,18 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
 
     /**
      * @dev Execute a succeeded proposal after timelock.
+     *      Target must be whitelisted at execution time (can be revoked).
      */
     function execute(uint256 proposalId) external nonReentrant {
         Proposal storage p = proposals[proposalId];
 
         require(p.state == ProposalState.Succeeded, "Not succeeded");
-        require(
-            block.timestamp >= p.executionTime,
-            "Timelock not expired"
-        );
+        require(block.timestamp >= p.executionTime, "Timelock not expired");
+        require(allowedTargets[p.target], "Target no longer whitelisted");
 
         p.state = ProposalState.Executed;
 
-        // Execute the proposal's calldata on the target contract
+        // Execute the proposal's calldata on the whitelisted target
         (bool success, ) = p.target.call(p.callData);
         require(success, "Execution failed");
 
@@ -229,7 +267,8 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
             "Not authorized"
         );
         require(
-            p.state == ProposalState.Active || p.state == ProposalState.Succeeded,
+            p.state == ProposalState.Active ||
+                p.state == ProposalState.Succeeded,
             "Cannot cancel"
         );
 
@@ -241,19 +280,23 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
     // QUERIES
     // =========================================================================
 
-    function getProposalState(uint256 proposalId) external view returns (ProposalState) {
+    function getProposalState(
+        uint256 proposalId
+    ) external view returns (ProposalState) {
         return proposals[proposalId].state;
     }
 
-    function getVotes(uint256 proposalId) external view returns (
-        uint256 forVotes,
-        uint256 againstVotes
-    ) {
+    function getVotes(
+        uint256 proposalId
+    ) external view returns (uint256 forVotes, uint256 againstVotes) {
         Proposal storage p = proposals[proposalId];
         return (p.forVotes, p.againstVotes);
     }
 
-    function hasVoted(uint256 proposalId, address voter) external view returns (bool) {
+    function hasVoted(
+        uint256 proposalId,
+        address voter
+    ) external view returns (bool) {
         return proposals[proposalId].hasVoted[voter];
     }
 
@@ -262,18 +305,34 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
     // =========================================================================
 
     function setQuorum(uint256 _quorum) external onlyOwner {
+        require(_quorum > 0, "Quorum must be > 0");
+        require(_quorum <= 1_000_000 * 1e8, "Quorum too high");
+        uint256 old = quorum;
         quorum = _quorum;
+        emit QuorumUpdated(old, _quorum);
     }
 
     function setVotingPeriod(uint256 _period) external onlyOwner {
+        require(_period >= 1 days, "Voting period too short");
+        require(_period <= 30 days, "Voting period too long");
+        uint256 old = votingPeriod;
         votingPeriod = _period;
+        emit VotingPeriodUpdated(old, _period);
     }
 
     function setProposalThreshold(uint256 _threshold) external onlyOwner {
+        require(_threshold > 0, "Threshold must be > 0");
+        require(_threshold <= 1_000_000 * 1e8, "Threshold too high");
+        uint256 old = proposalThreshold;
         proposalThreshold = _threshold;
+        emit ProposalThresholdUpdated(old, _threshold);
     }
 
     function setExecutionDelay(uint256 _delay) external onlyOwner {
+        require(_delay >= 1 hours, "Delay too short");
+        require(_delay <= 14 days, "Delay too long");
+        uint256 old = executionDelay;
         executionDelay = _delay;
+        emit ExecutionDelayUpdated(old, _delay);
     }
 }

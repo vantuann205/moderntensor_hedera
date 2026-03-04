@@ -12,9 +12,11 @@ This is the single source of truth for "how much MDT has flowed where."
 For ModernTensor on Hedera — Hello Future Hackathon 2026
 """
 
+import json
 import logging
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .types import FeeBreakdown
@@ -26,9 +28,11 @@ logger = logging.getLogger(__name__)
 # Data Types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PayoutRecord:
     """A single payout event recorded by Treasury."""
+
     task_id: str
     miner_id: str
     miner_amount: float
@@ -52,6 +56,7 @@ class PayoutRecord:
 @dataclass
 class TreasurySnapshot:
     """Point-in-time snapshot of treasury state."""
+
     total_protocol_fees: float = 0.0
     total_subnet_fees: float = 0.0
     total_miner_rewards: float = 0.0
@@ -77,6 +82,7 @@ class TreasurySnapshot:
 # ---------------------------------------------------------------------------
 # Treasury
 # ---------------------------------------------------------------------------
+
 
 class Treasury:
     """
@@ -147,7 +153,9 @@ class Treasury:
             self._state_file.parent.mkdir(parents=True, exist_ok=True)
             self.load_state()
 
-        logger.info("Treasury initialized (persistence=%s)", self._state_file is not None)
+        logger.info(
+            "Treasury initialized (persistence=%s)", self._state_file is not None
+        )
 
     # -----------------------------------------------------------------------
     # Recording
@@ -188,9 +196,7 @@ class Treasury:
         self._miner_earnings[miner_id] = round(
             self._miner_earnings.get(miner_id, 0.0) + miner_amount, 8
         )
-        self._miner_task_counts[miner_id] = (
-            self._miner_task_counts.get(miner_id, 0) + 1
-        )
+        self._miner_task_counts[miner_id] = self._miner_task_counts.get(miner_id, 0) + 1
 
         # Per-subnet tracking
         if subnet_id is not None:
@@ -215,13 +221,16 @@ class Treasury:
         # Add to history (with cap)
         self._payout_history.append(record)
         if len(self._payout_history) > self._max_history:
-            self._payout_history = self._payout_history[-self._max_history:]
+            self._payout_history = self._payout_history[-self._max_history :]
 
         logger.info(
             "Treasury recorded: task=%s, miner=%s, amount=%.4f MDT "
             "(protocol_fee=%.4f, subnet_fee=%.4f)",
-            task_id[:8], miner_id, miner_amount,
-            protocol_fee, subnet_fee,
+            task_id[:8],
+            miner_id,
+            miner_amount,
+            protocol_fee,
+            subnet_fee,
         )
 
         self._auto_save()
@@ -343,7 +352,8 @@ class Treasury:
             self._unique_tasks = set(state.get("unique_tasks", []))
             logger.info(
                 "Treasury state loaded: volume=%.4f MDT, %d payouts",
-                self._total_volume, len(state.get("payout_history", [])),
+                self._total_volume,
+                len(state.get("payout_history", [])),
             )
         except Exception as e:
             logger.error("Failed to load treasury state: %s", e)

@@ -12,10 +12,13 @@ For ModernTensor on Hedera — Hello Future Hackathon 2026
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
 import time
 import json
 import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
@@ -94,14 +97,20 @@ class Dendrite:
         self,
         validator_id: str = "0.0.0",
         timeout: float = 30.0,
+        auth_secret: Optional[str] = None,
+        max_workers: int = 8,
     ):
         """
         Args:
             validator_id: This validator's Hedera account ID
             timeout: Request timeout in seconds
+            auth_secret: Shared HMAC secret for Axon authentication
+            max_workers: Max threads for broadcast concurrency
         """
         self.validator_id = validator_id
         self.timeout = timeout
+        self.auth_secret = auth_secret
+        self.max_workers = max_workers
         self._total_requests = 0
         self._total_errors = 0
 
@@ -127,25 +136,38 @@ class Dendrite:
             DendriteResult with response or error
         """
         url = f"{endpoint.rstrip('/')}/task"
-        body = json.dumps({
-            "task_id": task_id,
-            "task_type": task_type,
-            "payload": payload,
-            "validator_id": self.validator_id,
-            "timestamp": time.time(),
-        }).encode("utf-8")
+        body = json.dumps(
+            {
+                "task_id": task_id,
+                "task_type": task_type,
+                "payload": payload,
+                "validator_id": self.validator_id,
+                "timestamp": time.time(),
+            }
+        ).encode("utf-8")
 
         self._total_requests += 1
         start_time = time.time()
 
         try:
+            headers = {
+                "Content-Type": "application/json",
+                "X-Validator-ID": self.validator_id,
+            }
+
+            # Add HMAC signature if auth secret is configured
+            if self.auth_secret:
+                sig = hmac.new(
+                    self.auth_secret.encode(),
+                    self.validator_id.encode(),
+                    hashlib.sha256,
+                ).hexdigest()
+                headers["X-Auth-Signature"] = sig
+
             req = Request(
                 url,
                 data=body,
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Validator-ID": self.validator_id,
-                },
+                headers=headers,
                 method="POST",
             )
 
@@ -157,7 +179,9 @@ class Dendrite:
 
             logger.info(
                 "Dendrite → %s: task %s completed in %.2fs",
-                miner_id, task_id[:8], latency,
+                miner_id,
+                task_id[:8],
+                latency,
             )
 
             return DendriteResult(
@@ -173,7 +197,9 @@ class Dendrite:
             error_body = e.read().decode("utf-8", errors="replace")
             logger.warning(
                 "Dendrite → %s: HTTP %d — %s",
-                miner_id, e.code, error_body[:200],
+                miner_id,
+                e.code,
+                error_body[:200],
             )
             return DendriteResult(
                 miner_id=miner_id,
@@ -186,7 +212,9 @@ class Dendrite:
             latency = time.time() - start_time
             self._total_errors += 1
             logger.warning(
-                "Dendrite → %s: connection failed — %s", miner_id, e,
+                "Dendrite → %s: connection failed — %s",
+                miner_id,
+                e,
             )
             return DendriteResult(
                 miner_id=miner_id,
@@ -232,26 +260,44 @@ class Dendrite:
         Returns:
             List of DendriteResult, one per miner
         """
-        results = []
-        for miner in miners:
-            mid = miner.get("miner_id", "unknown")
-            ep = miner.get("endpoint", "")
-            if not ep:
-                results.append(DendriteResult(
-                    miner_id=mid,
-                    endpoint="",
-                    error="No endpoint configured",
-                ))
-                continue
+        results: List[DendriteResult] = []
+        futures = {}
 
-            result = self.send_task(
-                endpoint=ep,
-                miner_id=mid,
-                task_id=task_id,
-                task_type=task_type,
-                payload=payload,
-            )
-            results.append(result)
+        with ThreadPoolExecutor(max_workers=min(self.max_workers, len(miners))) as pool:
+            for miner in miners:
+                mid = miner.get("miner_id", "unknown")
+                ep = miner.get("endpoint", "")
+                if not ep:
+                    results.append(
+                        DendriteResult(
+                            miner_id=mid,
+                            endpoint="",
+                            error="No endpoint configured",
+                        )
+                    )
+                    continue
+
+                fut = pool.submit(
+                    self.send_task,
+                    endpoint=ep,
+                    miner_id=mid,
+                    task_id=task_id,
+                    task_type=task_type,
+                    payload=payload,
+                )
+                futures[fut] = mid
+
+            for fut in as_completed(futures):
+                try:
+                    results.append(fut.result())
+                except Exception as exc:
+                    results.append(
+                        DendriteResult(
+                            miner_id=futures[fut],
+                            endpoint="",
+                            error=f"Thread error: {exc}",
+                        )
+                    )
 
         logger.info(
             "Dendrite broadcast: %d miners, %d success, %d failed",
@@ -268,7 +314,8 @@ class Dendrite:
             "total_requests": self._total_requests,
             "total_errors": self._total_errors,
             "success_rate": round(
-                (self._total_requests - self._total_errors) / max(1, self._total_requests),
+                (self._total_requests - self._total_errors)
+                / max(1, self._total_requests),
                 4,
             ),
             "timeout": self.timeout,

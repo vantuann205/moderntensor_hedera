@@ -14,6 +14,7 @@ from sdk.hedera.client import HederaClient
 
 logger = logging.getLogger(__name__)
 
+
 class MinerHeartbeat:
     """
     Background service that sends periodic heartbeats to HCS.
@@ -43,7 +44,9 @@ class MinerHeartbeat:
         self._running = True
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
-        logger.info(f"MinerHeartbeat started for {self.miner_id} on topic {self.topic_id}")
+        logger.info(
+            f"MinerHeartbeat started for {self.miner_id} on topic {self.topic_id}"
+        )
 
     def stop(self):
         """Stop the heartbeat loop."""
@@ -76,21 +79,17 @@ class MinerHeartbeat:
             "timestamp": time.time(),
             "seq": self._counter,
             "status": "ONLINE",
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
 
         message = json.dumps(payload)
 
-        # Use async submit to avoid blocking main threads
-        self.client.submit_message_async(
-            topic_id=self.topic_id,
-            message=message,
-            callback=self._on_sent
-        )
-
-    def _on_sent(self, receipt, error):
-        """Callback for submission result."""
-        if error:
-            logger.warning(f"Heartbeat failed: {error}")
-        else:
+        # Submit heartbeat message to HCS topic
+        try:
+            receipt = self.client.submit_message(
+                topic_id=self.topic_id,
+                message=message,
+            )
             logger.debug(f"Heartbeat sent (seq={self._counter})")
+        except Exception as e:
+            logger.warning(f"Heartbeat failed: {e}")

@@ -64,7 +64,19 @@ const chartOptions = {
     }
 };
 
-const charts = getChartData();
+const charts = { taskVolume: { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], data: [0,0,0,0,0,0,0] } };
+let chartDataLoaded = false;
+
+// Load chart data async on first render
+const loadChartData = async () => {
+    if (chartDataLoaded) return;
+    chartDataLoaded = true;
+    try {
+        const result = await getChartData();
+        Object.assign(charts, result);
+    } catch { /* use defaults */ }
+};
+loadChartData();
 
 const chartData = {
     labels: charts.taskVolume.labels,
@@ -115,11 +127,28 @@ const StatItem = ({ icon: Icon, label, value, subtext, highlight }) => (
 );
 
 export default function Dashboard() {
-    const stats = getProtocolStats().data;
-    const subnets = getSubnets().data;
-    const tasks = getTaskFeed().data;
+    const [stats, setStats] = useState({
+        totalSubnets: 5, activeSubnets: 2, totalTasks: 0,
+        activeMinerCount: 0, protocolRevenue: '0 MDT', protocolFee: 5, totalVolume: '0 MDT',
+    });
+    const [subnets, setSubnets] = useState([]);
+    const [tasks, setTasks] = useState([]);
     const hederaServices = getHederaServices();
     const [verificationLog, setVerificationLog] = useState(null);
+
+    // Load real data from Mirror Node
+    useEffect(() => {
+        (async () => {
+            const [statsRes, subnetsRes, tasksRes] = await Promise.allSettled([
+                getProtocolStats(),
+                getSubnets(),
+                getTaskFeed(),
+            ]);
+            if (statsRes.status === 'fulfilled' && statsRes.value.data) setStats(statsRes.value.data);
+            if (subnetsRes.status === 'fulfilled' && subnetsRes.value.data) setSubnets(subnetsRes.value.data);
+            if (tasksRes.status === 'fulfilled' && tasksRes.value.data) setTasks(tasksRes.value.data);
+        })();
+    }, []);
 
     // Poll for live verification logs
     useEffect(() => {

@@ -19,55 +19,37 @@ keywords = ["blockchain", "layer1", "proof-of-stake", "ai-validation", "zkml", "
 classifiers = [
   "Programming Language :: Python :: 3",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
-  # Core cryptography - Layer 1 blockchain
-  "bip_utils==2.9.3",
-  "cryptography==42.0.8",
-  "ecdsa==0.18.0",
-  "coincurve>=19.0.1",
-  "pycryptodome==3.23.0",
-  
-  # Web framework
-  "fastapi==0.115.6",
-  "uvicorn==0.34.0",
-  "starlette==0.41.3",
-  "pydantic==2.10.4",
-  "pydantic-settings==2.7.1",
-  "pydantic_core==2.27.2",
-  
+  # Hedera SDK (official)
+  "hiero-sdk-python>=0.2.0",
+
+  # Cryptography (for commit-reveal hashing, signatures)
+  "cryptography>=42.0.0",
+
+  # Web framework (dashboard API, REST endpoints)
+  "fastapi>=0.115.0",
+  "uvicorn>=0.34.0",
+  "pydantic>=2.10.0",
+  "pydantic-settings>=2.7.0",
+
   # Networking
-  "websockets==13.0",
-  "requests==2.32.3",
-  "httptools==0.6.4",
-  "h11==0.14.0",
-  
-  # Storage (for Phase 4)
-  "plyvel==1.5.0",
-  
+  "websockets>=13.0",
+  "requests>=2.32.0",
+
+  # AI Validator Agent — LLM providers
+  "openai>=1.0.0",
+  "anthropic>=0.30.0",
+  "google-generativeai>=0.5.0",
+
   # Utilities
-  "click==8.1.8",
-  "loguru==0.7.3",
-  "PyYAML==6.0.2",
-  "python-dotenv==1.0.1",
-  "colorama==0.4.6",
-  
-  # Standard library additions
-  "annotated-types==0.7.0",
-  "anyio==4.7.0",
-  "certifi==2024.12.14",
-  "charset-normalizer==3.4.1",
-  "cmake==3.31.2",
-  "dependency-injector==4.45.0",
-  "dnspython==2.7.0",
-  "email_validator==2.2.0",
-  "idna==3.10",
-  "python-multipart==0.0.20",
-  "sniffio==1.3.1",
-  "typing_extensions==4.12.2",
-  "urllib3==2.3.0",
-  "watchfiles==1.0.3",
-  "win32_setctime==1.2.0"
+  "click>=8.1.0",
+  "loguru>=0.7.0",
+  "PyYAML>=6.0",
+  "python-dotenv>=1.0.0",
+  "colorama>=0.4.6",
+  "python-multipart>=0.0.20",
+  "typing_extensions>=4.12.0",
 ]
 
 [project.urls]
