@@ -33,6 +33,7 @@ from .hts import (
 from .payment_escrow import (
     PaymentEscrowService,
     EscrowEntry,
+    EscrowTaskStatus,
 )
 from .contracts import (
     SmartContractService,
@@ -95,6 +96,7 @@ __all__ = [
     "SmartContractService",
     "PaymentEscrowService",
     "EscrowEntry",
+    "EscrowTaskStatus",
     "TaskStatus",
     "TaskInfo",
     "SubnetRegistryService",

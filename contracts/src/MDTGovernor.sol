@@ -51,6 +51,7 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
         uint256 endTime;
         uint256 executionTime; // When it can be executed (after timelock)
         ProposalState state;
+        bool targetAllowedAtCreation; // Snapshot: was target whitelisted at creation?
         mapping(address => bool) hasVoted;
         mapping(address => uint256) voterSnapshot; // snapshot of balance at proposal creation
     }
@@ -169,6 +170,7 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
         p.startTime = block.timestamp;
         p.endTime = block.timestamp + votingPeriod;
         p.state = ProposalState.Active;
+        p.targetAllowedAtCreation = true; // Already verified above
 
         emit ProposalCreated(
             proposalId,
@@ -238,14 +240,18 @@ contract MDTGovernor is ReentrancyGuard, Ownable {
 
     /**
      * @dev Execute a succeeded proposal after timelock.
-     *      Target must be whitelisted at execution time (can be revoked).
+     *      Uses target whitelist snapshot from creation — prevents owner
+     *      from vetoing a democratic vote by revoking target mid-flight.
      */
     function execute(uint256 proposalId) external nonReentrant {
         Proposal storage p = proposals[proposalId];
 
         require(p.state == ProposalState.Succeeded, "Not succeeded");
         require(block.timestamp >= p.executionTime, "Timelock not expired");
-        require(allowedTargets[p.target], "Target no longer whitelisted");
+        require(
+            p.targetAllowedAtCreation,
+            "Target was not whitelisted at creation"
+        );
 
         p.state = ProposalState.Executed;
 

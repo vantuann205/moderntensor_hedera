@@ -585,6 +585,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         ];
         require(!submission.validated, "Submission already has consensus");
 
+        // GUARD: Prevent self-validation (miner cannot score own submission)
+        require(
+            msg.sender != submission.miner,
+            "Cannot validate own submission"
+        );
+
         // GUARD: If commit-reveal has started for this submission, block direct scoring
         require(
             commitPhaseStart[taskId][minerIndex] == 0,
@@ -661,6 +667,12 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
             minerIndex
         ];
         require(!submission.validated, "Already has consensus");
+
+        // GUARD: Prevent self-validation via commit-reveal
+        require(
+            msg.sender != submission.miner,
+            "Cannot validate own submission"
+        );
 
         // Cannot commit if already committed or already used direct validateSubmission
         require(
@@ -814,6 +826,65 @@ contract PaymentEscrow is ReentrancyGuard, Ownable, Pausable {
         revealPhaseDuration = _revealDuration;
 
         emit CommitPhaseConfigUpdated(_commitDuration, _revealDuration);
+    }
+
+    /**
+     * @dev Resolve a stalled commit-reveal phase.
+     *      If the reveal phase has ended and enough validators have revealed,
+     *      force consensus from revealed scores only. If not enough revealed,
+     *      reset the commit-reveal so the task can proceed via direct validation
+     *      or be expired.
+     *      Anyone can call (trustless cleanup).
+     *
+     * @param taskId Task ID
+     * @param minerIndex Miner submission index
+     */
+    function resolveUnrevealedCommits(
+        uint256 taskId,
+        uint256 minerIndex
+    ) external nonReentrant taskExists(taskId) {
+        Task storage task = tasks[taskId];
+        require(
+            task.status == TaskStatus.PendingReview ||
+                task.status == TaskStatus.InProgress,
+            "Not pending review"
+        );
+        require(minerIndex < taskSubmissions[taskId].length, "Invalid index");
+
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
+        require(!submission.validated, "Already has consensus");
+
+        // Verify commit-reveal was started and reveal phase has ended
+        uint256 cStart = commitPhaseStart[taskId][minerIndex];
+        require(cStart > 0, "No commit-reveal started");
+        uint256 revealEnd = cStart + commitPhaseDuration + revealPhaseDuration;
+        require(block.timestamp > revealEnd, "Reveal phase not ended yet");
+
+        // Check if enough validators revealed
+        uint256 revealed = submission.validationCount;
+        if (revealed >= minValidations) {
+            // Enough reveals — force consensus from revealed scores
+            uint256 medianScore = _calculateMedianScore(
+                taskId,
+                minerIndex,
+                revealed
+            );
+            submission.score = medianScore;
+            submission.validated = true;
+
+            if (medianScore > task.winningScore) {
+                task.winningScore = medianScore;
+                task.winningMiner = submission.miner;
+            }
+
+            emit ConsensusReached(taskId, minerIndex, medianScore, revealed);
+        } else {
+            // Not enough reveals — reset commit-reveal state so task
+            // can proceed via direct scoring or expiration
+            commitPhaseStart[taskId][minerIndex] = 0;
+        }
     }
 
     /**

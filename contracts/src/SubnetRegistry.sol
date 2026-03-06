@@ -34,6 +34,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ValidationLib.sol";
 
+/// @dev Interface to check stake status in StakingVault
+interface IStakingVault {
+    function isMiner(address user) external view returns (bool);
+    function isValidator(address user) external view returns (bool);
+}
+
 contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     using SafeERC20 for IERC20;
 
@@ -59,6 +65,9 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
 
     /// @dev MDT Token address
     IERC20 public mdtToken;
+
+    /// @dev StakingVault for on-chain stake verification
+    IStakingVault public stakingVault;
 
     /// @dev Subnet counter
     uint256 public subnetCount;
@@ -454,7 +463,8 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     // =========================================================================
 
     /**
-     * @dev Register as a miner in a subnet
+     * @dev Register as a miner in a subnet.
+     *      Requires active stake as Miner in StakingVault.
      */
     function registerMiner(uint256 subnetId) external {
         require(
@@ -462,6 +472,14 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
             "Subnet not active"
         );
         require(!subnetMiners[subnetId][msg.sender], "Already registered");
+
+        // Cross-contract stake verification
+        if (address(stakingVault) != address(0)) {
+            require(
+                stakingVault.isMiner(msg.sender),
+                "Must stake as Miner in StakingVault first"
+            );
+        }
 
         subnetMiners[subnetId][msg.sender] = true;
         subnetMinerCount[subnetId]++;
@@ -644,6 +662,12 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         ];
         require(!submission.validated, "Submission already has consensus");
 
+        // GUARD: Prevent self-validation (miner cannot score own submission)
+        require(
+            msg.sender != submission.miner,
+            "Cannot validate own submission"
+        );
+
         // GUARD: If commit-reveal has started for this submission, block direct scoring
         require(
             commitPhaseStart[taskId][submissionIndex] == 0,
@@ -711,6 +735,13 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
             minerIndex
         ];
         require(!submission.validated, "Already has consensus");
+
+        // GUARD: Prevent self-validation via commit-reveal
+        require(
+            msg.sender != submission.miner,
+            "Cannot validate own submission"
+        );
+
         require(
             validationCommits[taskId][minerIndex][msg.sender].commitHash ==
                 bytes32(0),
@@ -830,6 +861,58 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         commitPhaseDuration = _commitDuration;
         revealPhaseDuration = _revealDuration;
         emit CommitPhaseConfigUpdated(_commitDuration, _revealDuration);
+    }
+
+    /**
+     * @dev Resolve a stalled commit-reveal phase.
+     *      If reveal phase ended with enough reveals, force consensus.
+     *      If not enough, reset commit-reveal so task can proceed or expire.
+     *      Anyone can call (trustless cleanup).
+     */
+    function resolveUnrevealedCommits(
+        uint256 taskId,
+        uint256 minerIndex
+    ) external nonReentrant {
+        Task storage task = tasks[taskId];
+        require(
+            task.status == TaskStatus.PendingReview ||
+                task.status == TaskStatus.InProgress,
+            "Not pending review"
+        );
+        require(minerIndex < taskSubmissions[taskId].length, "Invalid index");
+
+        MinerSubmission storage submission = taskSubmissions[taskId][
+            minerIndex
+        ];
+        require(!submission.validated, "Already has consensus");
+
+        uint256 cStart = commitPhaseStart[taskId][minerIndex];
+        require(cStart > 0, "No commit-reveal started");
+        uint256 revealEnd = cStart + commitPhaseDuration + revealPhaseDuration;
+        require(block.timestamp > revealEnd, "Reveal phase not ended yet");
+
+        uint256 revealed = submission.validationCount;
+        uint256 minVals = subnetMinValidations[task.subnetId];
+        if (minVals == 0) minVals = 2;
+
+        if (revealed >= minVals) {
+            uint256 medianScore = _calculateMedianScore(
+                taskId,
+                minerIndex,
+                revealed
+            );
+            submission.score = medianScore;
+            submission.validated = true;
+
+            if (medianScore > task.winningScore) {
+                task.winningScore = medianScore;
+                task.winningMiner = submission.miner;
+            }
+
+            emit ConsensusReached(taskId, minerIndex, medianScore, revealed);
+        } else {
+            commitPhaseStart[taskId][minerIndex] = 0;
+        }
     }
 
     /**
@@ -1053,7 +1136,8 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     // =========================================================================
 
     /**
-     * @dev Add validator to a subnet
+     * @dev Add validator to a subnet.
+     *      Cross-contract: verifies stake in StakingVault if configured.
      */
     function addValidator(uint256 subnetId, address validator) external {
         require(
@@ -1062,6 +1146,14 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
         );
         require(validator != address(0), "Invalid address");
         require(!subnetValidators[subnetId][validator], "Already validator");
+
+        // Cross-contract stake verification
+        if (address(stakingVault) != address(0)) {
+            require(
+                stakingVault.isValidator(validator),
+                "Must stake as Validator in StakingVault first"
+            );
+        }
 
         subnetValidators[subnetId][validator] = true;
         subnetValidatorCount[subnetId]++;
@@ -1221,6 +1313,15 @@ contract SubnetRegistry is ReentrancyGuard, Ownable, Pausable {
     function setProtocolTreasury(address newTreasury) external onlyOwner {
         require(newTreasury != address(0), "Invalid address");
         protocolTreasury = newTreasury;
+    }
+
+    /**
+     * @dev Set StakingVault address for cross-contract stake verification.
+     *      Once set, registerMiner/addValidator will require on-chain stake.
+     */
+    function setStakingVault(address _stakingVault) external onlyOwner {
+        require(_stakingVault != address(0), "Invalid address");
+        stakingVault = IStakingVault(_stakingVault);
     }
 
     // =========================================================================

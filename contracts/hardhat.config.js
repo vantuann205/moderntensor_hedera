@@ -3,6 +3,7 @@
 // Used to compile and verify SubnetRegistry.sol and PaymentEscrow.sol
 
 require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {

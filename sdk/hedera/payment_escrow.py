@@ -2,24 +2,18 @@
 Payment Escrow Service — PaymentEscrow Contract Integration
 
 Wraps the deployed PaymentEscrow contract on Hedera testnet.
-Handles task deposits, payment releases to miners, refunds, and fee management.
+Multi-validator consensus escrow with commit-reveal scoring and dispute resolution.
 
-Contract ABI functions:
-  - deposit(bytes32 requestId, uint256 amount, uint256 timeout)
-  - release(bytes32 requestId, address miner)
-  - refund(bytes32 requestId)
-  - getEscrow(bytes32 requestId) → EscrowEntry
-  - canRefund(bytes32 requestId) → bool
-  - setAIOracle(address _aiOracle)   [owner only]
-  - setProtocolFee(uint256 _feeBps)   [owner only]
-  - withdrawFees(address recipient)   [owner only]
-
-View functions:
-  - accumulatedFees() → uint256
-  - aiOracle() → address
-  - mdtToken() → address
-  - minTimeout() → uint256
-  - protocolFeeBps() → uint256
+Contract ABI (PaymentEscrow.sol):
+  Task lifecycle: createTask, cancelTask, expireTask, acceptTask, submitResult,
+    validateSubmission, commitScore, revealScore, finalizeTask, claimTaskReward
+  Dispute: openDispute, resolveDispute
+  Commit-reveal: getCommitHash, setCommitRevealConfig, resolveUnrevealedCommits
+  Earnings: withdrawEarnings
+  Admin: addValidator, removeValidator, setMinValidations, setPlatformFeeRate,
+    setDisputeGracePeriod, withdrawFees, pause, unpause
+  View: getTask, getSubmissions, getSubmissionCount, isValidator, totalTasks,
+    getAdaptiveMinValidations, getValidatorScore
 
 For ModernTensor on Hedera — Hello Future Hackathon 2026
 """
@@ -27,62 +21,67 @@ For ModernTensor on Hedera — Hello Future Hackathon 2026
 import hashlib
 import logging
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Optional, TYPE_CHECKING
 
 from hiero_sdk_python import ContractFunctionParameters
 
 if TYPE_CHECKING:
     from .client import HederaClient
+    from hiero_sdk_python import ContractFunctionResult
 
 logger = logging.getLogger(__name__)
 
 
+class EscrowTaskStatus(IntEnum):
+    """Task status matching PaymentEscrow.sol"""
+
+    CREATED = 0
+    IN_PROGRESS = 1
+    PENDING_REVIEW = 2
+    COMPLETED = 3
+    CANCELLED = 4
+    EXPIRED = 5
+    DISPUTED = 6
+
+
 @dataclass
 class EscrowEntry:
-    """Escrow entry returned by getEscrow()."""
+    """Simplified task info for backward compat."""
 
-    depositor: str
-    amount: int
-    deposited_at: int
-    timeout: int
-    released: bool
-    refunded: bool
+    task_id: int
+    requester: str
+    reward_amount: int
+    deadline: int
+    status: int
+    winner: str
 
 
 class PaymentEscrowService:
     """
     Service for PaymentEscrow contract operations.
 
-    Manages MDT token escrow for task payments:
-    - Requester deposits MDT into escrow for a task
-    - AI Oracle releases payment to winning miner
-    - Depositor can refund after timeout
+    Multi-validator escrow with commit-reveal scoring:
+    - Requester creates task with MDT reward
+    - Miners submit results
+    - Validators score via direct or commit-reveal
+    - Task finalized, winner gets reward
+    - Dispute resolution available
 
     Usage:
-        from sdk.hedera import HederaClient
         from sdk.hedera.payment_escrow import PaymentEscrowService
-
-        client = HederaClient.from_env()
         escrow = PaymentEscrowService(client)
+        escrow.contract_id = "0.0.8045890"
 
-        # Generate request ID from task string
-        request_id = PaymentEscrowService.make_request_id("task-001")
-
-        # Deposit MDT for a task (requires ERC20 approve first)
-        escrow.deposit(request_id, amount=100 * 10**8, timeout=3600)
-
-        # Oracle releases payment to miner
-        escrow.release(request_id, miner_address="0x...")
-
-        # Query escrow
-        entry = escrow.get_escrow(request_id)
+        escrow.create_task("QmTaskHash...", reward_amount=100*10**8, duration=86400)
+        escrow.submit_result(task_id=0, result_hash="QmResultHash...")
+        escrow.validate_submission(task_id=0, miner_index=0, score=8500)
+        escrow.finalize_task(task_id=0)
     """
 
     def __init__(self, client: "HederaClient"):
         self.client = client
         self._contract_id: Optional[str] = None
-
-    # ── Contract ID ──────────────────────────────────────────────
 
     @property
     def contract_id(self) -> Optional[str]:
@@ -107,340 +106,421 @@ class PaymentEscrowService:
                 "assign escrow.contract_id = '0.0.xxxx'"
             )
 
-    # ── Helpers ──────────────────────────────────────────────────
-
     @staticmethod
     def make_request_id(task_id: str) -> bytes:
-        """
-        Generate a deterministic bytes32 request ID from a task string.
-
-        Uses SHA-256 (which produces 32 bytes) — same as keccak256 length.
-
-        Args:
-            task_id: Human-readable task identifier (e.g. "task-001")
-
-        Returns:
-            32-byte hash suitable for the contract's bytes32 requestId
-        """
+        """Generate a deterministic bytes32 ID from a task string (SHA-256)."""
         return hashlib.sha256(task_id.encode("utf-8")).digest()
 
-    # ── State-Changing Functions ─────────────────────────────────
+    # ── Task Lifecycle ───────────────────────────────────────────
 
-    def deposit(
-        self,
-        request_id: bytes,
-        amount: int,
-        timeout: int,
-        gas: int = 300_000,
+    def create_task(
+        self, task_hash: str, reward_amount: int, duration: int, gas: int = 800_000
     ):
-        """
-        Deposit MDT tokens into escrow for a task.
-
-        The caller must have approved the PaymentEscrow contract to spend
-        `amount` MDT tokens (via ERC20 approve or HTS allowance) before
-        calling this function.
-
-        Args:
-            request_id: 32-byte unique task identifier
-            amount: MDT amount in smallest unit (8 decimals)
-            timeout: Seconds until the deposit can be refunded
-            gas: Gas limit
-
-        Returns:
-            TransactionReceipt from Hedera
-        """
+        """Create a task with MDT reward. Caller must approve MDT first."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_bytes32(request_id)
-        params.add_uint256(amount)
-        params.add_uint256(timeout)
-
-        receipt = self.client.execute_contract(
+        params.add_string(task_hash)
+        params.add_uint256(reward_amount)
+        params.add_uint256(duration)
+        return self.client.execute_contract(
             contract_id=self.contract_id,
-            function_name="deposit",
+            function_name="createTask",
             params=params,
             gas=gas,
         )
-        logger.info(
-            f"PaymentEscrow.deposit: request={request_id.hex()[:16]}... "
-            f"amount={amount} timeout={timeout}s"
-        )
-        return receipt
 
-    def release(
-        self,
-        request_id: bytes,
-        miner_address: str,
-        gas: int = 300_000,
+    def cancel_task(self, task_id: int, gas: int = 200_000):
+        """Cancel a task (requester only, before any submissions)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="cancelTask",
+            params=params,
+            gas=gas,
+        )
+
+    def expire_task(self, task_id: int, gas: int = 200_000):
+        """Expire a timed-out task and refund requester."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="expireTask",
+            params=params,
+            gas=gas,
+        )
+
+    def accept_task(self, task_id: int, gas: int = 200_000):
+        """Accept a task (miner)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="acceptTask",
+            params=params,
+            gas=gas,
+        )
+
+    def submit_result(self, task_id: int, result_hash: str, gas: int = 200_000):
+        """Submit a result for a task (miner)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        params.add_string(result_hash)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="submitResult",
+            params=params,
+            gas=gas,
+        )
+
+    # ── Scoring ──────────────────────────────────────────────────
+
+    def validate_submission(
+        self, task_id: int, miner_index: int, score: int, gas: int = 200_000
     ):
-        """
-        Release escrowed payment to a miner (oracle only).
-
-        Only the configured AI Oracle address can call this function.
-
-        Args:
-            request_id: 32-byte unique task identifier
-            miner_address: EVM address of the winning miner
-            gas: Gas limit
-
-        Returns:
-            TransactionReceipt from Hedera
-        """
+        """Score a submission directly (0-10000 bps). Validator only."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_bytes32(request_id)
-        params.add_address(miner_address)
-
-        receipt = self.client.execute_contract(
+        params.add_uint256(task_id)
+        params.add_uint256(miner_index)
+        params.add_uint256(score)
+        return self.client.execute_contract(
             contract_id=self.contract_id,
-            function_name="release",
+            function_name="validateSubmission",
             params=params,
             gas=gas,
         )
-        logger.info(
-            f"PaymentEscrow.release: request={request_id.hex()[:16]}... "
-            f"miner={miner_address}"
-        )
-        return receipt
 
-    def refund(self, request_id: bytes, gas: int = 200_000):
-        """
-        Refund escrowed deposit back to the depositor.
-
-        Can only be called by the original depositor after the timeout
-        has expired and if the escrow has not been released.
-
-        Args:
-            request_id: 32-byte unique task identifier
-            gas: Gas limit
-
-        Returns:
-            TransactionReceipt from Hedera
-        """
+    def commit_score(
+        self, task_id: int, miner_index: int, commit_hash: bytes, gas: int = 200_000
+    ):
+        """Commit a hashed score (commit-reveal mode). Validator only."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_bytes32(request_id)
-
-        receipt = self.client.execute_contract(
+        params.add_uint256(task_id)
+        params.add_uint256(miner_index)
+        params.add_bytes32(commit_hash)
+        return self.client.execute_contract(
             contract_id=self.contract_id,
-            function_name="refund",
+            function_name="commitScore",
             params=params,
             gas=gas,
         )
-        logger.info(f"PaymentEscrow.refund: request={request_id.hex()[:16]}...")
-        return receipt
 
-    # ── Owner Functions ──────────────────────────────────────────
-
-    def set_ai_oracle(self, oracle_address: str, gas: int = 100_000):
-        """
-        Set the AI Oracle address (owner only).
-
-        The oracle is the only account authorized to release payments.
-
-        Args:
-            oracle_address: EVM address of the AI oracle
-            gas: Gas limit
-
-        Returns:
-            TransactionReceipt from Hedera
-        """
+    def reveal_score(
+        self,
+        task_id: int,
+        miner_index: int,
+        score: int,
+        salt: bytes,
+        gas: int = 200_000,
+    ):
+        """Reveal a previously committed score."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_address(oracle_address)
-
-        receipt = self.client.execute_contract(
+        params.add_uint256(task_id)
+        params.add_uint256(miner_index)
+        params.add_uint256(score)
+        params.add_bytes32(salt)
+        return self.client.execute_contract(
             contract_id=self.contract_id,
-            function_name="setAIOracle",
+            function_name="revealScore",
             params=params,
             gas=gas,
         )
-        logger.info(f"PaymentEscrow.setAIOracle: {oracle_address}")
-        return receipt
 
-    def set_protocol_fee(self, fee_bps: int, gas: int = 100_000):
-        """
-        Set the protocol fee in basis points (owner only).
-
-        Args:
-            fee_bps: Fee in basis points (e.g. 500 = 5%)
-            gas: Gas limit
-
-        Returns:
-            TransactionReceipt from Hedera
-        """
+    def get_commit_hash(
+        self, score: int, salt: bytes, gas: int = 50_000
+    ) -> "ContractFunctionResult":
+        """Compute commit hash for a score+salt (pure helper)."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_uint256(fee_bps)
-
-        receipt = self.client.execute_contract(
+        params.add_uint256(score)
+        params.add_bytes32(salt)
+        return self.client.call_contract(
             contract_id=self.contract_id,
-            function_name="setProtocolFee",
+            function_name="getCommitHash",
             params=params,
             gas=gas,
         )
-        logger.info(f"PaymentEscrow.setProtocolFee: {fee_bps} bps")
-        return receipt
 
-    def withdraw_fees(self, recipient_address: str, gas: int = 200_000):
-        """
-        Withdraw accumulated protocol fees (owner only).
-
-        Args:
-            recipient_address: EVM address to receive fees
-            gas: Gas limit
-
-        Returns:
-            TransactionReceipt from Hedera
-        """
+    def set_commit_reveal_config(
+        self, commit_duration: int, reveal_duration: int, gas: int = 100_000
+    ):
+        """Set commit and reveal duration in seconds (owner only)."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_address(recipient_address)
+        params.add_uint256(commit_duration)
+        params.add_uint256(reveal_duration)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="setCommitRevealConfig",
+            params=params,
+            gas=gas,
+        )
 
-        receipt = self.client.execute_contract(
+    def resolve_unrevealed_commits(
+        self, task_id: int, miner_index: int, gas: int = 200_000
+    ):
+        """Resolve unrevealed commits after reveal deadline."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        params.add_uint256(miner_index)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="resolveUnrevealedCommits",
+            params=params,
+            gas=gas,
+        )
+
+    # ── Finalization & Rewards ───────────────────────────────────
+
+    def finalize_task(self, task_id: int, gas: int = 800_000):
+        """Finalize task: determine winner, distribute rewards."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="finalizeTask",
+            params=params,
+            gas=gas,
+        )
+
+    def claim_task_reward(self, task_id: int, gas: int = 500_000):
+        """Claim reward for a specific completed task (winner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="claimTaskReward",
+            params=params,
+            gas=gas,
+        )
+
+    def withdraw_earnings(self, gas: int = 500_000):
+        """Withdraw accumulated earnings (miners/validators)."""
+        self._require_contract()
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="withdrawEarnings",
+            gas=gas,
+        )
+
+    # ── Dispute ──────────────────────────────────────────────────
+
+    def open_dispute(self, task_id: int, gas: int = 200_000):
+        """Open a dispute on a completed task (requester only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="openDispute",
+            params=params,
+            gas=gas,
+        )
+
+    def resolve_dispute(self, task_id: int, requester_wins: bool, gas: int = 300_000):
+        """Resolve a dispute (owner only). requester_wins=True refunds requester."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        params.add_bool(requester_wins)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="resolveDispute",
+            params=params,
+            gas=gas,
+        )
+
+    # ── Admin Functions ──────────────────────────────────────────
+
+    def add_validator(self, validator_address: str, gas: int = 100_000):
+        """Add a validator (owner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_address(validator_address)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="addValidator",
+            params=params,
+            gas=gas,
+        )
+
+    def remove_validator(self, validator_address: str, gas: int = 100_000):
+        """Remove a validator (owner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_address(validator_address)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="removeValidator",
+            params=params,
+            gas=gas,
+        )
+
+    def set_min_validations(self, new_min: int, gas: int = 100_000):
+        """Set minimum validations required (owner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(new_min)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="setMinValidations",
+            params=params,
+            gas=gas,
+        )
+
+    def set_platform_fee_rate(self, new_rate: int, gas: int = 100_000):
+        """Set platform fee rate in basis points (owner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(new_rate)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="setPlatformFeeRate",
+            params=params,
+            gas=gas,
+        )
+
+    def set_dispute_grace_period(self, new_period: int, gas: int = 100_000):
+        """Set dispute grace period in seconds (owner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_uint256(new_period)
+        return self.client.execute_contract(
+            contract_id=self.contract_id,
+            function_name="setDisputeGracePeriod",
+            params=params,
+            gas=gas,
+        )
+
+    def withdraw_fees(self, to_address: str, gas: int = 200_000):
+        """Withdraw accumulated protocol fees (owner only)."""
+        self._require_contract()
+        params = ContractFunctionParameters()
+        params.add_address(to_address)
+        return self.client.execute_contract(
             contract_id=self.contract_id,
             function_name="withdrawFees",
             params=params,
             gas=gas,
         )
-        logger.info(f"PaymentEscrow.withdrawFees -> {recipient_address}")
-        return receipt
 
-    # ── Read-Only Query Functions ────────────────────────────────
+    def pause(self, gas: int = 50_000):
+        """Pause contract (owner only)."""
+        self._require_contract()
+        return self.client.execute_contract(
+            contract_id=self.contract_id, function_name="pause", gas=gas
+        )
 
-    def get_escrow(
-        self, request_id: bytes, gas: int = 100_000
-    ) -> Optional[EscrowEntry]:
-        """
-        Query an escrow entry by request ID.
+    def unpause(self, gas: int = 50_000):
+        """Unpause contract (owner only)."""
+        self._require_contract()
+        return self.client.execute_contract(
+            contract_id=self.contract_id, function_name="unpause", gas=gas
+        )
 
-        Args:
-            request_id: 32-byte unique task identifier
-            gas: Gas limit
+    # ── View / Query Functions ───────────────────────────────────
 
-        Returns:
-            EscrowEntry dataclass or None if query fails
-        """
+    def get_task(self, task_id: int, gas: int = 100_000) -> "ContractFunctionResult":
+        """Query task info by ID."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_bytes32(request_id)
+        params.add_uint256(task_id)
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="getTask",
+            params=params,
+            gas=gas,
+        )
 
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="getEscrow",
-                params=params,
-                gas=gas,
-            )
-            # Result is a tuple: (depositor, amount, depositedAt, timeout, released, refunded)
-            return EscrowEntry(
-                depositor=result.get_address(0),
-                amount=result.get_uint256(1),
-                deposited_at=result.get_uint256(2),
-                timeout=result.get_uint256(3),
-                released=result.get_bool(4),
-                refunded=result.get_bool(5),
-            )
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.getEscrow failed: {e}")
-            return None
-
-    def can_refund(self, request_id: bytes, gas: int = 100_000) -> bool:
-        """
-        Check if an escrow entry can be refunded.
-
-        Args:
-            request_id: 32-byte unique task identifier
-            gas: Gas limit
-
-        Returns:
-            True if the escrow can be refunded
-        """
+    def get_submissions(
+        self, task_id: int, gas: int = 100_000
+    ) -> "ContractFunctionResult":
+        """Get all submissions for a task."""
         self._require_contract()
         params = ContractFunctionParameters()
-        params.add_bytes32(request_id)
+        params.add_uint256(task_id)
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="getSubmissions",
+            params=params,
+            gas=gas,
+        )
 
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="canRefund",
-                params=params,
-                gas=gas,
-            )
-            return result.get_bool(0)
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.canRefund failed: {e}")
-            return False
-
-    def get_accumulated_fees(self, gas: int = 100_000) -> int:
-        """Query total accumulated protocol fees."""
+    def get_submission_count(
+        self, task_id: int, gas: int = 50_000
+    ) -> "ContractFunctionResult":
+        """Get number of submissions for a task."""
         self._require_contract()
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="accumulatedFees",
-                gas=gas,
-            )
-            return result.get_uint256(0)
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.accumulatedFees failed: {e}")
-            return 0
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="getSubmissionCount",
+            params=params,
+            gas=gas,
+        )
 
-    def get_ai_oracle(self, gas: int = 100_000) -> Optional[str]:
-        """Query the current AI Oracle address."""
+    def is_validator(self, account: str, gas: int = 50_000) -> "ContractFunctionResult":
+        """Check if an address is a registered validator."""
         self._require_contract()
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="aiOracle",
-                gas=gas,
-            )
-            return result.get_address(0)
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.aiOracle query failed: {e}")
-            return None
+        params = ContractFunctionParameters()
+        params.add_address(account)
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="isValidator",
+            params=params,
+            gas=gas,
+        )
 
-    def get_protocol_fee_bps(self, gas: int = 100_000) -> int:
-        """Query the protocol fee in basis points."""
+    def total_tasks(self, gas: int = 50_000) -> "ContractFunctionResult":
+        """Get total number of tasks created."""
         self._require_contract()
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="protocolFeeBps",
-                gas=gas,
-            )
-            return result.get_uint256(0)
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.protocolFeeBps query failed: {e}")
-            return 0
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="totalTasks",
+            gas=gas,
+        )
 
-    def get_min_timeout(self, gas: int = 100_000) -> int:
-        """Query the minimum timeout for deposits."""
+    def get_adaptive_min_validations(
+        self, reward_amount: int, gas: int = 50_000
+    ) -> "ContractFunctionResult":
+        """Get adaptive minimum validations for a reward amount."""
         self._require_contract()
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="minTimeout",
-                gas=gas,
-            )
-            return result.get_uint256(0)
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.minTimeout query failed: {e}")
-            return 0
+        params = ContractFunctionParameters()
+        params.add_uint256(reward_amount)
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="getAdaptiveMinValidations",
+            params=params,
+            gas=gas,
+        )
 
-    def get_mdt_token(self, gas: int = 100_000) -> Optional[str]:
-        """Query the MDT token address used by the contract."""
+    def get_validator_score(
+        self, task_id: int, miner_index: int, validator: str, gas: int = 50_000
+    ) -> "ContractFunctionResult":
+        """Get a specific validator's score for a submission."""
         self._require_contract()
-        try:
-            result = self.client.call_contract(
-                contract_id=self.contract_id,
-                function_name="mdtToken",
-                gas=gas,
-            )
-            return result.get_address(0)
-        except Exception as e:
-            logger.warning(f"PaymentEscrow.mdtToken query failed: {e}")
-            return None
+        params = ContractFunctionParameters()
+        params.add_uint256(task_id)
+        params.add_uint256(miner_index)
+        params.add_address(validator)
+        return self.client.call_contract(
+            contract_id=self.contract_id,
+            function_name="getValidatorScore",
+            params=params,
+            gas=gas,
+        )
 
     def __repr__(self) -> str:
         return f"<PaymentEscrowService contract={self.contract_id}>"

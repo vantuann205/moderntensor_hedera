@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "D:\\venera\\hedera\\moderntensor_hedera\\contracts\\src\\MDTGovernor.sol": {
-      "lastModificationDate": 1772559907133,
-      "contentHash": "4c1a093a630866c817de1f16f17058a8",
+      "lastModificationDate": 1772783445903,
+      "contentHash": "3811d87f7b7683bc1766ba471787314e",
       "sourceName": "src/MDTGovernor.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -312,8 +312,8 @@
       ]
     },
     "D:\\venera\\hedera\\moderntensor_hedera\\contracts\\src\\SubnetRegistry.sol": {
-      "lastModificationDate": 1772559907270,
-      "contentHash": "d64072a3359f86607c33589101468a0a",
+      "lastModificationDate": 1772783330708,
+      "contentHash": "ded2983292d05e26a78c4fa3224d60ec",
       "sourceName": "src/SubnetRegistry.sol",
       "solcConfig": {
         "version": "0.8.24",
@@ -352,6 +352,7 @@
         "^0.8.24"
       ],
       "artifacts": [
+        "IStakingVault",
         "SubnetRegistry"
       ]
     },
@@ -514,8 +515,8 @@
       ]
     },
     "D:\\venera\\hedera\\moderntensor_hedera\\contracts\\src\\PaymentEscrow.sol": {
-      "lastModificationDate": 1772559907304,
-      "contentHash": "7f287b3abacfe3ceb75a9028f9975c95",
+      "lastModificationDate": 1772783312207,
+      "contentHash": "ac7b500ed290d17265d31449703adb36",
       "sourceName": "src/PaymentEscrow.sol",
       "solcConfig": {
         "version": "0.8.24",

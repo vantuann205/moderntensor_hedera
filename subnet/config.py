@@ -18,11 +18,11 @@ class SubnetConfig:
     subnet_name: str = "ModernTensor-AI-Subnet"
     description: str = "AI code review & text analysis subnet"
 
-    # ── On-Chain Contracts (Hedera Testnet) ──
-    payment_escrow: str = "0.0.8045890"
-    subnet_registry: str = "0.0.8046035"
-    staking_vault: str = "0.0.8046039"
-    mdt_governor: str = "0.0.8046041"
+    # ── On-Chain Contracts (Hedera Testnet — V3 security-fixed) ──
+    payment_escrow: str = "0.0.8101736"
+    subnet_registry: str = "0.0.8101733"
+    staking_vault: str = "0.0.8101730"
+    mdt_governor: str = "0.0.8101737"
 
     # ── HCS Topics ──
     hcs_registration: str = "0.0.7852335"

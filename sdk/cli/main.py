@@ -2,21 +2,24 @@
 """
 ModernTensor CLI — mtcli
 
-Command-line interface for interacting with the ModernTensor protocol.
+Command-line interface for ALL on-chain operations across 4 smart contracts:
+  PaymentEscrow, SubnetRegistry, StakingVault, MDTGovernor
 
 Commands:
-    mtcli submit-task   — Submit a task to the network
-    mtcli status        — Check task status
-    mtcli balance       — Check MDT token balance
-    mtcli miners        — List registered miners
-    mtcli register      — Register as a miner
-    mtcli faucet        — Request testnet MDT tokens
+    Staking:   stake, unstake, withdraw, stake-info
+    Subnet:    register-subnet, register-miner, add-validator, subnet-info
+    Task:      create-task, submit-result, validate, finalize-task, task-info
+    Escrow:    escrow-create, escrow-submit, escrow-validate, escrow-finalize
+    Earnings:  withdraw-earnings, withdraw-fees
+    Governance: propose, vote, finalize-vote, execute-proposal, proposal-info
+    General:   balance, faucet
 
 Usage:
     pip install -e .
-    mtcli submit-task --type code_review --file main.py --reward 10
     mtcli balance
-    mtcli miners --subnet 0
+    mtcli stake --amount 100 --role miner
+    mtcli register-subnet --name "AI Review" --description "Code review" --fee-rate 300
+    mtcli create-task --subnet 0 --hash "QmTask..." --reward 10 --duration 86400
 """
 
 import json
@@ -27,258 +30,522 @@ from pathlib import Path
 
 import click
 
-# Ensure project root is in path
 ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
 
+def _get_client():
+    """Create HederaClient from env."""
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    from sdk.hedera.config import load_hedera_config
+    from sdk.hedera.client import HederaClient
+
+    config = load_hedera_config()
+    return HederaClient(config)
+
+
 @click.group()
-@click.version_option(version="0.1.0", prog_name="mtcli")
+@click.version_option(version="0.2.0", prog_name="mtcli")
 def cli():
-    """ModernTensor CLI — AI Marketplace on Hedera"""
+    """ModernTensor CLI — AI Marketplace on Hedera (100% on-chain)"""
     pass
 
 
-# -----------------------------------------------------------------------
-# submit-task
-# -----------------------------------------------------------------------
+# ==========================================================================
+# Balance
+# ==========================================================================
 
-@cli.command("submit-task")
-@click.option("--type", "task_type", required=True,
-              type=click.Choice(["code_review", "text_generation", "sentiment_analysis", "summarization"]),
-              help="Type of AI task")
-@click.option("--file", "file_path", type=click.Path(exists=True),
-              help="File to submit for code review")
-@click.option("--prompt", type=str, help="Text prompt for generation tasks")
-@click.option("--reward", type=float, required=True, help="MDT reward amount")
-@click.option("--subnet", type=int, default=0, help="Subnet ID (default: 0)")
-@click.option("--priority", type=click.Choice(["low", "normal", "high", "urgent"]),
-              default="normal", help="Task priority")
-@click.option("--max-miners", type=int, default=3, help="Max miners to assign")
-def submit_task(task_type, file_path, prompt, reward, subnet, priority, max_miners):
-    """Submit a task to the ModernTensor network."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    # Build payload
-    payload = {}
-    if task_type == "code_review":
-        if not file_path:
-            click.echo("❌ --file is required for code_review tasks")
-            sys.exit(1)
-        code = Path(file_path).read_text(encoding="utf-8", errors="replace")
-        payload = {
-            "code": code,
-            "language": _detect_language(file_path),
-            "filename": Path(file_path).name,
-        }
-        click.echo(f"📄 File: {file_path} ({len(code)} chars, {payload['language']})")
-
-    elif task_type in ("text_generation", "summarization"):
-        if not prompt:
-            click.echo("❌ --prompt is required for text generation tasks")
-            sys.exit(1)
-        payload = {"prompt": prompt, "max_tokens": 500}
-
-    elif task_type == "sentiment_analysis":
-        if not prompt:
-            click.echo("❌ --prompt is required for sentiment analysis")
-            sys.exit(1)
-        payload = {"text": prompt}
-
-    # Create task
-    from sdk.protocol.types import TaskRequest, TaskPriority
-    import uuid
-
-    priority_map = {
-        "low": TaskPriority.LOW,
-        "normal": TaskPriority.NORMAL,
-        "high": TaskPriority.HIGH,
-        "urgent": TaskPriority.URGENT,
-    }
-
-    task = TaskRequest(
-        task_id=str(uuid.uuid4()),
-        subnet_id=subnet,
-        task_type=task_type,
-        payload=payload,
-        reward_amount=reward,
-        requester_id=os.getenv("HEDERA_ACCOUNT_ID", "0.0.unknown"),
-        priority=priority_map[priority],
-        max_miners=max_miners,
-    )
-
-    click.echo(f"\n📋 Task Created:")
-    click.echo(f"   ID:       {task.task_id}")
-    click.echo(f"   Type:     {task_type}")
-    click.echo(f"   Subnet:   {subnet}")
-    click.echo(f"   Reward:   {reward} MDT")
-    click.echo(f"   Priority: {priority} ({priority_map[priority].multiplier}x)")
-    click.echo(f"   Miners:   max {max_miners}")
-
-    # Calculate fees
-    from sdk.protocol.fee_engine import FeeEngine
-    engine = FeeEngine()
-    fees = engine.calculate(
-        reward_amount=reward,
-        subnet_fee_rate=0.03,
-        priority=priority_map[priority],
-    )
-
-    click.echo(f"\n💰 Fee Breakdown (V2 Tokenomics):")
-    click.echo(f"   Miner reward:     {fees.miner_reward:.2f} MDT (~85%)")
-    click.echo(f"   Validator pool:   {fees.validator_reward:.2f} MDT (8%)")
-    click.echo(f"   Staking pool:     {reward * 0.05:.2f} MDT (5% → passive stakers)")
-    click.echo(f"   Protocol fee:     {fees.protocol_fee:.2f} MDT (2%)")
-    click.echo(f"   Subnet fee:       {fees.subnet_fee:.2f} MDT")
-    click.echo(f"   Total deposit:    {fees.total_deposit:.2f} MDT")
-
-    # Try to submit on-chain
-    try:
-        _submit_onchain(task)
-    except Exception as e:
-        click.echo(f"\n⚠️  On-chain submission skipped: {e}")
-        click.echo("   Task saved locally. Use demo mode for testing.")
-
-    # Save task locally
-    tasks_dir = ROOT / ".moderntensor" / "tasks"
-    tasks_dir.mkdir(parents=True, exist_ok=True)
-    task_file = tasks_dir / f"{task.task_id}.json"
-    task_file.write_text(json.dumps(task.to_dict(), indent=2))
-    click.echo(f"\n💾 Task saved: {task_file}")
-    click.echo("✅ Done!")
-
-
-def _submit_onchain(task):
-    """Submit task to Hedera HCS (requires network connection)."""
-    from sdk.hedera.config import load_hedera_config
-    from sdk.hedera.client import HederaClient
-    from sdk.hedera.hcs import HCSService, TaskSubmission
-
-    config = load_hedera_config()
-    client = HederaClient(config)
-    hcs = HCSService(client)
-
-    submission = TaskSubmission(
-        task_id=task.task_id,
-        requester_id=task.requester_id,
-        task_type=task.task_type,
-        prompt=json.dumps(task.payload),
-        reward_amount=int(task.reward_amount * 10 ** 8),
-        deadline=int(time.time()) + int(task.timeout_seconds),
-    )
-
-    receipt = hcs.create_task(submission)
-    click.echo(f"\n📡 Submitted to Hedera HCS")
-    client.close()
-
-
-def _detect_language(file_path: str) -> str:
-    """Detect programming language from file extension."""
-    ext_map = {
-        ".py": "python", ".js": "javascript", ".ts": "typescript",
-        ".sol": "solidity", ".rs": "rust", ".go": "go",
-        ".java": "java", ".cpp": "cpp", ".c": "c",
-        ".rb": "ruby", ".php": "php", ".swift": "swift",
-    }
-    ext = Path(file_path).suffix.lower()
-    return ext_map.get(ext, "unknown")
-
-
-# -----------------------------------------------------------------------
-# balance
-# -----------------------------------------------------------------------
 
 @cli.command("balance")
 def check_balance():
-    """Check your HBAR and MDT token balances."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    account_id = os.getenv("HEDERA_ACCOUNT_ID")
-    if not account_id:
-        click.echo("❌ HEDERA_ACCOUNT_ID not set in .env")
-        sys.exit(1)
-
-    click.echo(f"💳 Account: {account_id}")
-
+    """Check HBAR and MDT token balances."""
     try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-
-        config = load_hedera_config()
-        client = HederaClient(config)
+        client = _get_client()
         balance = client.get_balance()
-
-        click.echo(f"   HBAR:  {balance.hbars}")
-        click.echo(f"   Network: {config.network.value}")
+        account_id = os.getenv("HEDERA_ACCOUNT_ID")
+        click.echo(f"Account: {account_id}")
+        click.echo(f"HBAR:    {balance.hbars}")
         client.close()
     except Exception as e:
-        click.echo(f"   ⚠️  Could not fetch balance: {e}")
-        click.echo("   Make sure hiero-sdk-python is installed and .env is configured")
+        click.echo(f"Error: {e}")
 
 
-# -----------------------------------------------------------------------
-# miners
-# -----------------------------------------------------------------------
+# ==========================================================================
+# StakingVault Commands
+# ==========================================================================
 
-@cli.command("miners")
-@click.option("--subnet", type=int, default=None, help="Filter by subnet ID")
-@click.option("--top", type=int, default=10, help="Number of miners to show")
-def list_miners(subnet, top):
-    """List registered miners and their reputation."""
-    from sdk.protocol.miner_registry import MinerRegistry
 
-    registry = MinerRegistry()
-
-    # Try to load saved state
+@cli.command("stake")
+@click.option("--amount", type=float, required=True, help="MDT amount to stake")
+@click.option(
+    "--role",
+    type=click.Choice(["miner", "validator"]),
+    required=True,
+    help="Staking role",
+)
+def stake_tokens(amount, role):
+    """Stake MDT tokens in StakingVault."""
+    role_map = {"miner": 1, "validator": 2}
+    click.echo(f"Staking {amount} MDT as {role.upper()}...")
     try:
-        registry.load_state()
-    except Exception:
-        click.echo("⚠️  No saved miner registry found. Showing empty registry.")
-        click.echo("   Miners register via HCS — run a demo to populate.")
-        return
+        client = _get_client()
+        from sdk.hedera.staking_vault import StakingVaultService
 
-    miners = registry.get_active_miners(subnet_id=subnet)
-    if not miners:
-        click.echo("No active miners found.")
-        return
+        staking = StakingVaultService(client)
+        amount_tokens = int(amount * 1e8)
+        staking.stake(amount_tokens, role_map[role])
+        click.echo(f"Staked {amount} MDT as {role.upper()}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
 
-    click.echo(f"\n⛏️  Active Miners ({len(miners)} total):")
-    click.echo(f"{'ID':<20} {'Reputation':>10} {'Weight':>8} {'Tasks':>6} {'Subnets'}")
-    click.echo("-" * 70)
 
-    for miner in sorted(miners, key=lambda m: m.effective_weight, reverse=True)[:top]:
+@cli.command("unstake")
+def unstake_tokens():
+    """Request unstake (7-day cooldown)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.staking_vault import StakingVaultService
+
+        staking = StakingVaultService(client)
+        staking.request_unstake()
+        click.echo("Unstake requested. Withdraw after 7 days.")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("withdraw")
+def withdraw_tokens():
+    """Withdraw staked MDT after cooldown."""
+    try:
+        client = _get_client()
+        from sdk.hedera.staking_vault import StakingVaultService
+
+        staking = StakingVaultService(client)
+        staking.withdraw()
+        click.echo("Tokens withdrawn.")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("stake-info")
+@click.argument("address")
+def stake_info(address):
+    """Check staking info for an EVM address."""
+    try:
+        client = _get_client()
+        from sdk.hedera.staking_vault import StakingVaultService
+
+        staking = StakingVaultService(client)
+        result = staking.get_stake_info(address)
+        click.echo(f"Stake info for {address}: {result}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# ==========================================================================
+# SubnetRegistry Commands
+# ==========================================================================
+
+
+@cli.command("register-subnet")
+@click.option("--name", required=True, help="Subnet name")
+@click.option("--description", required=True, help="Subnet description")
+@click.option(
+    "--fee-rate", type=int, default=300, help="Fee rate in basis points (300 = 3%)"
+)
+def register_subnet(name, description, fee_rate):
+    """Register a new subnet on SubnetRegistry."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        registry.register_subnet(name, description, fee_rate)
+        click.echo(f"Subnet '{name}' registered (fee: {fee_rate} bps)")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("register-miner")
+@click.option("--subnet", type=int, required=True, help="Subnet ID")
+def register_miner(subnet):
+    """Register as miner in a subnet (must stake first)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        registry.register_miner(subnet)
+        click.echo(f"Registered as miner in subnet {subnet}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("add-validator")
+@click.option("--subnet", type=int, required=True, help="Subnet ID")
+@click.option("--address", required=True, help="Validator EVM address")
+def add_validator(subnet, address):
+    """Add a validator to a subnet (must stake first)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        registry.add_validator(subnet, address)
+        click.echo(f"Validator {address} added to subnet {subnet}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("subnet-info")
+@click.option("--subnet", type=int, required=True, help="Subnet ID")
+def subnet_info(subnet):
+    """Get subnet info from SubnetRegistry."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        result = registry.get_subnet(subnet)
+        click.echo(f"Subnet {subnet}: {result}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# ==========================================================================
+# SubnetRegistry Task Commands
+# ==========================================================================
+
+
+@cli.command("create-task")
+@click.option("--subnet", type=int, required=True, help="Subnet ID")
+@click.option("--hash", "task_hash", required=True, help="Task content hash")
+@click.option("--reward", type=float, required=True, help="MDT reward amount")
+@click.option("--duration", type=int, default=86400, help="Task duration in seconds")
+def create_task(subnet, task_hash, reward, duration):
+    """Create a task in SubnetRegistry (approve MDT first)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        reward_tokens = int(reward * 1e8)
+        registry.create_task(subnet, task_hash, reward_tokens, duration)
         click.echo(
-            f"{miner.miner_id:<20} "
-            f"{miner.reputation.score:>10.4f} "
-            f"{miner.effective_weight:>8.4f} "
-            f"{miner.reputation.total_tasks:>6} "
-            f"{miner.subnet_ids}"
+            f"Task created in subnet {subnet}: reward={reward} MDT, duration={duration}s"
         )
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
 
 
-# -----------------------------------------------------------------------
-# faucet
-# -----------------------------------------------------------------------
+@cli.command("submit-result")
+@click.option("--task", type=int, required=True, help="Task ID")
+@click.option("--hash", "result_hash", required=True, help="Result content hash")
+def submit_result(task, result_hash):
+    """Submit a result for a task (miner)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        registry.submit_result(task, result_hash)
+        click.echo(f"Result submitted for task {task}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("validate")
+@click.option("--task", type=int, required=True, help="Task ID")
+@click.option("--miner-index", type=int, required=True, help="Miner submission index")
+@click.option("--score", type=int, required=True, help="Score (0-10000 bps)")
+def validate_submission(task, miner_index, score):
+    """Score a task submission (validator only)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        registry.validate_submission(task, miner_index, score)
+        click.echo(f"Scored task {task}, miner {miner_index}: {score}/10000")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("finalize-task")
+@click.option("--task", type=int, required=True, help="Task ID")
+def finalize_task(task):
+    """Finalize a task and distribute rewards."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        registry.finalize_task(task)
+        click.echo(f"Task {task} finalized")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("task-info")
+@click.option("--task", type=int, required=True, help="Task ID")
+def task_info(task):
+    """Get task info from SubnetRegistry."""
+    try:
+        client = _get_client()
+        from sdk.hedera.subnet_registry import SubnetRegistryService
+
+        registry = SubnetRegistryService(client)
+        result = registry.get_task(task)
+        click.echo(f"Task {task}: {result}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# ==========================================================================
+# PaymentEscrow Commands
+# ==========================================================================
+
+
+@cli.command("escrow-create")
+@click.option("--hash", "task_hash", required=True, help="Task content hash")
+@click.option("--reward", type=float, required=True, help="MDT reward amount")
+@click.option("--duration", type=int, default=86400, help="Task duration in seconds")
+def escrow_create(task_hash, reward, duration):
+    """Create a task in PaymentEscrow (approve MDT first)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.payment_escrow import PaymentEscrowService
+
+        escrow = PaymentEscrowService(client)
+        reward_tokens = int(reward * 1e8)
+        escrow.create_task(task_hash, reward_tokens, duration)
+        click.echo(f"Escrow task created: reward={reward} MDT, duration={duration}s")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("escrow-submit")
+@click.option("--task", type=int, required=True, help="Task ID")
+@click.option("--hash", "result_hash", required=True, help="Result hash")
+def escrow_submit(task, result_hash):
+    """Submit result to PaymentEscrow task (miner)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.payment_escrow import PaymentEscrowService
+
+        escrow = PaymentEscrowService(client)
+        escrow.submit_result(task, result_hash)
+        click.echo(f"Result submitted for escrow task {task}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("escrow-validate")
+@click.option("--task", type=int, required=True, help="Task ID")
+@click.option("--miner-index", type=int, required=True, help="Miner index")
+@click.option("--score", type=int, required=True, help="Score (0-10000)")
+def escrow_validate(task, miner_index, score):
+    """Score an escrow submission (validator)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.payment_escrow import PaymentEscrowService
+
+        escrow = PaymentEscrowService(client)
+        escrow.validate_submission(task, miner_index, score)
+        click.echo(f"Escrow task {task}, miner {miner_index}: scored {score}/10000")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("escrow-finalize")
+@click.option("--task", type=int, required=True, help="Task ID")
+def escrow_finalize(task):
+    """Finalize an escrow task."""
+    try:
+        client = _get_client()
+        from sdk.hedera.payment_escrow import PaymentEscrowService
+
+        escrow = PaymentEscrowService(client)
+        escrow.finalize_task(task)
+        click.echo(f"Escrow task {task} finalized")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("open-dispute")
+@click.option("--task", type=int, required=True, help="Task ID")
+def open_dispute(task):
+    """Open a dispute on a completed task (requester only)."""
+    try:
+        client = _get_client()
+        from sdk.hedera.payment_escrow import PaymentEscrowService
+
+        escrow = PaymentEscrowService(client)
+        escrow.open_dispute(task)
+        click.echo(f"Dispute opened for task {task}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# ==========================================================================
+# Earnings Commands
+# ==========================================================================
+
+
+@cli.command("withdraw-earnings")
+@click.option(
+    "--contract",
+    type=click.Choice(["escrow", "registry"]),
+    default="registry",
+    help="Which contract to withdraw from",
+)
+def withdraw_earnings(contract):
+    """Withdraw accumulated earnings."""
+    try:
+        client = _get_client()
+        if contract == "registry":
+            from sdk.hedera.subnet_registry import SubnetRegistryService
+
+            svc = SubnetRegistryService(client)
+        else:
+            from sdk.hedera.payment_escrow import PaymentEscrowService
+
+            svc = PaymentEscrowService(client)
+        svc.withdraw_earnings()
+        click.echo(f"Earnings withdrawn from {contract}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# ==========================================================================
+# Governance Commands
+# ==========================================================================
+
+
+@cli.command("propose")
+@click.option("--description", required=True, help="Proposal description")
+@click.option("--target", required=True, help="Target contract EVM address")
+@click.option("--calldata", required=True, help="Hex-encoded call data")
+def create_proposal(description, target, calldata):
+    """Create a governance proposal."""
+    try:
+        client = _get_client()
+        from sdk.hedera.governor import MDTGovernorService
+
+        gov = MDTGovernorService(client)
+        call_bytes = bytes.fromhex(calldata.replace("0x", ""))
+        gov.propose(description, target, call_bytes)
+        click.echo(f"Proposal created: {description}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("vote")
+@click.option("--proposal", type=int, required=True, help="Proposal ID")
+@click.option("--support/--against", default=True, help="Vote for or against")
+def vote_proposal(proposal, support):
+    """Vote on a governance proposal."""
+    try:
+        client = _get_client()
+        from sdk.hedera.governor import MDTGovernorService
+
+        gov = MDTGovernorService(client)
+        gov.vote(proposal, support)
+        click.echo(f"Voted {'FOR' if support else 'AGAINST'} proposal {proposal}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("finalize-vote")
+@click.option("--proposal", type=int, required=True, help="Proposal ID")
+def finalize_vote(proposal):
+    """Finalize voting on a proposal."""
+    try:
+        client = _get_client()
+        from sdk.hedera.governor import MDTGovernorService
+
+        gov = MDTGovernorService(client)
+        gov.finalize_voting(proposal)
+        click.echo(f"Voting finalized for proposal {proposal}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("execute-proposal")
+@click.option("--proposal", type=int, required=True, help="Proposal ID")
+def execute_proposal(proposal):
+    """Execute a passed governance proposal."""
+    try:
+        client = _get_client()
+        from sdk.hedera.governor import MDTGovernorService
+
+        gov = MDTGovernorService(client)
+        gov.execute(proposal)
+        click.echo(f"Proposal {proposal} executed")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("proposal-info")
+@click.option("--proposal", type=int, required=True, help="Proposal ID")
+def proposal_info(proposal):
+    """Get proposal state and votes."""
+    try:
+        client = _get_client()
+        from sdk.hedera.governor import MDTGovernorService, ProposalState
+
+        gov = MDTGovernorService(client)
+        state = gov.get_proposal_state(proposal)
+        votes = gov.get_votes(proposal)
+        click.echo(f"Proposal {proposal}: state={state}, votes={votes}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+# ==========================================================================
+# Faucet
+# ==========================================================================
+
 
 @cli.command("faucet")
 @click.option("--amount", type=float, default=100.0, help="MDT amount to request")
 def request_faucet(amount):
-    """Request testnet MDT tokens from the faucet."""
+    """Request testnet MDT tokens."""
     import requests as req
 
     faucet_url = os.getenv("MDT_FAUCET_URL", "http://localhost:8888")
     account_id = os.getenv("HEDERA_ACCOUNT_ID")
-
     if not account_id:
-        click.echo("❌ HEDERA_ACCOUNT_ID not set in .env")
+        click.echo("HEDERA_ACCOUNT_ID not set")
         sys.exit(1)
 
-    click.echo(f"🚰 Requesting {amount} MDT from faucet...")
-    click.echo(f"   Account: {account_id}")
-    click.echo(f"   Faucet:  {faucet_url}")
-
+    click.echo(f"Requesting {amount} MDT from faucet...")
     try:
         resp = req.post(
             f"{faucet_url}/drip",
@@ -287,195 +554,11 @@ def request_faucet(amount):
         )
         if resp.status_code == 200:
             data = resp.json()
-            click.echo(f"✅ Received {data.get('amount', amount)} MDT!")
-            if data.get("tx_id"):
-                click.echo(f"   TX: {data['tx_id']}")
+            click.echo(f"Received {data.get('amount', amount)} MDT")
         else:
-            click.echo(f"❌ Faucet error: {resp.text}")
+            click.echo(f"Faucet error: {resp.text}")
     except req.ConnectionError:
-        click.echo(f"❌ Cannot connect to faucet at {faucet_url}")
-        click.echo("   Start faucet: python scripts/faucet_server.py")
-
-# -----------------------------------------------------------------------
-# stake (M3 fix)
-# -----------------------------------------------------------------------
-
-@cli.command("stake")
-@click.option("--amount", type=float, required=True, help="MDT amount to stake")
-@click.option("--role", type=click.Choice(["miner", "validator", "holder"]),
-              required=True, help="Staking role")
-def stake_tokens(amount, role):
-    """Stake MDT tokens in StakingVaultV2. First stake charges dynamic registration fee (burned)."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    role_map = {"miner": 1, "validator": 2, "holder": 3}
-    min_stakes = {"miner": 10, "validator": 500, "holder": 1}
-
-    if amount < min_stakes[role]:
-        click.echo(f"❌ Minimum stake for {role}: {min_stakes[role]} MDT")
-        sys.exit(1)
-
-    click.echo(f"\n🔒 Staking {amount} MDT as {role.upper()}")
-    click.echo(f"   Min required: {min_stakes[role]} MDT")
-    click.echo(f"   ⚠️  First stake also charges dynamic registration fee (burned)")
-
-    try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-        from sdk.hedera.contracts import StakingVaultService, StakeRole
-
-        config = load_hedera_config()
-        client = HederaClient(config)
-        staking = StakingVaultService(client)
-
-        # Get current reg fee
-        try:
-            result = staking.get_current_reg_fee()
-            click.echo(f"   Current reg fee: {int(result.get_uint256(0)) / 1e8:.1f} MDT")
-        except Exception:
-            pass
-
-        amount_tokens = int(amount * 1e8)
-        receipt = staking.stake(amount_tokens, role_map[role])
-        click.echo(f"\n✅ Staked {amount} MDT as {role.upper()}")
-        client.close()
-    except Exception as e:
-        click.echo(f"\n⚠️  Staking error: {e}")
-        click.echo("   Ensure CONTRACT_ID_STAKING_VAULT_V2 is set in .env")
-
-
-@cli.command("unstake")
-def unstake_tokens():
-    """Request unstake from StakingVaultV2. 7-day cooldown."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    click.echo("🔓 Requesting unstake (7-day cooldown)...")
-    try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-        from sdk.hedera.contracts import StakingVaultService
-
-        config = load_hedera_config()
-        client = HederaClient(config)
-        staking = StakingVaultService(client)
-        staking.request_unstake()
-        click.echo("✅ Unstake requested. Withdraw after 7 days with `mtcli withdraw`.")
-        client.close()
-    except Exception as e:
-        click.echo(f"❌ Error: {e}")
-
-
-@cli.command("claim-rewards")
-def claim_rewards():
-    """Claim accumulated passive staking rewards from StakingVaultV2."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    click.echo("💰 Claiming staking rewards...")
-    try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-        from sdk.hedera.contracts import StakingVaultService
-
-        config = load_hedera_config()
-        client = HederaClient(config)
-        staking = StakingVaultService(client)
-        staking.claim_rewards()
-        click.echo("✅ Rewards claimed!")
-        client.close()
-    except Exception as e:
-        click.echo(f"❌ Error: {e}")
-
-
-@cli.command("pool-stats")
-def pool_stats():
-    """View StakingVaultV2 pool statistics."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    click.echo("📊 StakingVaultV2 Pool Stats")
-    click.echo("-" * 40)
-
-    contract_id = os.getenv("CONTRACT_ID_STAKING_VAULT_V2", "0.0.8054430")
-    click.echo(f"   Contract: {contract_id}")
-    click.echo(f"   Fee Split: Miner 85% | Validator 8% | Pool 5% | Protocol 2%")
-    click.echo(f"   Min Stake: Miner 10 MDT | Validator 500 MDT | Holder 1 MDT")
-    click.echo(f"   Reg Fee: Dynamic (EIP-1559 style, burned)")
-
-    try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-        from sdk.hedera.contracts import StakingVaultService
-
-        config = load_hedera_config()
-        client = HederaClient(config)
-        staking = StakingVaultService(client)
-        result = staking.get_pool_stats()
-        click.echo(f"\n   On-chain data available via contract query")
-        client.close()
-    except Exception as e:
-        click.echo(f"\n   ⚠️  On-chain query unavailable: {e}")
-
-@cli.command("withdraw")
-def withdraw_tokens():
-    """Withdraw staked MDT after unstake cooldown (7 days)."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    click.echo("💸 Withdrawing staked tokens...")
-    try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-        from sdk.hedera.contracts import StakingVaultService
-
-        config = load_hedera_config()
-        client = HederaClient(config)
-        staking = StakingVaultService(client)
-        staking.withdraw()
-        click.echo("✅ Withdrawn! Tokens returned to your account.")
-        client.close()
-    except Exception as e:
-        click.echo(f"❌ Error: {e}")
-        click.echo("   Ensure 7-day cooldown has passed after `mtcli unstake`.")
-
-
-@cli.command("reputation")
-@click.argument("address")
-def check_reputation(address):
-    """Check a validator's on-chain reputation score."""
-    from dotenv import load_dotenv
-    load_dotenv()
-
-    click.echo(f"🏆 Validator Reputation: {address}")
-    click.echo("-" * 50)
-
-    try:
-        from sdk.hedera.config import load_hedera_config
-        from sdk.hedera.client import HederaClient
-        from sdk.hedera.contracts import SubnetRegistryService
-
-        config = load_hedera_config()
-        client = HederaClient(config)
-        registry = SubnetRegistryService(client)
-        result = registry.get_validator_reputation(address)
-
-        total = result.get_uint256(0)
-        accurate = result.get_uint256(1)
-        score = result.get_uint256(2)
-        last_active = result.get_uint256(3)
-
-        accuracy = (accurate / total * 100) if total > 0 else 0
-        click.echo(f"   Total validations:    {total}")
-        click.echo(f"   Accurate validations: {accurate}")
-        click.echo(f"   Accuracy rate:        {accuracy:.1f}%")
-        click.echo(f"   Reputation score:     {score} / 10000 ({score/100:.1f}%)")
-        click.echo(f"   Last active:          {last_active}")
-        client.close()
-    except Exception as e:
-        click.echo(f"   ⚠️  Query error: {e}")
-        click.echo("   Ensure CONTRACT_ID_SUBNET_REGISTRY_V2 is set in .env")
+        click.echo(f"Cannot connect to faucet at {faucet_url}")
 
 
 if __name__ == "__main__":

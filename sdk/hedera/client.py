@@ -115,7 +115,7 @@ class HederaClient:
                     # ECDSA key in hex format
                     key_bytes = bytes.fromhex(pk[2:])
                     self._operator_key = PrivateKey.from_bytes_ecdsa(key_bytes)
-                elif len(pk) == 64 and all(c in '0123456789abcdefABCDEF' for c in pk):
+                elif len(pk) == 64 and all(c in "0123456789abcdefABCDEF" for c in pk):
                     # ECDSA key in hex without 0x prefix
                     key_bytes = bytes.fromhex(pk)
                     self._operator_key = PrivateKey.from_bytes_ecdsa(key_bytes)
@@ -124,7 +124,9 @@ class HederaClient:
                     self._operator_key = PrivateKey.from_string(pk)
 
                 self._client.set_operator(self._operator_id, self._operator_key)
-                logger.info(f"Connected to Hedera {self.config.network.value} as {self.config.account_id}")
+                logger.info(
+                    f"Connected to Hedera {self.config.network.value} as {self.config.account_id}"
+                )
             else:
                 logger.warning("No operator credentials provided - read-only mode")
 
@@ -136,6 +138,7 @@ class HederaClient:
     def from_env(cls, env_file: str = ".env") -> "HederaClient":
         """Create client from environment variables."""
         from dotenv import load_dotenv
+
         load_dotenv(env_file)
         return cls(load_hedera_config())
 
@@ -202,7 +205,9 @@ class HederaClient:
         query.set_account_id(target)
         return query.execute(self.client)
 
-    def transfer_hbar(self, to_account: str, amount: float, memo: str = "") -> TransactionReceipt:
+    def transfer_hbar(
+        self, to_account: str, amount: float, memo: str = ""
+    ) -> TransactionReceipt:
         """
         Transfer HBAR to another account.
 
@@ -228,7 +233,9 @@ class HederaClient:
     # HCS Operations - Hedera Consensus Service
     # =========================================================================
 
-    def create_topic(self, memo: str = "", admin_key: bool = True, submit_key: bool = False) -> str:
+    def create_topic(
+        self, memo: str = "", admin_key: bool = True, submit_key: bool = False
+    ) -> str:
         """
         Create a new HCS topic.
 
@@ -350,7 +357,9 @@ class HederaClient:
         logger.info(f"Created token: {token_id}")
         return token_id
 
-    def associate_token(self, token_id: str, account_id: Optional[str] = None) -> TransactionReceipt:
+    def associate_token(
+        self, token_id: str, account_id: Optional[str] = None
+    ) -> TransactionReceipt:
         """Associate a token with an account."""
         target = AccountId.from_string(account_id) if account_id else self._operator_id
 
@@ -361,7 +370,45 @@ class HederaClient:
         receipt = tx.execute(self.client)
         return receipt
 
-    def transfer_token(self, token_id: str, to_account: str, amount: int) -> TransactionReceipt:
+    def approve_token_allowance(
+        self,
+        token_id: str,
+        spender_account_id: str,
+        amount: int,
+    ) -> TransactionReceipt:
+        """
+        Approve a spender (contract or account) to transfer tokens on behalf of the operator.
+
+        Required before any contract call that uses safeTransferFrom (e.g. createTask, stake, registerSubnet).
+
+        Args:
+            token_id: Token ID (e.g. "0.0.7852345")
+            spender_account_id: Spender account/contract ID (e.g. "0.0.8101733")
+            amount: Allowance amount in smallest token unit
+
+        Returns:
+            SDK TransactionReceipt
+        """
+        from hiero_sdk_python.account.account_allowance_approve_transaction import (
+            AccountAllowanceApproveTransaction,
+        )
+
+        tx = AccountAllowanceApproveTransaction()
+        tx.approve_token_allowance(
+            token_id=TokenId.from_string(token_id),
+            owner_account_id=self._operator_id,
+            spender_account_id=AccountId.from_string(spender_account_id),
+            amount=amount,
+        )
+        receipt = tx.execute(self.client)
+        logger.info(
+            f"Approved {amount} tokens of {token_id} for spender {spender_account_id}"
+        )
+        return receipt
+
+    def transfer_token(
+        self, token_id: str, to_account: str, amount: int
+    ) -> TransactionReceipt:
         """
         Transfer tokens to another account.
 
@@ -571,6 +618,7 @@ class HederaClient:
 # Convenience Functions
 # =========================================================================
 
+
 def connect_hedera(
     network: str = "testnet",
     account_id: Optional[str] = None,
@@ -588,6 +636,7 @@ def connect_hedera(
         HederaClient instance
     """
     from dotenv import load_dotenv
+
     load_dotenv()
 
     config = HederaConfig(
