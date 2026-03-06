@@ -6,13 +6,18 @@ Command-line interface for ALL on-chain operations across 4 smart contracts:
   PaymentEscrow, SubnetRegistry, StakingVault, MDTGovernor
 
 Commands:
+    Setup:     gen-key, approve
     Staking:   stake, unstake, withdraw, stake-info
     Subnet:    register-subnet, register-miner, add-validator, subnet-info
-    Task:      create-task, submit-result, validate, finalize-task, task-info
-    Escrow:    escrow-create, escrow-submit, escrow-validate, escrow-finalize
-    Earnings:  withdraw-earnings, withdraw-fees
+    Task:      create-task, task-info
+    Escrow:    escrow-create, open-dispute
+    Earnings:  withdraw-earnings
     Governance: propose, vote, finalize-vote, execute-proposal, proposal-info
     General:   balance, faucet
+
+Note:
+    Task processing (submit-result, validate, finalize) is handled
+    automatically by run_miner.py and run_validator.py scripts.
 
 Usage:
     pip install -e .
@@ -51,6 +56,68 @@ def _get_client():
 def cli():
     """ModernTensor CLI — AI Marketplace on Hedera (100% on-chain)"""
     pass
+
+
+# ==========================================================================
+# Key Generation & Setup
+# ==========================================================================
+
+
+@cli.command("gen-key")
+def gen_key():
+    """Generate a new ECDSA keypair for Hedera."""
+    try:
+        from hiero_sdk_python import PrivateKey
+
+        key = PrivateKey.generate_ecdsa()
+        pub = key.public_key()
+        click.echo("=" * 60)
+        click.echo("New ECDSA Keypair Generated")
+        click.echo("=" * 60)
+        click.echo(f"Private Key: {key.to_string_raw()}")
+        click.echo(f"Public Key:  {pub.to_string_raw()}")
+        click.echo("\nNext steps:")
+        click.echo("  1. Go to https://portal.hedera.com/register")
+        click.echo("  2. Create testnet account with this public key")
+        click.echo("  3. Copy account ID (0.0.XXXXX) to .env")
+        click.echo("  4. Copy private key to .env")
+    except Exception as e:
+        click.echo(f"Error: {e}")
+
+
+@cli.command("approve")
+@click.option("--amount", type=float, required=True, help="MDT amount to approve")
+@click.option(
+    "--spender",
+    type=click.Choice(["staking", "registry", "escrow"]),
+    required=True,
+    help="Contract to approve",
+)
+def approve_tokens(amount, spender):
+    """Approve MDT token allowance for a contract (required before stake/task/register)."""
+    spender_env_map = {
+        "staking": "HEDERA_STAKING_VAULT_CONTRACT_ID",
+        "registry": "HEDERA_SUBNET_REGISTRY_CONTRACT_ID",
+        "escrow": "HEDERA_PAYMENT_ESCROW_CONTRACT_ID",
+    }
+    contract_id = os.getenv(spender_env_map[spender])
+    token_id = os.getenv("HEDERA_MDT_TOKEN_ID") or os.getenv("HTS_TOKEN_ID_MDT")
+    if not contract_id:
+        click.echo(f"Error: {spender_env_map[spender]} not set in .env")
+        return
+    if not token_id:
+        click.echo("Error: HEDERA_MDT_TOKEN_ID not set in .env")
+        return
+
+    amount_tokens = int(amount * 1e8)
+    click.echo(f"Approving {amount} MDT for {spender} ({contract_id})...")
+    try:
+        client = _get_client()
+        client.approve_token_allowance(token_id, contract_id, amount_tokens)
+        click.echo(f"Approved {amount} MDT for {spender}")
+        client.close()
+    except Exception as e:
+        click.echo(f"Error: {e}")
 
 
 # ==========================================================================
@@ -249,57 +316,6 @@ def create_task(subnet, task_hash, reward, duration):
         click.echo(f"Error: {e}")
 
 
-@cli.command("submit-result")
-@click.option("--task", type=int, required=True, help="Task ID")
-@click.option("--hash", "result_hash", required=True, help="Result content hash")
-def submit_result(task, result_hash):
-    """Submit a result for a task (miner)."""
-    try:
-        client = _get_client()
-        from sdk.hedera.subnet_registry import SubnetRegistryService
-
-        registry = SubnetRegistryService(client)
-        registry.submit_result(task, result_hash)
-        click.echo(f"Result submitted for task {task}")
-        client.close()
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command("validate")
-@click.option("--task", type=int, required=True, help="Task ID")
-@click.option("--miner-index", type=int, required=True, help="Miner submission index")
-@click.option("--score", type=int, required=True, help="Score (0-10000 bps)")
-def validate_submission(task, miner_index, score):
-    """Score a task submission (validator only)."""
-    try:
-        client = _get_client()
-        from sdk.hedera.subnet_registry import SubnetRegistryService
-
-        registry = SubnetRegistryService(client)
-        registry.validate_submission(task, miner_index, score)
-        click.echo(f"Scored task {task}, miner {miner_index}: {score}/10000")
-        client.close()
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command("finalize-task")
-@click.option("--task", type=int, required=True, help="Task ID")
-def finalize_task(task):
-    """Finalize a task and distribute rewards."""
-    try:
-        client = _get_client()
-        from sdk.hedera.subnet_registry import SubnetRegistryService
-
-        registry = SubnetRegistryService(client)
-        registry.finalize_task(task)
-        click.echo(f"Task {task} finalized")
-        client.close()
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
-
 @cli.command("task-info")
 @click.option("--task", type=int, required=True, help="Task ID")
 def task_info(task):
@@ -335,57 +351,6 @@ def escrow_create(task_hash, reward, duration):
         reward_tokens = int(reward * 1e8)
         escrow.create_task(task_hash, reward_tokens, duration)
         click.echo(f"Escrow task created: reward={reward} MDT, duration={duration}s")
-        client.close()
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command("escrow-submit")
-@click.option("--task", type=int, required=True, help="Task ID")
-@click.option("--hash", "result_hash", required=True, help="Result hash")
-def escrow_submit(task, result_hash):
-    """Submit result to PaymentEscrow task (miner)."""
-    try:
-        client = _get_client()
-        from sdk.hedera.payment_escrow import PaymentEscrowService
-
-        escrow = PaymentEscrowService(client)
-        escrow.submit_result(task, result_hash)
-        click.echo(f"Result submitted for escrow task {task}")
-        client.close()
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command("escrow-validate")
-@click.option("--task", type=int, required=True, help="Task ID")
-@click.option("--miner-index", type=int, required=True, help="Miner index")
-@click.option("--score", type=int, required=True, help="Score (0-10000)")
-def escrow_validate(task, miner_index, score):
-    """Score an escrow submission (validator)."""
-    try:
-        client = _get_client()
-        from sdk.hedera.payment_escrow import PaymentEscrowService
-
-        escrow = PaymentEscrowService(client)
-        escrow.validate_submission(task, miner_index, score)
-        click.echo(f"Escrow task {task}, miner {miner_index}: scored {score}/10000")
-        client.close()
-    except Exception as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command("escrow-finalize")
-@click.option("--task", type=int, required=True, help="Task ID")
-def escrow_finalize(task):
-    """Finalize an escrow task."""
-    try:
-        client = _get_client()
-        from sdk.hedera.payment_escrow import PaymentEscrowService
-
-        escrow = PaymentEscrowService(client)
-        escrow.finalize_task(task)
-        click.echo(f"Escrow task {task} finalized")
         client.close()
     except Exception as e:
         click.echo(f"Error: {e}")
