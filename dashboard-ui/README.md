@@ -1,49 +1,40 @@
-# ModernTensor Dashboard UI
+# ModernTensor Hedera Dashboard
 
-This is the new React-based dashboard for the ModernTensor protocol, replacing the previous static HTML version.
+A decentralized AI compute network dashboard built with Next.js 15, mirroring the Modernhub UI.
 
 ## Features
-
-- **Dashboard**: Real-time protocol statistics and activity feed.
-- **Subnet Explorer**: Browse active and upcoming subnets.
-- **Task Protocol**: Interface for submitting AI tasks to the network.
-- **Miner Leaderboard**: Live ranking of network participants.
-- **AI Code Review Demo**: Specialized interface for Subnet #1.
+- **Real-time Data Proxy**: Reads JSON registry and task data directly from the backend.
+- **Hedera Integration**: Live Hbar balance and transaction history tracking.
+- **Network Visualization**: Canvas-based physics graph for node topology.
+- **AI Task Submission**: Simulated feedback loop for compute tasks.
+- **Full Explorer**: Miners, Validators, Tasks, and Emission history.
 
 ## Getting Started
 
-### Prerequisites
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-- Node.js (v18+)
+2. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
 
-### Installation
+3. **Production Build**
+   ```bash
+   npm run build
+   ```
 
-```bash
-cd dashboard-ui
-npm install
-```
-
-### Development
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-### Build
-
-Build for production:
-
-```bash
-npm run build
-```
+## Configuration
+Control the platform via `.env.local`:
+- `NEXT_PUBLIC_HEDERA_ACCOUNT_ID`: Your Hedera Account ID.
+- `NEXT_PUBLIC_EVM_ADDRESS`: Your EVM-compatible address.
+- `NEXT_PUBLIC_MIRROR_BASE`: Mirror Node API endpoint.
 
 ## Tech Stack
-
-- **Vite**: Build tool.
-- **React**: UI library.
-- **Tailwind CSS / Standard CSS**: Styling (Configured with CSS variables).
-- **Lucide React**: Icons.
-- **Chart.js**: Data visualization.
-- **React Router**: Navigation.
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS, Shadcn UI, Framer Motion
+- **Data**: TanStack React Query (Polling every 5s-20s)
+- **Charts**: Recharts
+- **Icons**: Lucide React
