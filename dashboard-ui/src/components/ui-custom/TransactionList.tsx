@@ -36,7 +36,7 @@ export default function TransactionList() {
         <div className="space-y-3">
             {transactions?.length === 0 ? (
                 <div className="text-center py-12 text-slate-600 text-xs font-bold uppercase tracking-widest bg-white/[0.01] rounded-2xl border border-white/5">
-                    No recent transactions detected
+                    No real protocol transactions detected
                 </div>
             ) : (
                 transactions?.map((tx: any) => {
@@ -53,7 +53,7 @@ export default function TransactionList() {
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono font-bold text-white tracking-tight">
-                                            {tx.transaction_id.split('@')[0]}...
+                                            {tx.transaction_id ? tx.transaction_id.split('@')[0] : '-'}...
                                         </span>
                                         {isSuccess ?
                                             <CheckCircle2 size={12} className="text-emerald-500" /> :
@@ -62,14 +62,14 @@ export default function TransactionList() {
                                     </div>
                                     <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
                                         <Clock size={10} />
-                                        {new Date(tx.consensus_timestamp * 1000).toLocaleTimeString()}
+                                        {tx.consensus_timestamp ? new Date(tx.consensus_timestamp * 1000).toLocaleTimeString() : '-'}
                                     </div>
                                 </div>
                             </div>
 
                             <div className="text-right space-y-1">
                                 <div className={`text-sm font-display font-bold ${isIncoming ? 'text-emerald-400' : 'text-slate-200'}`}>
-                                    {isIncoming ? '+' : ''}{(amount / 100000000).toLocaleString()} ℏ
+                                    {isIncoming ? '+' : ''}{tx.transfers ? (amount / 100000000).toLocaleString() : '-'} ℏ
                                 </div>
                                 <a
                                     href={`https://hashscan.io/testnet/transaction/${tx.consensus_timestamp}`}

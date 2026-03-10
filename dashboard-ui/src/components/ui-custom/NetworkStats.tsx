@@ -7,12 +7,12 @@ export default function NetworkStats() {
     const { data: stats, isLoading } = useNetworkState();
 
     const metrics = [
-        { label: 'Neural Nodes', value: stats?.active_miners ?? '—', icon: Users, color: 'text-neon-cyan' },
-        { label: 'Oracle Nexus', value: stats?.active_validators ?? '—', icon: Shield, color: 'text-neon-purple' },
-        { label: 'Live Streams', value: stats?.tasks_running ?? '—', icon: Zap, color: 'text-neon-yellow' },
-        { label: 'Total Verified', value: (stats?.tasks_completed ?? 0).toLocaleString(), icon: Activity, color: 'text-emerald-400' },
-        { label: 'Network Uptime', value: stats?.network_uptime ?? '—', icon: Clock, color: 'text-slate-400' },
-        { label: 'Protocol Emissions', value: (stats?.total_emissions ?? 0).toLocaleString() + ' ℏ', icon: Globe, color: 'text-blue-400' },
+        { label: 'Neural Nodes', value: stats?.active_miners ?? '-', icon: Users, color: 'text-neon-cyan' },
+        { label: 'Oracle Nexus', value: stats?.active_validators ?? '-', icon: Shield, color: 'text-neon-purple' },
+        { label: 'Live Streams', value: stats?.tasks_running ?? '-', icon: Zap, color: 'text-neon-yellow' },
+        { label: 'Total Verified', value: stats?.tasks_completed !== undefined ? Number(stats.tasks_completed).toLocaleString() : '-', icon: Activity, color: 'text-emerald-400' },
+        { label: 'Network Uptime', value: stats?.network_uptime ?? '-', icon: Clock, color: 'text-slate-400' },
+        { label: 'Protocol Emissions', value: stats?.total_emissions !== undefined ? Number(stats.total_emissions).toLocaleString() + ' ℏ' : '-', icon: Globe, color: 'text-blue-400' },
     ];
 
     return (

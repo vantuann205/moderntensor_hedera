@@ -32,9 +32,9 @@ export default function MinerDetailPage({ params }: { params: Promise<{ id: stri
     );
 
     const stats = [
-        { label: 'Trust Score', value: (miner.reputation?.score || miner.score || 0).toFixed(4), icon: Shield, color: 'text-neon-purple' },
-        { label: 'Tasks Completed', value: miner.reputation?.total_tasks || miner.tasks_completed || 0, icon: Activity, color: 'text-neon-cyan' },
-        { label: 'Stake Amount', value: `${(miner.stake_amount || 0).toLocaleString()} ℏ`, icon: Award, color: 'text-neon-yellow' },
+        { label: 'Trust Score', value: miner.reputation?.score !== undefined ? Number(miner.reputation.score).toFixed(4) : (miner.score !== undefined ? Number(miner.score).toFixed(4) : '-'), icon: Shield, color: 'text-neon-purple' },
+        { label: 'Tasks Completed', value: miner.reputation?.total_tasks ?? miner.tasks_completed ?? '-', icon: Activity, color: 'text-neon-cyan' },
+        { label: 'Stake Amount', value: miner.stake_amount !== undefined ? `${(miner.stake_amount).toLocaleString()} ℏ` : '-', icon: Award, color: 'text-neon-yellow' },
     ];
 
     return (
@@ -52,13 +52,13 @@ export default function MinerDetailPage({ params }: { params: Promise<{ id: stri
                         <h1 className="text-3xl font-display font-bold text-white tracking-tighter italic uppercase">
                             Miner <span className="text-neon-cyan">Identity</span>
                         </h1>
-                        <p className="text-xs font-mono text-slate-500 mt-1 uppercase tracking-wider">{miner.id || miner.miner_id || miner.account_id}</p>
+                        <p className="text-xs font-mono text-slate-500 mt-1 uppercase tracking-wider">{miner.id || miner.miner_id || miner.account_id || '-'}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <StatusBadge status={miner.status || 'active'} />
                     <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        v{miner.metadata?.version || '2.0.0'}
+                        v{miner.metadata?.version || '-'}
                     </div>
                 </div>
             </div>
@@ -96,19 +96,19 @@ export default function MinerDetailPage({ params }: { params: Promise<{ id: stri
                         <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-500 uppercase">Success Rate</span>
                             <span className="text-sm font-mono text-white font-bold">
-                                {((miner.reputation?.success_rate || 0.95) * 100).toFixed(1)}%
+                                {miner.reputation?.success_rate !== undefined ? `${(miner.reputation.success_rate * 100).toFixed(1)}%` : '-'}
                             </span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-500 uppercase">Account Address</span>
                             <span className="text-xs font-mono text-slate-400">
-                                {miner.account_id || miner.id}
+                                {miner.account_id || miner.id || '-'}
                             </span>
                         </div>
                         <div className="flex justify-between items-center">
                             <span className="text-xs text-slate-500 uppercase">Last Activity</span>
                             <span className="text-xs text-slate-300">
-                                {miner.last_active_at ? new Date(miner.last_active_at * 1000).toLocaleString() : 'Recent'}
+                                {miner.last_active_at ? new Date(miner.last_active_at * 1000).toLocaleString() : (miner.last_seen ? new Date(miner.last_seen * 1000).toLocaleString() : '-')}
                             </span>
                         </div>
                     </div>
@@ -118,7 +118,7 @@ export default function MinerDetailPage({ params }: { params: Promise<{ id: stri
                     <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 border-b border-white/5 pb-4">Capabilities & Logic</h3>
                     <div className="space-y-4">
                         <div className="flex flex-wrap gap-2">
-                            {(miner.capabilities || ['code_review', 'text_gen']).map((cap: string) => (
+                            {(miner.capabilities || ['-']).map((cap: string) => (
                                 <div key={cap} className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-300 uppercase tracking-widest">
                                     {cap}
                                 </div>
@@ -127,9 +127,9 @@ export default function MinerDetailPage({ params }: { params: Promise<{ id: stri
                         <div className="p-4 bg-black/40 rounded-xl border border-white/5">
                             <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Hardware Profile</h4>
                             <p className="text-xs text-slate-400 font-mono">
-                                Type: NVIDIA_H100_MOCKED<br />
-                                Region: us-east-1<br />
-                                Provider: ModernTensor_Edge
+                                Type: {miner.metadata?.hardware?.type || '-'}<br />
+                                Region: {miner.metadata?.hardware?.region || '-'}<br />
+                                Provider: {miner.metadata?.hardware?.provider || '-'}
                             </p>
                         </div>
                     </div>
