@@ -1,6 +1,7 @@
 'use client';
 
-import { ExternalLink, Hash, Shield, Zap, UserPlus } from 'lucide-react';
+import Link from 'next/link';
+import { Hash, Shield, Zap, UserPlus, ArrowRight } from 'lucide-react';
 
 export default function ProtocolInfrastructure() {
     const topics = [
@@ -52,14 +53,12 @@ export default function ProtocolInfrastructure() {
                                 {t.desc}
                             </p>
                         </div>
-                        <a
-                            href={`https://hashscan.io/testnet/topic/${t.id}`}
-                            target="_blank"
-                            rel="noreferrer"
+                        <Link
+                            href={`/explorer?topic=${t.id}`}
                             className="pt-2 flex items-center gap-2 text-[9px] font-bold text-neon-cyan/60 hover:text-neon-cyan transition-colors uppercase tracking-widest border-t border-white/5"
                         >
-                            View on Hashscan <ExternalLink size={10} />
-                        </a>
+                            Open Internal Explorer <ArrowRight size={10} />
+                        </Link>
                     </div>
                 ))}
             </div>

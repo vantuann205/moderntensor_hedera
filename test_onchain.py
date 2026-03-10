@@ -120,6 +120,9 @@ def main():
     governor = MDTGovernorService(client)
     hcs = HCSService(client)
 
+    MDT_TOKEN = os.getenv("HEDERA_MDT_TOKEN_ID", "0.0.8146318")
+    ok(f"MDT Token: {MDT_TOKEN}")
+
     print(f"\n  {C}Deployed Contracts:{X}")
     for label, svc in [
         ("StakingVault", staking),
@@ -133,9 +136,17 @@ def main():
     # ── Phase 2: StakingVault — Stake as MINER ──
     hdr("StakingVault — Stake as MINER")
 
+    STAKE_AMOUNT = int(1000 * 1e8)
     try:
+        ok(f"Approving {STAKE_AMOUNT // 10**8} MDT for StakingVault...")
+        client.approve_token_allowance(
+            token_id=MDT_TOKEN,
+            spender_account_id=staking.contract_id,
+            amount=STAKE_AMOUNT,
+        )
+        time.sleep(2)
         receipt = staking.stake(
-            amount=int(100 * 1e8),  # 100 MDT
+            amount=STAKE_AMOUNT,
             role=StakeRole.MINER,
         )
         log_tx("stake(100 MDT, MINER)", receipt)
@@ -153,8 +164,16 @@ def main():
     # ── Phase 3: SubnetRegistry — Register Subnet ──
     hdr("SubnetRegistry — Register Subnet")
 
+    REGISTRATION_COST = int(10000 * 1e8)
     subnet_name = f"AI-Review-{int(time.time())}"
     try:
+        ok(f"Approving {REGISTRATION_COST // 10**8} MDT for SubnetRegistry...")
+        client.approve_token_allowance(
+            token_id=MDT_TOKEN,
+            spender_account_id=registry.contract_id,
+            amount=REGISTRATION_COST,
+        )
+        time.sleep(2)
         receipt = registry.register_subnet(
             name=subnet_name,
             description="On-chain AI code review subnet",
@@ -207,12 +226,21 @@ def main():
     # ── Phase 6: SubnetRegistry — Create Task ──
     hdr("SubnetRegistry — Create Task")
 
+    TASK_REWARD = int(10 * 1e8)
+    TASK_DEPOSIT = int(TASK_REWARD * 123 / 100)
     task_hash = f"QmTest_{int(time.time())}"
     try:
+        ok(f"Approving {TASK_DEPOSIT / 1e8:.2f} MDT for SubnetRegistry (task deposit)...")
+        client.approve_token_allowance(
+            token_id=MDT_TOKEN,
+            spender_account_id=registry.contract_id,
+            amount=TASK_DEPOSIT,
+        )
+        time.sleep(2)
         receipt = registry.create_task(
             subnet_id=SUBNET_ID,
             task_hash=task_hash,
-            reward_amount=int(10 * 1e8),  # 10 MDT
+            reward_amount=TASK_REWARD,
             duration=86400,
         )
         log_tx(f"createTask(hash={task_hash[:20]}...)", receipt)
@@ -274,11 +302,20 @@ def main():
     # ── Phase 11: PaymentEscrow — Create Task ──
     hdr("PaymentEscrow — Create Task")
 
+    ESCROW_REWARD = int(5 * 1e8)
+    ESCROW_DEPOSIT = int(ESCROW_REWARD * 123 / 100)
     escrow_task_hash = f"QmEscrow_{int(time.time())}"
     try:
+        ok(f"Approving {ESCROW_DEPOSIT / 1e8:.2f} MDT for PaymentEscrow...")
+        client.approve_token_allowance(
+            token_id=MDT_TOKEN,
+            spender_account_id=escrow.contract_id,
+            amount=ESCROW_DEPOSIT,
+        )
+        time.sleep(2)
         receipt = escrow.create_task(
             task_hash=escrow_task_hash,
-            reward_amount=int(5 * 1e8),  # 5 MDT
+            reward_amount=ESCROW_REWARD,
             duration=86400,
         )
         log_tx(f"escrow.createTask(hash={escrow_task_hash[:20]}...)", receipt)
@@ -392,7 +429,6 @@ def main():
             validator_id=OPERATOR_ID,
             score=0.85,
             confidence=0.95,
-            reasoning="High quality code review result",
         )
         hcs.submit_score(score_sub)
         ok("HCS score submitted (on-chain)")

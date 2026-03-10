@@ -2,7 +2,8 @@
 
 import { useActivity } from '@/lib/hooks/useProtocolData';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Cpu, Zap, Shield, UserPlus, Coins, Clock, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { Cpu, Zap, Shield, UserPlus, Coins, Clock, ExternalLink, ArrowRight } from 'lucide-react';
 
 export default function ActivityFeed() {
     const { data: activity, isLoading } = useActivity();
@@ -67,14 +68,12 @@ export default function ActivityFeed() {
                                         <span className="text-[10px] font-bold text-white uppercase tracking-tight">
                                             {label}
                                         </span>
-                                        <a
-                                            href={`https://hashscan.io/testnet/topic/${item.topic_id}/message/${item.sequence}`}
-                                            target="_blank"
-                                            rel="noreferrer"
+                                        <Link
+                                            href={`/explorer?topic=${item.topic_id}`}
                                             className="text-[8px] font-bold text-slate-600 hover:text-neon-cyan transition-colors uppercase tracking-widest flex items-center gap-1"
                                         >
-                                            Verify On-Chain <ExternalLink size={8} />
-                                        </a>
+                                            Internal Verify <ArrowRight size={8} />
+                                        </Link>
                                     </div>
                                     <p className="text-[10px] text-slate-500 font-mono truncate">
                                         {description || item.content.raw || 'Protocol synchronization event'}

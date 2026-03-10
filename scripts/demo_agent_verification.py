@@ -234,8 +234,8 @@ def main():
     update_dashboard_log({
         "status": "success",
         "message": f"Agent {agent_id} verified on Hedera!",
-        "tx_id": receipt.transaction_id if 'receipt' in locals() else "0.0.7851838@1770699824.123456789",
-        "score": result.overall_score
+        "tx_id": str(receipt.transaction_id) if 'receipt' in locals() else "0.0.7851838@1770699824.123456789",
+        "score": float(result.overall_score)
     })
 
 def update_dashboard_log(data):

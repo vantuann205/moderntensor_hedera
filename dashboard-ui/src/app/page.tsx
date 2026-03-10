@@ -5,6 +5,7 @@ import NetworkStats from '@/components/ui-custom/NetworkStats';
 import TransactionList from '@/components/ui-custom/TransactionList';
 import ActivityFeed from '@/components/ui-custom/ActivityFeed';
 import ProtocolInfrastructure from '@/components/ui-custom/ProtocolInfrastructure';
+import AgentVerificationLive from '@/components/ui-custom/AgentVerificationLive';
 import { ArrowRight, Activity, Zap, Shield, Database, LayoutDashboard } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -75,9 +76,11 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Subnet Shortcuts */}
+        {/* Subnet Shortcuts & Live Verification */}
         <div className="space-y-6">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+          <AgentVerificationLive />
+
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2 pt-4">
             <Database size={14} className="text-neon-purple" />
             Sector Navigation
           </h2>
