@@ -2,21 +2,30 @@ import { NextResponse } from 'next/server';
 
 const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
 
-// Dynamic Topic Discovery
+let cachedTopics: string[] = [];
+let lastDiscovery = 0;
+const CACHE_TTL = 60000; // 60 seconds
+
 async function discoverTopics() {
+    const now = Date.now();
+    if (cachedTopics.length > 0 && (now - lastDiscovery) < CACHE_TTL) {
+        return cachedTopics;
+    }
+
     try {
-        // Search for topics with ModernTensor in memo
         const res = await fetch(`${MIRROR_BASE}/api/v1/topics?limit=25&order=desc`);
-        if (!res.ok) return [];
+        if (!res.ok) return cachedTopics;
         const data = await res.json();
 
-        // Filter topics that look like ModernTensor protocol topics
-        return data.topics
+        cachedTopics = data.topics
             .filter((t: any) => t.memo && t.memo.toLowerCase().includes('moderntensor'))
             .map((t: any) => t.topic_id);
+
+        lastDiscovery = now;
+        return cachedTopics;
     } catch (e) {
         console.error('Topic discovery failed:', e);
-        return [];
+        return cachedTopics;
     }
 }
 
