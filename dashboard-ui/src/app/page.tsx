@@ -1,197 +1,115 @@
 'use client';
 
-import { useProtocolData } from '@/lib/hooks/useProtocolData';
-import StatCard from '@/components/ui-custom/StatCard';
-import { Cpu, Activity, Database, Zap, Globe, Shield, TrendingUp, CpuIcon } from 'lucide-react';
+import Link from 'next/link';
+import NetworkStats from '@/components/ui-custom/NetworkStats';
+import TransactionList from '@/components/ui-custom/TransactionList';
 import ActivityFeed from '@/components/ui-custom/ActivityFeed';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import NeuralMetagraph, { CountUp } from '@/components/ui-custom/NeuralMetagraph';
-import SubmitTaskForm from '@/components/ui-custom/SubmitTaskForm';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowRight, Activity, Zap, Shield, Database, LayoutDashboard } from 'lucide-react';
 
-const HEDERA_ACCOUNT_ID = process.env.NEXT_PUBLIC_HEDERA_ACCOUNT_ID || '0.0.8127455';
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
-
-const TickerContent = ({ price }: { price: number }) => (
-  <div className="flex items-center gap-12 whitespace-nowrap px-6">
-    <div className="flex items-center gap-3">
-      <span className="text-slate-500 uppercase text-[10px] font-bold tracking-widest">HBAR Price</span>
-      <span className="text-neon-cyan font-bold font-mono text-sm neon-text">
-        $<CountUp end={price} decimals={4} />
-      </span>
-      <span className="text-neon-green flex items-center gap-0.5 font-bold text-xs">
-        <TrendingUp size={12} /> 4.2%
-      </span>
-    </div>
-    <div className="flex items-center gap-3">
-      <span className="text-slate-500 uppercase text-[10px] font-bold tracking-widest">Market Cap</span>
-      <span className="text-white font-bold font-mono text-sm">$2.42B</span>
-    </div>
-    <div className="flex items-center gap-3">
-      <span className="text-slate-500 uppercase text-[10px] font-bold tracking-widest">Metagraph Nodes</span>
-      <span className="text-white font-bold font-mono text-sm"><CountUp end={4096} /></span>
-    </div>
-    <div className="flex items-center gap-3">
-      <span className="text-slate-500 uppercase text-[10px] font-bold tracking-widest">Network Load</span>
-      <span className="text-neon-purple font-bold font-mono text-sm">72%</span>
-    </div>
-    <div className="flex items-center gap-3">
-      <span className="text-slate-500 uppercase text-[10px] font-bold tracking-widest">Status</span>
-      <span className="text-neon-green font-bold text-[10px] uppercase tracking-widest animate-pulse">System Online</span>
-    </div>
-  </div>
-);
-
-export default function Dashboard() {
-  const { miners, tasks, network, isLoading } = useProtocolData();
-
-  // Fetch real HBAR price or simulate
-  const { data: priceData } = useQuery({
-    queryKey: ['hbar-price'],
-    queryFn: async () => {
-      // Simple mock or real price API
-      return { price: 0.1425 };
-    },
-    refetchInterval: 30000
-  });
-
-  const chartData = [
-    { name: '00:00', value: 380 },
-    { name: '04:00', value: 410 },
-    { name: '08:00', value: 395 },
-    { name: '12:00', value: 423 },
-    { name: '16:00', value: 418 },
-    { name: '20:00', value: 435 },
-    { name: '24:00', value: 428 },
-  ];
-
+export default function DashboardPage() {
   return (
-    <div className="flex flex-col gap-8 animate-fade-in">
-      {/* Infinite Marquee Ticker */}
-      <div className="w-full border-b border-white/5 bg-[#0a0e17]/50 backdrop-blur-md overflow-hidden relative flex h-10 items-center -mx-6 px-6 lg:-mx-8 lg:px-8">
-        <div className="absolute left-0 top-0 w-24 h-full bg-gradient-to-r from-[#020408] to-transparent z-10"></div>
-        <div className="absolute right-0 top-0 w-24 h-full bg-gradient-to-l from-[#020408] to-transparent z-10"></div>
-        <div className="flex animate-marquee hover:[animation-play-state:paused] cursor-default">
-          <TickerContent price={priceData?.price || 0.1425} />
-          <TickerContent price={priceData?.price || 0.1425} />
-          <TickerContent price={priceData?.price || 0.1425} />
+    <div className="space-y-10 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-8">
+        <div>
+          <div className="flex items-center gap-2 text-neon-cyan text-[10px] font-bold uppercase tracking-[0.3em] mb-2">
+            <LayoutDashboard size={14} />
+            Protocol Overview
+          </div>
+          <h1 className="text-5xl font-display font-bold text-white tracking-tighter italic uppercase leading-none">
+            Network <span className="text-neon-cyan">Intelligence</span>
+          </h1>
+          <p className="text-slate-500 text-sm mt-3 max-w-xl font-medium">
+            Real-time verification metrics and neural node distribution for the ModernTensor Hedera subnet.
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <div className="px-5 py-3 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center gap-4">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Mainnet-Alpha Online</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Main Neural Display */}
-        <div className="xl:col-span-8 flex flex-col gap-6">
-          <div className="panel h-[400px] relative overflow-hidden flex flex-col">
-            <div className="absolute top-0 left-0 w-full p-6 z-20 bg-gradient-to-b from-black/80 to-transparent flex justify-between items-start">
-              <div>
-                <h2 className="text-neon-cyan text-xs font-bold font-display uppercase tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(0,243,255,0.5)]">
-                  <Activity size={14} className="animate-pulse" />
-                  Network Performance
-                </h2>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <span className="text-4xl font-display font-bold text-white tracking-widest uppercase">
-                    <CountUp end={89.4} decimals={1} suffix=" PH/s" />
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-1.5 p-1 bg-black/40 backdrop-blur rounded-lg border border-white/10">
-                {['1H', '4H', '1D', '1W'].map((t, i) => (
-                  <button key={t} className={`px-3 py-1 text-[9px] font-bold rounded uppercase tracking-widest transition-all ${i === 0 ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30' : 'text-slate-500 hover:text-white'}`}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Chart Overlay */}
-            <div className="absolute inset-0 z-10 pt-24">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#00f3ff" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#00f3ff" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#00f3ff"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorValue)"
-                    isAnimationActive={true}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* 3D Metagraph Background Effect */}
-            <div className="absolute right-0 bottom-0 w-[400px] h-full pointer-events-none opacity-40">
-              <NeuralMetagraph />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <StatCard
-              label="Active Miners"
-              value={miners?.length || 0}
-              icon={Cpu}
-              isLoading={isLoading}
-              accent="cyan"
-            />
-            <StatCard
-              label="Network Tasks"
-              value={tasks?.length || 0}
-              icon={Database}
-              isLoading={isLoading}
-              accent="purple"
-            />
-          </div>
+      {/* Network Health Panel */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Activity size={14} className="text-neon-cyan" />
+            Neural Health Metrics
+          </h2>
         </div>
+        <NetworkStats />
+      </div>
 
-        {/* Global Metagraph Hub */}
-        <div className="xl:col-span-4 flex flex-col gap-6">
-          <div className="panel h-[500px] flex flex-col">
-            <div className="p-4 border-b border-white/5 bg-black/20 flex justify-between items-center">
-              <h3 className="text-white text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 font-display">
-                <Globe size={14} className="text-neon-cyan" />
-                Global Metagraph Hub
-              </h3>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse" />
-                <span className="text-[9px] font-mono text-neon-green uppercase tracking-widest">Live</span>
-              </span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* Protocol Activity */}
+        <div className="lg:col-span-2 space-y-10">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Zap size={14} className="text-neon-yellow" />
+                Recent Ledger Activity
+              </h2>
+              <Link href="/tasks" className="text-[10px] font-bold text-slate-600 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-1">
+                Explore All <ArrowRight size={10} />
+              </Link>
             </div>
-            <div className="flex-1 min-h-0">
+            <TransactionList />
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Activity size={14} className="text-neon-cyan" />
+                Real-time Protocol Stream
+              </h2>
+            </div>
+            <div className="panel h-[400px] flex flex-col overflow-hidden">
               <ActivityFeed />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Secondary Row */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-1">
-          <SubmitTaskForm />
-        </div>
-        <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard
-            label="Total Emissions"
-            value={network?.totalEmissions || 0}
-            subtext="ℏ HBAR"
-            icon={Zap}
-            isLoading={isLoading}
-            accent="green"
-          />
-          <StatCard
-            label="Staked Weight"
-            value={network?.totalStaked || 0}
-            subtext="ℏ HBAR"
-            icon={Shield}
-            isLoading={isLoading}
-            accent="amber"
-          />
+        {/* Subnet Shortcuts */}
+        <div className="space-y-6">
+          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Database size={14} className="text-neon-purple" />
+            Sector Navigation
+          </h2>
+
+          <div className="space-y-4">
+            <Link href="/miners" className="panel p-5 group flex items-start gap-4 hover:border-neon-cyan/30 transition-all block text-left">
+              <div className="p-3 bg-neon-cyan/10 border border-neon-cyan/20 rounded-xl group-hover:bg-neon-cyan/20 transition-all">
+                <Database size={18} className="text-neon-cyan" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-bold text-white group-hover:text-neon-cyan transition-colors italic uppercase">Miner Registry</h4>
+                <p className="text-xs text-slate-600 mt-1">Manage and track neural node performance and reputation.</p>
+              </div>
+            </Link>
+
+            <Link href="/validators" className="panel p-5 group flex items-start gap-4 hover:border-neon-purple/30 transition-all block text-left">
+              <div className="p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-xl group-hover:bg-neon-purple/20 transition-all">
+                <Shield size={18} className="text-neon-purple" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-bold text-white group-hover:text-neon-purple transition-colors italic uppercase">Validator Nexus</h4>
+                <p className="text-xs text-slate-600 mt-1">Audit oracle integrity and consensus distribution.</p>
+              </div>
+            </Link>
+
+            <div className="panel p-6 bg-gradient-to-br from-neon-purple/5 to-neon-cyan/5 border-neon-cyan/20 relative overflow-hidden group text-left">
+              <div className="relative z-10">
+                <h3 className="text-lg font-display font-bold text-white italic uppercase tracking-tighter">Submit a <span className="text-neon-cyan">Challenge</span></h3>
+                <p className="text-xs text-slate-500 mt-2 mb-6">Request neural verification for your off-chain AI operations.</p>
+                <button className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-white uppercase tracking-[0.2em] hover:bg-white/10 transition-all">
+                  Initialize Task
+                </button>
+              </div>
+              <Zap className="absolute -bottom-4 -right-4 text-neon-cyan/10 group-hover:text-neon-cyan/20 transition-colors" size={120} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

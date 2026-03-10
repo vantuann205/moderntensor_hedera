@@ -8,19 +8,21 @@ const DATA_DIR = path.join(process.cwd(), '..', 'data');
 export async function GET() {
     try {
         const filePath = path.join(DATA_DIR, 'miner_registry.json');
-        let data = [];
+        let data: any[] = [];
 
         try {
             const fileContents = await fs.readFile(filePath, 'utf8');
             const parsed = JSON.parse(fileContents);
-            // The registry might be a dict mapped by miner ID, convert to array if needed.
-            if (typeof parsed === 'object' && !Array.isArray(parsed)) {
-                data = Object.values(parsed);
+
+            // Handle {"miners": { "id": {...} }}
+            const minersObj = parsed.miners || parsed;
+
+            if (typeof minersObj === 'object' && !Array.isArray(minersObj)) {
+                data = Object.values(minersObj);
             } else {
-                data = parsed;
+                data = minersObj || [];
             }
         } catch (err: any) {
-            // If file doesn't exist yet, return empty list
             if (err.code !== 'ENOENT') {
                 throw err;
             }

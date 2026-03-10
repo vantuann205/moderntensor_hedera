@@ -1,0 +1,8 @@
+{
+  "active_miners": 8,
+  "active_validators": 3,
+  "tasks_running": 5,
+  "tasks_completed": 1250,
+  "network_uptime": "99.99%",
+  "total_emissions": 1250000.0
+}

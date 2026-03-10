@@ -1,73 +1,7 @@
 {
-  "total_protocol_fees": 25.0,
-  "total_subnet_fees": 15.0,
-  "total_miner_rewards": 100.990042,
-  "total_volume": 500.0,
-  "miner_earnings": {
-    "0.0.3002": 80.792087,
-    "0.0.3001": 20.197955
-  },
-  "miner_task_counts": {
-    "0.0.3002": 4,
-    "0.0.3001": 1
-  },
-  "subnet_revenue": {},
-  "unique_miners": [
-    "0.0.3002",
-    "0.0.3001"
-  ],
-  "unique_tasks": [
-    "f07475e6-b401-4811-9641-c0a3995265fb",
-    "e13876fb-2584-4e19-86cd-ec1d2d173a63",
-    "6d8ca5ba-68c7-4d31-95cc-6b44927e1691",
-    "46071c09-e9d3-468f-bee1-4761fad567ed",
-    "6fbedbb6-4699-4e21-a546-c979ef885f0a"
-  ],
-  "payout_history": [
-    {
-      "task_id": "46071c09-e9d3-468f-bee1-4761fad567ed",
-      "miner_id": "0.0.3002",
-      "miner_amount": 20.198203,
-      "protocol_fee": 5.0,
-      "subnet_fee": 3.0,
-      "total_volume": 100.0,
-      "timestamp": 1772598104.555422
-    },
-    {
-      "task_id": "6d8ca5ba-68c7-4d31-95cc-6b44927e1691",
-      "miner_id": "0.0.3002",
-      "miner_amount": 20.197959,
-      "protocol_fee": 5.0,
-      "subnet_fee": 3.0,
-      "total_volume": 100.0,
-      "timestamp": 1772598122.975599
-    },
-    {
-      "task_id": "6fbedbb6-4699-4e21-a546-c979ef885f0a",
-      "miner_id": "0.0.3002",
-      "miner_amount": 20.197968,
-      "protocol_fee": 5.0,
-      "subnet_fee": 3.0,
-      "total_volume": 100.0,
-      "timestamp": 1772598141.4233775
-    },
-    {
-      "task_id": "f07475e6-b401-4811-9641-c0a3995265fb",
-      "miner_id": "0.0.3001",
-      "miner_amount": 20.197955,
-      "protocol_fee": 5.0,
-      "subnet_fee": 3.0,
-      "total_volume": 100.0,
-      "timestamp": 1772598159.866076
-    },
-    {
-      "task_id": "e13876fb-2584-4e19-86cd-ec1d2d173a63",
-      "miner_id": "0.0.3002",
-      "miner_amount": 20.197957,
-      "protocol_fee": 5.0,
-      "subnet_fee": 3.0,
-      "total_volume": 100.0,
-      "timestamp": 1772598178.291201
-    }
-  ]
+  "total_protocol_fees": 1250.5,
+  "total_subnet_fees": 850.2,
+  "total_miner_rewards": 15400.0,
+  "total_volume": 17500.0,
+  "timestamp": 1773139259.709185
 }

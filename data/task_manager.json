@@ -1,0 +1,469 @@
+{
+  "tasks": {
+    "task-1773139259-1": {
+      "task_id": "task-1773139259-1",
+      "id": "task-1773139259-1",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "executing",
+      "reward_amount": 46.113337916772416,
+      "requester_id": "0.0.5003",
+      "created_at": 1773068022.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1008",
+      "miner_id": "0.0.1008",
+      "validator": "0.0.9003",
+      "score": null,
+      "result": null,
+      "tx_hash": null
+    },
+    "task-1773139259-2": {
+      "task_id": "task-1773139259-2",
+      "id": "task-1773139259-2",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 23.820344634164897,
+      "requester_id": "0.0.5002",
+      "created_at": 1773127752.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1006",
+      "miner_id": "0.0.1006",
+      "validator": "0.0.9002",
+      "score": 0.7524651559419154,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x5574cd76bcb6c726353aed651041584c98ce3cd0cfb3e9e781f1a2317fb0fc83"
+    },
+    "task-1773139259-3": {
+      "task_id": "task-1773139259-3",
+      "id": "task-1773139259-3",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 34.47277511164226,
+      "requester_id": "0.0.5003",
+      "created_at": 1773117011.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1008",
+      "miner_id": "0.0.1008",
+      "validator": "0.0.9003",
+      "score": 0.9479553959132201,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x21e7a12b153a5b92d9d2e6bfd7fa3d2473a0dc29b6cd3be9be8f8eea157cddb2"
+    },
+    "task-1773139259-4": {
+      "task_id": "task-1773139259-4",
+      "id": "task-1773139259-4",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 46.655880672562404,
+      "requester_id": "0.0.5001",
+      "created_at": 1773087753.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1001",
+      "miner_id": "0.0.1001",
+      "validator": "0.0.9001",
+      "score": 0.7165451791010186,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0xf22fd9efebe1ca985f0da6aab7f3f9ca979823b3fd375247ffbefc8e65f05f1c"
+    },
+    "task-1773139259-5": {
+      "task_id": "task-1773139259-5",
+      "id": "task-1773139259-5",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 18.809114744930078,
+      "requester_id": "0.0.5004",
+      "created_at": 1773128342.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1008",
+      "miner_id": "0.0.1008",
+      "validator": "0.0.9003",
+      "score": 0.8444883426937406,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0xc260aa95621c8e912d4586a650e5709e0ca7a2fccb76cb6ae1634e500f60bcf7"
+    },
+    "task-1773139259-6": {
+      "task_id": "task-1773139259-6",
+      "id": "task-1773139259-6",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 24.38233501511542,
+      "requester_id": "0.0.5003",
+      "created_at": 1773093093.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1007",
+      "miner_id": "0.0.1007",
+      "validator": "0.0.9002",
+      "score": 0.9032381866974649,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x6fed814876e20c85af1578aeaaa7c6129b55fa024a410e6d0978919eca8fdbe4"
+    },
+    "task-1773139259-7": {
+      "task_id": "task-1773139259-7",
+      "id": "task-1773139259-7",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "pending",
+      "reward_amount": 12.615820784744834,
+      "requester_id": "0.0.5002",
+      "created_at": 1773059025.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1010",
+      "miner_id": "0.0.1010",
+      "validator": "0.0.9003",
+      "score": null,
+      "result": null,
+      "tx_hash": null
+    },
+    "task-1773139259-8": {
+      "task_id": "task-1773139259-8",
+      "id": "task-1773139259-8",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "executing",
+      "reward_amount": 24.61451420771619,
+      "requester_id": "0.0.5004",
+      "created_at": 1773134871.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1005",
+      "miner_id": "0.0.1005",
+      "validator": "0.0.9003",
+      "score": null,
+      "result": null,
+      "tx_hash": null
+    },
+    "task-1773139259-9": {
+      "task_id": "task-1773139259-9",
+      "id": "task-1773139259-9",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 43.53625156794338,
+      "requester_id": "0.0.5003",
+      "created_at": 1773065345.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1006",
+      "miner_id": "0.0.1006",
+      "validator": "0.0.9002",
+      "score": 0.931817426509985,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x702879f6b5a551b16f3144e3f6a9d3c466ebf12a86de1941d241148bbabb1882"
+    },
+    "task-1773139259-10": {
+      "task_id": "task-1773139259-10",
+      "id": "task-1773139259-10",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 43.03668247351166,
+      "requester_id": "0.0.5002",
+      "created_at": 1773133857.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1007",
+      "miner_id": "0.0.1007",
+      "validator": "0.0.9001",
+      "score": 0.7407214523058306,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x3bea1aa18b07d16aefe1dd9744cc23d7e46122431df5729fa93165a327de322a"
+    },
+    "task-1773139259-11": {
+      "task_id": "task-1773139259-11",
+      "id": "task-1773139259-11",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 12.330316182842836,
+      "requester_id": "0.0.5003",
+      "created_at": 1773133367.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1009",
+      "miner_id": "0.0.1009",
+      "validator": "0.0.9002",
+      "score": 0.8488426910802351,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0xfea9998b14144af77b45ebb15034f6105213b3cc517d138c284004eb7bf9c08f"
+    },
+    "task-1773139259-12": {
+      "task_id": "task-1773139259-12",
+      "id": "task-1773139259-12",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 11.599524460807304,
+      "requester_id": "0.0.5005",
+      "created_at": 1773077047.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1003",
+      "miner_id": "0.0.1003",
+      "validator": "0.0.9002",
+      "score": 0.9238822518079157,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x979b72f92fd4c0dcaf3d22bc944da3b32fcb20936df64a697cfcdf9ea600d49a"
+    },
+    "task-1773139259-13": {
+      "task_id": "task-1773139259-13",
+      "id": "task-1773139259-13",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "pending",
+      "reward_amount": 39.029265725404976,
+      "requester_id": "0.0.5002",
+      "created_at": 1773121872.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1010",
+      "miner_id": "0.0.1010",
+      "validator": "0.0.9001",
+      "score": null,
+      "result": null,
+      "tx_hash": null
+    },
+    "task-1773139259-14": {
+      "task_id": "task-1773139259-14",
+      "id": "task-1773139259-14",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 19.69168877890411,
+      "requester_id": "0.0.5002",
+      "created_at": 1773124660.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1001",
+      "miner_id": "0.0.1001",
+      "validator": "0.0.9002",
+      "score": 0.9064987150063752,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0xf554d17570fb8e739683ed3515eff7494441df467a1a6f14c8df5f2385511393"
+    },
+    "task-1773139259-15": {
+      "task_id": "task-1773139259-15",
+      "id": "task-1773139259-15",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "pending",
+      "reward_amount": 26.363545879285464,
+      "requester_id": "0.0.5004",
+      "created_at": 1773101558.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1004",
+      "miner_id": "0.0.1004",
+      "validator": "0.0.9003",
+      "score": null,
+      "result": null,
+      "tx_hash": null
+    },
+    "task-1773139259-16": {
+      "task_id": "task-1773139259-16",
+      "id": "task-1773139259-16",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 28.176199087493693,
+      "requester_id": "0.0.5003",
+      "created_at": 1773132545.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1003",
+      "miner_id": "0.0.1003",
+      "validator": "0.0.9002",
+      "score": 0.8162390671160265,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x8ac78f37a2e9973a13ebea2bb8e057e8ebac9c3d0a345bb1bc7acc14cd96fbee"
+    },
+    "task-1773139259-17": {
+      "task_id": "task-1773139259-17",
+      "id": "task-1773139259-17",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 41.74059346834447,
+      "requester_id": "0.0.5002",
+      "created_at": 1773094737.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1006",
+      "miner_id": "0.0.1006",
+      "validator": "0.0.9001",
+      "score": 0.9243872227564525,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x8bd300e493cd9f2acd4c764dec9854b401aa0656b337c8cb5fd32188a6e31f69"
+    },
+    "task-1773139259-18": {
+      "task_id": "task-1773139259-18",
+      "id": "task-1773139259-18",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 43.45935981188062,
+      "requester_id": "0.0.5001",
+      "created_at": 1773123139.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1004",
+      "miner_id": "0.0.1004",
+      "validator": "0.0.9003",
+      "score": 0.7263117250382135,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0xa6355836671819d62862a3067221503afde83eeaa2637b6d593b4e0b1c492256"
+    },
+    "task-1773139259-19": {
+      "task_id": "task-1773139259-19",
+      "id": "task-1773139259-19",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 47.639005539617756,
+      "requester_id": "0.0.5005",
+      "created_at": 1773084899.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1010",
+      "miner_id": "0.0.1010",
+      "validator": "0.0.9001",
+      "score": 0.7005882865213032,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x9d037450fd41e277748a7559bbf35c44edc2da8e0c9ceeb7b024bfb659146281"
+    },
+    "task-1773139259-20": {
+      "task_id": "task-1773139259-20",
+      "id": "task-1773139259-20",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "status": "completed",
+      "reward_amount": 35.96915265837655,
+      "requester_id": "0.0.5004",
+      "created_at": 1773124181.709185,
+      "timeout_seconds": 3600,
+      "payload": {
+        "code": "def process(): pass",
+        "language": "python"
+      },
+      "assigned_miner": "0.0.1007",
+      "miner_id": "0.0.1007",
+      "validator": "0.0.9002",
+      "score": 0.8364764969787337,
+      "result": {
+        "analysis": "Mock analysis...",
+        "score": 0.85
+      },
+      "tx_hash": "0x98f9a3776a1e3fcbfb0294310e481eccc08a6d65c4b5c882e5940e92eb591d12"
+    }
+  }
+}

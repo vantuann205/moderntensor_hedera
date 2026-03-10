@@ -9,21 +9,21 @@ const DATA_DIR = path.join(process.cwd(), '..', 'data');
 
 export async function GET() {
     try {
-        // Attempting to read from miner_registry but filtering for 'is_validator' or 'validator' role 
-        // or just returning a mock if file doesn't explicitly track them separated
-        const filePath = path.join(DATA_DIR, 'miner_registry.json');
-        let data = [];
+        const filePath = path.join(DATA_DIR, 'validator_registry.json');
+        let data: any[] = [];
 
         try {
             const fileContents = await fs.readFile(filePath, 'utf8');
             const parsed = JSON.parse(fileContents);
-            const allNodes = typeof parsed === 'object' && !Array.isArray(parsed) ? Object.values(parsed) : parsed;
 
-            // Filter hack for validators if they exist in the same file. 
-            // Real logic should match the python backend's JSON structure.
-            data = allNodes.filter((node: any) => node.role === 'validator' || node.type === 'validator' || node.capabilities?.includes('validator'));
+            // Handle {"validators": { "id": {...} }}
+            const valsObj = parsed.validators || parsed;
 
-            // If we didn't find any explicit ones, maybe they are in another file or hardcoded operators.
+            if (typeof valsObj === 'object' && !Array.isArray(valsObj)) {
+                data = Object.values(valsObj);
+            } else {
+                data = valsObj || [];
+            }
         } catch (err: any) {
             if (err.code !== 'ENOENT') throw err;
         }

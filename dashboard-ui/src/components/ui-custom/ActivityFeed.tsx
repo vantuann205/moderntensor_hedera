@@ -1,87 +1,59 @@
 'use client';
 
-import { useProtocolData } from '@/lib/hooks/useProtocolData';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Terminal, Clock, Activity, Zap, Cpu, ShieldAlert } from 'lucide-react';
+import { useActivity } from '@/lib/hooks/useProtocolData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Cpu, Zap, Shield, UserPlus, Coins, Clock } from 'lucide-react';
 
 export default function ActivityFeed() {
-    const { activities, isLoading } = useProtocolData();
+    const { data: activity, isLoading } = useActivity();
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'miner_joined': return <Cpu size={12} className="text-neon-cyan" />;
-            case 'task_assigned': return <Activity size={12} className="text-neon-purple" />;
-            case 'task_completed': return <Zap size={12} className="text-neon-green" />;
-            case 'reward_emitted': return <ShieldAlert size={12} className="text-yellow-500" />;
-            default: return <Terminal size={12} className="text-slate-500" />;
-        }
-    };
-
-    const getLogColor = (type: string) => {
-        switch (type) {
-            case 'miner_joined': return 'text-neon-cyan';
-            case 'task_assigned': return 'text-neon-purple';
-            case 'task_completed': return 'text-neon-green';
-            case 'reward_emitted': return 'text-yellow-500 font-bold';
-            default: return 'text-slate-400';
-        }
-    };
+    if (isLoading) return (
+        <div className="p-4 space-y-4">
+            {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-12 w-full bg-white/5" />
+            ))}
+        </div>
+    );
 
     return (
-        <div className="flex flex-col h-full bg-[#0a1120] font-mono relative overflow-hidden group">
-            {/* Console Overlay FX */}
-            <div className="absolute inset-0 pointer-events-none z-10 opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]" />
-
-            <div className="flex items-center gap-2 p-3 bg-black/40 border-b border-white/5 z-20">
-                <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {activity?.length === 0 ? (
+                <div className="p-12 text-center text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em] italic">
+                    Waiting for HCS Broadcasts...
                 </div>
-                <span className="text-[10px] text-slate-500 uppercase tracking-widest ml-2">Metagraph_Console_v2.4</span>
-            </div>
+            ) : (
+                <div className="divide-y divide-white/5">
+                    {activity?.map((item: any) => {
+                        const isReg = item.type === 'REGISTRATION';
+                        const Icon = isReg ? UserPlus : Zap;
+                        const color = isReg ? 'text-neon-cyan' : 'text-neon-yellow';
 
-            <ScrollArea className="flex-1 p-4 z-20 relative">
-                <div className="flex flex-col gap-3">
-                    {isLoading ? (
-                        <div className="flex items-center gap-2 text-slate-500 animate-pulse italic text-xs">
-                            <span className="text-neon-cyan">{`>`}</span>
-                            INITIALIZING_DATA_STREAM...
-                        </div>
-                    ) : (!activities || activities.length === 0) ? (
-                        <div className="text-slate-500 italic text-xs">
-                            <span className="text-neon-cyan">{`>`}</span>
-                            NO_ACTIVE_STREAM_DETECTED...
-                        </div>
-                    ) : (
-                        activities.map((activity: any) => (
-                            <div key={activity.id} className="flex flex-col gap-1 animate-fade-in-up">
-                                <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                                    <Clock size={10} />
-                                    <span>[{activity.timestamp}]</span>
-                                    <span className="uppercase tracking-tighter">Event_Log</span>
+                        return (
+                            <div key={item.id} className="p-4 hover:bg-white/[0.02] transition-colors group flex items-start gap-4">
+                                <div className={`mt-1 p-2 rounded-lg bg-white/[0.03] border border-white/5 ${color} group-hover:scale-110 transition-transform`}>
+                                    <Icon size={14} />
                                 </div>
-                                <div className="flex items-start gap-2 text-xs leading-relaxed group/item">
-                                    <span className="text-neon-cyan mt-1">{`>`}</span>
-                                    <div className="flex items-center gap-2">
-                                        {getIcon(activity.type)}
-                                        <span className={getLogColor(activity.type)}>
-                                            {activity.message.toUpperCase()}
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                        <span className="text-[10px] font-bold text-white uppercase tracking-tight">
+                                            {isReg ? 'New Miner Joined' : 'Task Broadcasted'}
+                                        </span>
+                                        <span className="text-[9px] font-mono text-slate-600">
+                                            {new Date(Number(item.timestamp) * 1000).toLocaleTimeString()}
                                         </span>
                                     </div>
+                                    <p className="text-[10px] text-slate-500 font-mono truncate">
+                                        {isReg
+                                            ? `Account ${item.content.account_id || '—'} registered in Subnet ${item.content.subnet_id || 0}`
+                                            : `Challenge ${item.id.slice(0, 12)}... initialized for sector ${item.content.task_type || 'default'}`
+                                        }
+                                    </p>
                                 </div>
                             </div>
-                        ))
-                    )}
-                    <div className="h-4 w-2 bg-neon-cyan animate-pulse mt-1" />
+                        );
+                    })}
                 </div>
-            </ScrollArea>
-
-            {/* Bottom Bar */}
-            <div className="p-2 border-t border-white/5 bg-black/20 text-[9px] text-slate-600 flex justify-between uppercase tracking-widest z-20">
-                <span>Ln 42, Col 8</span>
-                <span>UTF-8</span>
-            </div>
+            )}
         </div>
     );
 }

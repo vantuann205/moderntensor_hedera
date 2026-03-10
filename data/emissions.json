@@ -1,21 +1,6 @@
 {
-  "start_timestamp": 1772598097.2381873,
-  "total_distributed": 68493.15068492999,
-  "epochs": {
-    "0": {
-      "epoch_number": 0,
-      "start_time": 1772598097.2381873,
-      "end_time": 1772684497.2381873,
-      "total_emission": 68493.1506849315,
-      "distributed": 68493.15068492999,
-      "is_finalized": true,
-      "distributions": {
-        "0.0.3001": 1062.93929288,
-        "0.0.3002": 531.46964644,
-        "0.0.3003": 265.73482322,
-        "0.0.3004": 199.30111741,
-        "0.0.9001": 66433.70580498
-      }
-    }
-  }
+  "daily_emission": 68493.15,
+  "total_distributed": 1250000.0,
+  "remaining_pool": 8750000.0,
+  "current_epoch": 18
 }

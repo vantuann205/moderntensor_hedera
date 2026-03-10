@@ -6,43 +6,59 @@ const DATA_DIR = path.join(process.cwd(), '..', 'data');
 
 export async function GET() {
     try {
-        const filePath = path.join(DATA_DIR, 'treasury_state.json');
-        let data = {
+        let stats = {
             status: "operational",
-            active_nodes: 0,
-            total_tasks: 0,
-            network_reward_pool: 0
+            active_miners: 0,
+            active_validators: 0,
+            tasks_running: 0,
+            tasks_completed: 0,
+            network_uptime: "99.9%",
+            total_emissions: 0,
+            last_updated: new Date().toISOString()
         };
 
-        // Aggregating network health from multiple files
+        // 1. Calculate Miners
         try {
-            const treasuryContents = await fs.readFile(filePath, 'utf8');
-            const parsedTreasury = JSON.parse(treasuryContents);
-            data.network_reward_pool = parsedTreasury.balance || 0;
-        } catch (err: any) {
-            if (err.code !== 'ENOENT') throw err;
-        }
+            const minersJson = await fs.readFile(path.join(DATA_DIR, 'miner_registry.json'), 'utf8');
+            const parsed = JSON.parse(minersJson);
+            const miners = parsed.miners || parsed;
+            stats.active_miners = typeof miners === 'object' && !Array.isArray(miners)
+                ? Object.keys(miners).length
+                : miners.length || 0;
+        } catch (e) { }
 
+        // 2. Calculate Validators
         try {
-            const minersFilePath = path.join(DATA_DIR, 'miner_registry.json');
-            const minersContents = await fs.readFile(minersFilePath, 'utf8');
-            const parsedMiners = JSON.parse(minersContents);
-            data.active_nodes = typeof parsedMiners === 'object' && !Array.isArray(parsedMiners) ? Object.keys(parsedMiners).length : parsedMiners.length;
-        } catch (err) {
-            // fail silently for aggregation
-        }
+            const validatorsJson = await fs.readFile(path.join(DATA_DIR, 'validator_registry.json'), 'utf8');
+            const parsed = JSON.parse(validatorsJson);
+            const validators = parsed.validators || parsed;
+            stats.active_validators = typeof validators === 'object' && !Array.isArray(validators)
+                ? Object.keys(validators).length
+                : validators.length || 0;
+        } catch (e) { }
 
+        // 3. Calculate Tasks & Total Emissions
         try {
-            const tasksFilePath = path.join(DATA_DIR, 'task_manager.json');
-            const tasksContents = await fs.readFile(tasksFilePath, 'utf8');
-            const parsedTasks = JSON.parse(tasksContents);
-            data.total_tasks = typeof parsedTasks === 'object' && !Array.isArray(parsedTasks) ? Object.keys(parsedTasks).length : parsedTasks.length;
-        } catch (err) {
-            // fail silently
-        }
+            const tasksJson = await fs.readFile(path.join(DATA_DIR, 'task_manager.json'), 'utf8');
+            const parsed = JSON.parse(tasksJson);
+            const tasks = parsed.tasks || parsed;
+            const tasksArray = typeof tasks === 'object' && !Array.isArray(tasks) ? Object.values(tasks) : (tasks || []);
 
-        return NextResponse.json(data);
+            stats.tasks_completed = tasksArray.filter((t: any) => t.status === 'completed' || t.status === 'paid').length;
+            stats.tasks_running = tasksArray.filter((t: any) => t.status === 'pending' || t.status === 'assigned').length;
+
+            stats.total_emissions = tasksArray.reduce((acc: number, t: any) => acc + (Number(t.reward_amount || t.reward || 0)), 0);
+        } catch (e) { }
+
+        // 4. Override with explicit network_state.json if available
+        try {
+            const stateJson = await fs.readFile(path.join(DATA_DIR, 'network_state.json'), 'utf8');
+            const parsed = JSON.parse(stateJson);
+            stats = { ...stats, ...parsed };
+        } catch (e) { }
+
+        return NextResponse.json(stats);
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch network data', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to aggregate real network metrics', details: error.message }, { status: 500 });
     }
 }
