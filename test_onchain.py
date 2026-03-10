@@ -12,6 +12,7 @@ Tests ALL 4 deployed contracts on Hedera testnet:
   3. PaymentEscrow  — create_task, add_validator, submit_result,
                        validate_submission, finalize_task
   4. MDTGovernor    — propose, vote, finalize_voting
+  ,,
 
 Every transaction hash is collected and printed for HashScan verification.
 
