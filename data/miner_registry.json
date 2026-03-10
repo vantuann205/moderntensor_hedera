@@ -1,1 +1,76 @@
-
+{
+  "miners": {
+    "0.0.1001": {
+      "miner_id": "0.0.1001",
+      "subnet_ids": [
+        1
+      ],
+      "stake_amount": 500.0,
+      "reputation": {
+        "score": 0.5,
+        "total_tasks": 0,
+        "successful_tasks": 0,
+        "failed_tasks": 0,
+        "timeout_tasks": 0,
+        "success_rate": 0.0,
+        "timeout_rate": 0.0,
+        "average_response_time": 0.0
+      },
+      "status": "active",
+      "capabilities": [
+        "code_review"
+      ],
+      "registered_at": 1773144261.5393322,
+      "last_active_at": 1773144261.5393322,
+      "effective_weight": 0.0025
+    },
+    "0.0.1002": {
+      "miner_id": "0.0.1002",
+      "subnet_ids": [
+        1
+      ],
+      "stake_amount": 200.0,
+      "reputation": {
+        "score": 0.5,
+        "total_tasks": 0,
+        "successful_tasks": 0,
+        "failed_tasks": 0,
+        "timeout_tasks": 0,
+        "success_rate": 0.0,
+        "timeout_rate": 0.0,
+        "average_response_time": 0.0
+      },
+      "status": "active",
+      "capabilities": [
+        "code_review"
+      ],
+      "registered_at": 1773144263.1525369,
+      "last_active_at": 1773144263.1525369,
+      "effective_weight": 0.0025
+    },
+    "0.0.1003": {
+      "miner_id": "0.0.1003",
+      "subnet_ids": [
+        1
+      ],
+      "stake_amount": 100.0,
+      "reputation": {
+        "score": 0.5,
+        "total_tasks": 0,
+        "successful_tasks": 0,
+        "failed_tasks": 0,
+        "timeout_tasks": 0,
+        "success_rate": 0.0,
+        "timeout_rate": 0.0,
+        "average_response_time": 0.0
+      },
+      "status": "active",
+      "capabilities": [
+        "code_review"
+      ],
+      "registered_at": 1773144265.9506938,
+      "last_active_at": 1773144265.9506938,
+      "effective_weight": 0.0025
+    }
+  }
+}

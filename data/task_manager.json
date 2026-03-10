@@ -1,1 +1,671 @@
-
+{
+  "tasks": {
+    "28a28368-ba63-496c-9162-273ba3737f02": {
+      "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "payload": {
+        "code": "def process_1(data): return transform(data)",
+        "lang": "python"
+      },
+      "reward_amount": 100.0,
+      "requester_id": "0.0.8127455",
+      "priority": "normal",
+      "max_miners": 3,
+      "timeout_seconds": 300.0,
+      "metadata": {},
+      "created_at": 1773144269.1404958,
+      "status": "completed"
+    },
+    "85680476-add4-421a-9f00-5313887cfb66": {
+      "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "payload": {
+        "code": "def process_2(data): return transform(data)",
+        "lang": "python"
+      },
+      "reward_amount": 100.0,
+      "requester_id": "0.0.8127455",
+      "priority": "normal",
+      "max_miners": 3,
+      "timeout_seconds": 300.0,
+      "metadata": {},
+      "created_at": 1773144277.5547168,
+      "status": "completed"
+    },
+    "bb8d4cf7-cb12-4467-854e-979d40a2dbe7": {
+      "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+      "subnet_id": 1,
+      "task_type": "code_review",
+      "payload": {
+        "code": "def process_3(data): return transform(data)",
+        "lang": "python"
+      },
+      "reward_amount": 100.0,
+      "requester_id": "0.0.8127455",
+      "priority": "normal",
+      "max_miners": 3,
+      "timeout_seconds": 300.0,
+      "metadata": {},
+      "created_at": 1773144285.8632882,
+      "status": "completed"
+    }
+  },
+  "assignments": {
+    "28a28368-ba63-496c-9162-273ba3737f02": [
+      {
+        "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+        "miner_id": "0.0.1003",
+        "subnet_id": 1,
+        "assigned_at": 1773144269.1404958,
+        "deadline": 1773144569.1404958,
+        "result": {
+          "result_id": "c3523eb5-8d35-45b9-b098-9cda780c8ff9",
+          "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+          "miner_id": "0.0.1003",
+          "output": {
+            "analysis": "[GammaBot] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from GammaBot"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from GammaBot"
+              }
+            ],
+            "score": 0.547,
+            "confidence": 0.84
+          },
+          "execution_time": 0.0461273193359375,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144269.2756505
+        },
+        "score": 0.8399692484537761,
+        "is_completed": true,
+        "is_timeout": false
+      },
+      {
+        "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+        "miner_id": "0.0.1001",
+        "subnet_id": 1,
+        "assigned_at": 1773144269.1404958,
+        "deadline": 1773144569.1404958,
+        "result": {
+          "result_id": "9902d08b-a739-4836-aea0-0a082f571a92",
+          "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+          "miner_id": "0.0.1001",
+          "output": {
+            "analysis": "[AlphaAI] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #3 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #4 from AlphaAI"
+              }
+            ],
+            "score": 0.889,
+            "confidence": 0.93
+          },
+          "execution_time": 0.13134551048278809,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144269.2718413
+        },
+        "score": 0.9681316144085366,
+        "is_completed": true,
+        "is_timeout": false
+      },
+      {
+        "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+        "miner_id": "0.0.1002",
+        "subnet_id": 1,
+        "assigned_at": 1773144269.1404958,
+        "deadline": 1773144569.1404958,
+        "result": {
+          "result_id": "92d2aef7-c6e1-499f-96b5-8c99d49165a9",
+          "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+          "miner_id": "0.0.1002",
+          "output": {
+            "analysis": "[BetaML] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from BetaML"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from BetaML"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #3 from BetaML"
+              }
+            ],
+            "score": 0.752,
+            "confidence": 0.9
+          },
+          "execution_time": 0.10700774192810059,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144269.2718413
+        },
+        "score": 0.8969149628752443,
+        "is_completed": true,
+        "is_timeout": false
+      }
+    ],
+    "85680476-add4-421a-9f00-5313887cfb66": [
+      {
+        "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+        "miner_id": "0.0.1001",
+        "subnet_id": 1,
+        "assigned_at": 1773144277.5547168,
+        "deadline": 1773144577.5547168,
+        "result": {
+          "result_id": "225f2bba-afaf-4686-b40c-91f701a9b186",
+          "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+          "miner_id": "0.0.1001",
+          "output": {
+            "analysis": "[AlphaAI] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #3 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #4 from AlphaAI"
+              }
+            ],
+            "score": 0.926,
+            "confidence": 0.93
+          },
+          "execution_time": 0.001140594482421875,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144277.5642896
+        },
+        "score": 0.9682184176858701,
+        "is_completed": true,
+        "is_timeout": false
+      },
+      {
+        "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+        "miner_id": "0.0.1003",
+        "subnet_id": 1,
+        "assigned_at": 1773144277.5547168,
+        "deadline": 1773144577.5547168,
+        "result": {
+          "result_id": "003bf62b-f22b-489b-b9f9-b331495d3005",
+          "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+          "miner_id": "0.0.1003",
+          "output": {
+            "analysis": "[GammaBot] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from GammaBot"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from GammaBot"
+              }
+            ],
+            "score": 0.548,
+            "confidence": 0.84
+          },
+          "execution_time": 0.001140594482421875,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144277.5642896
+        },
+        "score": 0.8399992396036784,
+        "is_completed": true,
+        "is_timeout": false
+      },
+      {
+        "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+        "miner_id": "0.0.1002",
+        "subnet_id": 1,
+        "assigned_at": 1773144277.5547168,
+        "deadline": 1773144577.5547168,
+        "result": {
+          "result_id": "675eb551-01d7-4b16-92f8-ae7d8356296f",
+          "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+          "miner_id": "0.0.1002",
+          "output": {
+            "analysis": "[BetaML] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from BetaML"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from BetaML"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #3 from BetaML"
+              }
+            ],
+            "score": 0.761,
+            "confidence": 0.9
+          },
+          "execution_time": 0.001140594482421875,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144277.5642896
+        },
+        "score": 0.8969855409735414,
+        "is_completed": true,
+        "is_timeout": false
+      }
+    ],
+    "bb8d4cf7-cb12-4467-854e-979d40a2dbe7": [
+      {
+        "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+        "miner_id": "0.0.1002",
+        "subnet_id": 1,
+        "assigned_at": 1773144285.8654466,
+        "deadline": 1773144585.8654466,
+        "result": {
+          "result_id": "8fd74749-37a5-4a1b-bda7-07acb4ffce16",
+          "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+          "miner_id": "0.0.1002",
+          "output": {
+            "analysis": "[BetaML] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from BetaML"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from BetaML"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #3 from BetaML"
+              }
+            ],
+            "score": 0.787,
+            "confidence": 0.9
+          },
+          "execution_time": 0.005320072174072266,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144285.871777
+        },
+        "score": 0.8969827546550804,
+        "is_completed": true,
+        "is_timeout": false
+      },
+      {
+        "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+        "miner_id": "0.0.1001",
+        "subnet_id": 1,
+        "assigned_at": 1773144285.8654466,
+        "deadline": 1773144585.8654466,
+        "result": {
+          "result_id": "10a781be-b71f-4120-9c06-2c15a2d7dd47",
+          "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+          "miner_id": "0.0.1001",
+          "output": {
+            "analysis": "[AlphaAI] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #3 from AlphaAI"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #4 from AlphaAI"
+              }
+            ],
+            "score": 0.938,
+            "confidence": 0.93
+          },
+          "execution_time": 0.004129171371459961,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144285.8707666
+        },
+        "score": 0.9682164253012775,
+        "is_completed": true,
+        "is_timeout": false
+      },
+      {
+        "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+        "miner_id": "0.0.1003",
+        "subnet_id": 1,
+        "assigned_at": 1773144285.8654466,
+        "deadline": 1773144585.8654466,
+        "result": {
+          "result_id": "6afaabe7-0269-4d11-8358-1075cf87c17e",
+          "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+          "miner_id": "0.0.1003",
+          "output": {
+            "analysis": "[GammaBot] Reviewed 43 chars",
+            "findings": [
+              {
+                "severity": "warning",
+                "message": "Finding #1 from GammaBot"
+              },
+              {
+                "severity": "info",
+                "message": "Finding #2 from GammaBot"
+              }
+            ],
+            "score": 0.579,
+            "confidence": 0.84
+          },
+          "execution_time": 0.005320072174072266,
+          "proof": null,
+          "metadata": {},
+          "submitted_at": 1773144285.8727758
+        },
+        "score": 0.8399964532852173,
+        "is_completed": true,
+        "is_timeout": false
+      }
+    ]
+  },
+  "results": {
+    "28a28368-ba63-496c-9162-273ba3737f02": [
+      {
+        "result_id": "9902d08b-a739-4836-aea0-0a082f571a92",
+        "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+        "miner_id": "0.0.1001",
+        "output": {
+          "analysis": "[AlphaAI] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #3 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #4 from AlphaAI"
+            }
+          ],
+          "score": 0.889,
+          "confidence": 0.93
+        },
+        "execution_time": 0.13134551048278809,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144269.2718413
+      },
+      {
+        "result_id": "92d2aef7-c6e1-499f-96b5-8c99d49165a9",
+        "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+        "miner_id": "0.0.1002",
+        "output": {
+          "analysis": "[BetaML] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from BetaML"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from BetaML"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #3 from BetaML"
+            }
+          ],
+          "score": 0.752,
+          "confidence": 0.9
+        },
+        "execution_time": 0.10700774192810059,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144269.2718413
+      },
+      {
+        "result_id": "c3523eb5-8d35-45b9-b098-9cda780c8ff9",
+        "task_id": "28a28368-ba63-496c-9162-273ba3737f02",
+        "miner_id": "0.0.1003",
+        "output": {
+          "analysis": "[GammaBot] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from GammaBot"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from GammaBot"
+            }
+          ],
+          "score": 0.547,
+          "confidence": 0.84
+        },
+        "execution_time": 0.0461273193359375,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144269.2756505
+      }
+    ],
+    "85680476-add4-421a-9f00-5313887cfb66": [
+      {
+        "result_id": "675eb551-01d7-4b16-92f8-ae7d8356296f",
+        "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+        "miner_id": "0.0.1002",
+        "output": {
+          "analysis": "[BetaML] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from BetaML"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from BetaML"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #3 from BetaML"
+            }
+          ],
+          "score": 0.761,
+          "confidence": 0.9
+        },
+        "execution_time": 0.001140594482421875,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144277.5642896
+      },
+      {
+        "result_id": "225f2bba-afaf-4686-b40c-91f701a9b186",
+        "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+        "miner_id": "0.0.1001",
+        "output": {
+          "analysis": "[AlphaAI] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #3 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #4 from AlphaAI"
+            }
+          ],
+          "score": 0.926,
+          "confidence": 0.93
+        },
+        "execution_time": 0.001140594482421875,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144277.5642896
+      },
+      {
+        "result_id": "003bf62b-f22b-489b-b9f9-b331495d3005",
+        "task_id": "85680476-add4-421a-9f00-5313887cfb66",
+        "miner_id": "0.0.1003",
+        "output": {
+          "analysis": "[GammaBot] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from GammaBot"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from GammaBot"
+            }
+          ],
+          "score": 0.548,
+          "confidence": 0.84
+        },
+        "execution_time": 0.001140594482421875,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144277.5642896
+      }
+    ],
+    "bb8d4cf7-cb12-4467-854e-979d40a2dbe7": [
+      {
+        "result_id": "10a781be-b71f-4120-9c06-2c15a2d7dd47",
+        "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+        "miner_id": "0.0.1001",
+        "output": {
+          "analysis": "[AlphaAI] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #3 from AlphaAI"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #4 from AlphaAI"
+            }
+          ],
+          "score": 0.938,
+          "confidence": 0.93
+        },
+        "execution_time": 0.004129171371459961,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144285.8707666
+      },
+      {
+        "result_id": "8fd74749-37a5-4a1b-bda7-07acb4ffce16",
+        "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+        "miner_id": "0.0.1002",
+        "output": {
+          "analysis": "[BetaML] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from BetaML"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from BetaML"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #3 from BetaML"
+            }
+          ],
+          "score": 0.787,
+          "confidence": 0.9
+        },
+        "execution_time": 0.005320072174072266,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144285.871777
+      },
+      {
+        "result_id": "6afaabe7-0269-4d11-8358-1075cf87c17e",
+        "task_id": "bb8d4cf7-cb12-4467-854e-979d40a2dbe7",
+        "miner_id": "0.0.1003",
+        "output": {
+          "analysis": "[GammaBot] Reviewed 43 chars",
+          "findings": [
+            {
+              "severity": "warning",
+              "message": "Finding #1 from GammaBot"
+            },
+            {
+              "severity": "info",
+              "message": "Finding #2 from GammaBot"
+            }
+          ],
+          "score": 0.579,
+          "confidence": 0.84
+        },
+        "execution_time": 0.005320072174072266,
+        "proof": null,
+        "metadata": {},
+        "submitted_at": 1773144285.8727758
+      }
+    ]
+  },
+  "metrics": {
+    "total_tasks": 3,
+    "completed_tasks": 3,
+    "failed_tasks": 0,
+    "total_volume": 300.0
+  }
+}

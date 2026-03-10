@@ -4,6 +4,7 @@ import Link from 'next/link';
 import NetworkStats from '@/components/ui-custom/NetworkStats';
 import TransactionList from '@/components/ui-custom/TransactionList';
 import ActivityFeed from '@/components/ui-custom/ActivityFeed';
+import ProtocolInfrastructure from '@/components/ui-custom/ProtocolInfrastructure';
 import { ArrowRight, Activity, Zap, Shield, Database, LayoutDashboard } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -30,6 +31,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Protocol Infrastructure */}
+      <ProtocolInfrastructure />
 
       {/* Network Health Panel */}
       <div className="space-y-4">

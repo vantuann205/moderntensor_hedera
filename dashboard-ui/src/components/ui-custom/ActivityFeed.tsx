@@ -2,7 +2,7 @@
 
 import { useActivity } from '@/lib/hooks/useProtocolData';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Cpu, Zap, Shield, UserPlus, Coins, Clock } from 'lucide-react';
+import { Cpu, Zap, Shield, UserPlus, Coins, Clock, ExternalLink } from 'lucide-react';
 
 export default function ActivityFeed() {
     const { data: activity, isLoading } = useActivity();
@@ -24,9 +24,38 @@ export default function ActivityFeed() {
             ) : (
                 <div className="divide-y divide-white/5">
                     {activity?.map((item: any) => {
-                        const isReg = item.type === 'REGISTRATION';
-                        const Icon = isReg ? UserPlus : Zap;
-                        const color = isReg ? 'text-neon-cyan' : 'text-neon-yellow';
+                        const type = item.content?.type || item.type;
+                        let Icon = Zap;
+                        let label = 'Protocol Event';
+                        let color = 'text-neon-cyan';
+                        let description = '';
+
+                        switch (type) {
+                            case 'miner_register':
+                                Icon = UserPlus;
+                                label = 'Miner Registered';
+                                color = 'text-neon-cyan';
+                                description = `Miner ${item.content.miner_id || '—'} joined the network`;
+                                break;
+                            case 'validator_register':
+                                Icon = Shield;
+                                label = 'Validator Joined';
+                                color = 'text-neon-purple';
+                                description = `Oracle ${item.content.validator_id || '—'} activated`;
+                                break;
+                            case 'task_create':
+                                Icon = Cpu;
+                                label = 'Task Created';
+                                color = 'text-neon-yellow';
+                                description = `New compute task ${item.content.task_id?.slice(0, 8)}... broadcasted`;
+                                break;
+                            case 'score_submit':
+                                Icon = Coins;
+                                label = 'Score Verified';
+                                color = 'text-emerald-400';
+                                description = `Task ${item.content.task_id?.slice(0, 8)}... verified by Oracle`;
+                                break;
+                        }
 
                         return (
                             <div key={item.id} className="p-4 hover:bg-white/[0.02] transition-colors group flex items-start gap-4">
@@ -36,18 +65,28 @@ export default function ActivityFeed() {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2 mb-1">
                                         <span className="text-[10px] font-bold text-white uppercase tracking-tight">
-                                            {isReg ? 'New Miner Joined' : 'Task Broadcasted'}
+                                            {label}
+                                        </span>
+                                        <a
+                                            href={`https://hashscan.io/testnet/topic/${item.topic_id}/message/${item.sequence}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[8px] font-bold text-slate-600 hover:text-neon-cyan transition-colors uppercase tracking-widest flex items-center gap-1"
+                                        >
+                                            Verify On-Chain <ExternalLink size={8} />
+                                        </a>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 font-mono truncate">
+                                        {description || item.content.raw || 'Protocol synchronization event'}
+                                    </p>
+                                    <div className="mt-1 flex items-center justify-between">
+                                        <span className="text-[9px] font-mono text-slate-700">
+                                            Seq: #{item.sequence}
                                         </span>
                                         <span className="text-[9px] font-mono text-slate-600">
                                             {new Date(Number(item.timestamp) * 1000).toLocaleTimeString()}
                                         </span>
                                     </div>
-                                    <p className="text-[10px] text-slate-500 font-mono truncate">
-                                        {isReg
-                                            ? `Account ${item.content.account_id || '—'} registered in Subnet ${item.content.subnet_id || 0}`
-                                            : `Challenge ${item.id.slice(0, 12)}... initialized for sector ${item.content.task_type || 'default'}`
-                                        }
-                                    </p>
                                 </div>
                             </div>
                         );

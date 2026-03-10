@@ -34,9 +34,10 @@ export async function GET() {
         let topics = [];
         const envReg = process.env.NEXT_PUBLIC_REGISTRATION_TOPIC_ID;
         const envTask = process.env.NEXT_PUBLIC_TASK_TOPIC_ID;
+        const envScore = process.env.NEXT_PUBLIC_SCORING_TOPIC_ID;
 
-        if (envReg && envTask) {
-            topics = [envReg, envTask];
+        if (envReg || envTask || envScore) {
+            topics = [envReg, envTask, envScore].filter(Boolean) as string[];
         } else {
             // Fallback to discovery
             topics = await discoverTopics();
