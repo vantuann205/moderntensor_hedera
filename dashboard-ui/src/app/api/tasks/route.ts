@@ -3,41 +3,6 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), '..', 'data');
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
-
-async function indexTasksFromHCS() {
-    try {
-        const topicId = process.env.NEXT_PUBLIC_TASK_TOPIC_ID || '0.0.5134722';
-        const res = await fetch(`${MIRROR_BASE}/api/v1/topics/${topicId}/messages?limit=50&order=desc`);
-        if (!res.ok) return [];
-        const data = await res.json();
-
-        const tasksMap = new Map();
-        data.messages.forEach((m: any) => {
-            try {
-                const payload = JSON.parse(Buffer.from(m.message, 'base64').toString());
-                if (payload.type === 'task_create' || payload.type === 'TASK') {
-                    const id = payload.task_id || payload.id;
-                    if (!tasksMap.has(id)) {
-                        tasksMap.set(id, {
-                            id,
-                            task_id: id,
-                            requester_id: payload.requester_id,
-                            task_type: payload.task_type,
-                            status: payload.status || 'pending',
-                            reward: payload.reward_amount || 0,
-                            created_at: m.consensus_timestamp,
-                            timestamp: m.consensus_timestamp
-                        });
-                    }
-                }
-            } catch (e) { }
-        });
-        return Array.from(tasksMap.values());
-    } catch (e) {
-        return [];
-    }
-}
 
 export async function GET() {
     try {
@@ -52,23 +17,52 @@ export async function GET() {
             if (typeof tasksObj === 'object' && !Array.isArray(tasksObj)) {
                 data = Object.values(tasksObj);
             } else {
-                data = tasksObj || [];
+                data = Array.isArray(tasksObj) ? tasksObj : [];
             }
-        } catch (err) { }
 
-        if (data.length === 0) {
-            data = await indexTasksFromHCS();
+            const TASK_TOPIC_ID = process.env.HEDERA_TASK_TOPIC_ID || '0.0.8146317';
+            const NETWORK = process.env.HEDERA_NETWORK || 'testnet';
+
+            // Enrich tasks with assignment data
+            const assignments = parsed.assignments || {};
+            data = data
+                .filter((task: any) => task.source === 'hedera_hcs' || task.hcs_sequence)
+                .map((task: any) => {
+                    const taskAssignments = assignments[task.task_id] || [];
+                    const topAssignment = taskAssignments.sort((a: any, b: any) => (b.score || 0) - (a.score || 0))[0];
+                    
+                    return {
+                        id: task.task_id,
+                        task_id: task.task_id,
+                        subnet_id: task.subnet_id || 1,
+                        task_type: task.task_type,
+                        status: task.status || 'pending',
+                        reward: (task.reward_amount || 0) / 100000000,
+                        reward_amount: (task.reward_amount || 0) / 100000000,
+                        requester_id: task.requester_id,
+                        assigned_to: topAssignment?.miner_id || null,
+                        miner_id: topAssignment?.miner_id || null,
+                        score: topAssignment?.score || null,
+                        created_at: task.created_at,
+                        timestamp: task.created_at,
+                        hcs_sequence: task.hcs_sequence,
+                        consensus_timestamp: task.consensus_timestamp,
+                        topic_id: TASK_TOPIC_ID,
+                    };
+                });
+        } catch (err) {
+            // file not found
         }
 
-        // Sort by timestamp
+        // Sort by timestamp desc
         data.sort((a: any, b: any) => {
-            const tA = Number(a.timestamp || a.created_at || 0);
-            const tB = Number(b.timestamp || b.created_at || 0);
+            const tA = Number(a.timestamp || 0);
+            const tB = Number(b.timestamp || 0);
             return tB - tA;
         });
 
         return NextResponse.json(data);
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch real tasks data', details: error.message }, { status: 500 });
+        return NextResponse.json([], { status: 200 });
     }
 }

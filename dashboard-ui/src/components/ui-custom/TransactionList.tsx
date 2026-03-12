@@ -62,7 +62,15 @@ export default function TransactionList() {
                                     </div>
                                     <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
                                         <Clock size={10} />
-                                        {tx.consensus_timestamp ? new Date(tx.consensus_timestamp * 1000).toLocaleTimeString() : '-'}
+                                        {tx.consensus_timestamp ? new Date(tx.consensus_timestamp * 1000).toLocaleString('en-GB', { 
+                                            timeZone: 'Asia/Ho_Chi_Minh', 
+                                            hour12: false,
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        }) : '-'}
                                     </div>
                                 </div>
                             </div>

@@ -3,38 +3,66 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), '..', 'data');
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
 
 export async function GET() {
     try {
         const filePath = path.join(DATA_DIR, 'emissions.json');
-        let data: any = null;
+        let data: any[] = [];
 
         try {
             const fileContents = await fs.readFile(filePath, 'utf8');
-            data = JSON.parse(fileContents);
-        } catch (err) { }
+            const parsed = JSON.parse(fileContents);
 
-        if (!data || Object.keys(data).length === 0) {
-            // Fallback to real token supply from Mirror Node
-            const tokenId = process.env.NEXT_PUBLIC_MDT_TOKEN_ID;
-            if (tokenId) {
-                const res = await fetch(`${MIRROR_BASE}/api/v1/tokens/${tokenId}`);
-                if (res.ok) {
-                    const tokenData = await res.json();
-                    data = {
-                        total_emitted: Number(tokenData.total_supply) / Math.pow(10, tokenData.decimals),
-                        block_height: '-', // HBAR does not use block height in the same way
-                        timestamp: new Date().toISOString()
-                    };
-                }
+            // Flatten epoch distributions into per-account emission records for the ledger
+            const epochs = parsed.epochs || {};
+            const totalDistributed = parsed.total_distributed || 0;
+
+            // Build per-account cumulative emissions
+            const accountTotals: Record<string, number> = {};
+            const epochList: any[] = [];
+
+            Object.entries(epochs).forEach(([epochNum, epoch]: [string, any]) => {
+                const dists = epoch.distributions || {};
+                const epochTotal = epoch.total_emission || 0;
+                epochList.push({
+                    epoch: parseInt(epochNum),
+                    start_time: epoch.start_time,
+                    end_time: epoch.end_time,
+                    total_emission: epochTotal,
+                    distributed: epoch.distributed || 0,
+                    is_finalized: epoch.is_finalized,
+                    top_earner: Object.entries(dists).sort(([, a], [, b]) => Number(b) - Number(a))[0]?.[0],
+                });
+
+                Object.entries(dists).forEach(([accountId, amount]) => {
+                    accountTotals[accountId] = (accountTotals[accountId] || 0) + Number(amount);
+                });
+            });
+
+            // Convert to list sorted by amount desc
+            data = Object.entries(accountTotals)
+                .map(([accountId, amount]) => ({
+                    id: accountId,
+                    subnet: `Subnet-1`,
+                    name: accountId,
+                    amount: amount.toFixed(2),
+                    timestamp: new Date(Object.values(epochs)[0]?.end_time * 1000 || Date.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                    epochs: epochList,
+                    total_distributed: totalDistributed,
+                }))
+                .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
+
+            // Attach epoch metadata to first item for the chart
+            if (data.length > 0) {
+                (data as any)._meta = { epochs: epochList, total_distributed: totalDistributed };
             }
-        }
 
-        if (!data) data = { total_emitted: 0, block_height: '-', timestamp: new Date().toISOString() };
+        } catch (err) {
+            // emissions.json not available
+        }
 
         return NextResponse.json(data);
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch real emissions data', details: error.message }, { status: 500 });
+        return NextResponse.json([], { status: 200 });
     }
 }

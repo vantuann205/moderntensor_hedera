@@ -38,10 +38,9 @@ export async function GET() {
                 name: "AI-CodeReview-v1",
                 description: "Premium AI Code Review Subnet on Hedera HCS",
                 fee_rate: 3,
-                miners_count: minersCount > 0 ? minersCount : 3, // fallback to demo numbers if file is syncing
-                validators_count: validatorsCount > 0 ? validatorsCount : 1,
+                miners_count: minersCount,
+                validators_count: validatorsCount,
                 status: status,
-                total_emissions: "150.00 MDT",
                 minimum_stake: "1,000 MDT"
             }
         ];

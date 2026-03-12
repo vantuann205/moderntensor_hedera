@@ -2,118 +2,198 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Wallet, Search, Menu, X, Cpu, Activity, LayoutDashboard, Database, Zap } from 'lucide-react';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { 
+    Zap, 
+    LogOut,
+    PlusCircle,
+    ChevronDown,
+    UserCircle,
+    Wallet,
+    Sun,
+    Moon
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
+import RegistrationModal from '@/components/ui-custom/RegistrationModal';
+import WalletConnectModal from '@/components/ui-custom/WalletConnectModal';
+import { useWallet } from '@/context/WalletContext';
 
-const HEDERA_ACCOUNT_ID = process.env.NEXT_PUBLIC_HEDERA_ACCOUNT_ID || '0.0.8127455';
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
+const navLinks = [
+    { name: 'Dashboard', href: '/' },
+    { name: 'Miners', href: '/miners' },
+    { name: 'Validators', href: '/validators' },
+    { name: 'Tasks', href: '/tasks' },
+    { name: 'Rewards', href: '/rewards' },
+    { name: 'Network', href: '/network' },
+];
 
 export default function Navbar() {
     const pathname = usePathname();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+    const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    
+    const { isConnected, address, accountId, balance, type, disconnect, isMiner, isValidator } = useWallet();
 
-    const { data: accountData } = useQuery({
-        queryKey: ['hedera-account'],
-        queryFn: async () => {
-            const res = await fetch(`${MIRROR_BASE}/api/v1/accounts/${HEDERA_ACCOUNT_ID}`);
-            if (!res.ok) throw new Error('Failed to fetch account');
-            return res.json();
-        },
-        refetchInterval: 15000,
-    });
+    const truncateAddress = (addr: string) => {
+        if (!addr) return '';
+        return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+    };
 
-    const balance = accountData?.balance?.balance ? (accountData.balance.balance / 1e8).toFixed(2) : '--';
+function ThemeToggle() {
+    const { theme, setTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
 
-    const navLinks = [
-        { name: 'Home', href: '/' },
-        { name: 'Subnets', href: '/subnets' },
-        { name: 'Miners', href: '/miners' },
-        { name: 'Validators', href: '/validators' },
-        { name: 'Tasks', href: '/tasks' },
-        { name: 'Emissions', href: '/emissions' },
-        { name: 'Explorer', href: '/explorer' },
-    ];
+    useEffect(() => setMounted(true), []);
+
+    if (!mounted) return (
+        <div className="w-11 h-11 rounded-2xl bg-white/[0.03] border border-white/10" />
+    );
 
     return (
-        <nav className="fixed top-0 left-0 w-full z-[100] bg-[#0a0e17]/80 backdrop-blur-xl border-b border-white/10 h-16">
-            <div className="max-w-[1400px] mx-auto h-full px-6 flex items-center justify-between gap-8">
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 group">
-                    <span className="font-display font-bold text-lg tracking-tighter text-white uppercase italic group-hover:neon-text transition-all">
-                        ModernTensor
-                    </span>
-                </Link>
+        <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="w-11 h-11 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center hover:border-neon-cyan/40 transition-all text-slate-400 hover:text-white"
+            aria-label="Toggle Theme"
+        >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+    );
+}
 
-                {/* Desktop Nav */}
-                <div className="hidden lg:flex items-center gap-1">
-                    {navLinks.map((link) => {
-                        const isActive = pathname === link.href;
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-all flex items-center gap-2 ${isActive
-                                    ? 'text-neon-cyan bg-neon-cyan/10 border border-neon-cyan/20 shadow-[0_0_10px_rgba(0,243,255,0.1)]'
-                                    : 'text-text-secondary hover:text-white'
+    return (
+        <>
+            <nav className="sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a0e17]/80 backdrop-blur-md">
+                <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+                    {/* Logo */}
+                    <Link href="/" className="flex items-center gap-3 group">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-neon-cyan via-neon-purple to-neon-blue p-[1px]">
+                            <div className="w-full h-full rounded-xl bg-[#0a0e17] flex items-center justify-center group-hover:bg-transparent transition-colors">
+                                <Zap className="text-white group-hover:scale-110 transition-transform" size={20} fill="currentColor" />
+                            </div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xl font-display font-black tracking-tighter text-white uppercase italic">ModernTensor Hedera</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-mono text-neon-cyan uppercase tracking-widest font-bold">Decentralized AI Network</span>
+                            </div>
+                        </div>
+                    </Link>
+
+                    {/* Nav Links */}
+                    <div className="hidden md:flex items-center gap-1 bg-white/[0.03] p-1 rounded-2xl border border-white/5">
+                        {navLinks.map((link) => {
+                            const isActive = pathname === link.href;
+                            return (
+                                <Link
+                                    key={link.name}
+                                    href={link.href}
+                                    className={`flex items-center px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
+                                        isActive 
+                                            ? 'bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.2)] border border-white/20' 
+                                            : 'text-white/70 hover:text-white hover:bg-white/5'
                                     }`}
-                            >
-                                {link.name}
-                            </Link>
-                        );
-                    })}
-                </div>
-
-                {/* Search & Wallet */}
-                <div className="hidden lg:flex items-center gap-4 flex-1 max-w-xs">
-                    <div className="relative w-full">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Search Metagraph..."
-                            className="w-full bg-black/40 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-neon-cyan/40 transition-all font-mono"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="hidden md:flex flex-col items-end mr-2">
-                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Balance</span>
-                        <span className="text-sm font-mono font-bold text-neon-cyan tracking-tight">ℏ {balance}</span>
+                                >
+                                    {link.name}
+                                </Link>
+                            );
+                        })}
                     </div>
 
-                    <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-neon-cyan/20 to-neon-blue/20 border border-neon-cyan/30 rounded-lg hover:border-neon-cyan transition-all group">
-                        <span className="text-xs font-bold text-white uppercase tracking-widest whitespace-nowrap">
-                            {HEDERA_ACCOUNT_ID}
-                        </span>
-                    </button>
+                    {/* Actions */}
+                    <div className="flex items-center gap-4">
+                        {/* Theme Toggle & Wallet Button Container */}
+                        <div className="flex items-center gap-2">
+                            {/* Theme Toggle Button */}
+                            <ThemeToggle />
 
-                    <button
-                        className="lg:hidden p-2 text-slate-400 hover:text-white"
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    >
-                        {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
-                </div>
-            </div>
+                            {isConnected ? (
+                                <div className="relative">
+                                    <button 
+                                        onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                        className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-neon-cyan/50 h-11 transition-all group hover:bg-white/5"
+                                    >
+                                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 border border-white/10 flex items-center justify-center p-0.5">
+                                            <img 
+                                                src={type === 'hashpack' ? 'https://www.hashpack.app/img/logo.svg' : 'https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Mirror.svg'} 
+                                                alt="Wallet" 
+                                                className="w-full h-full rounded-lg"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-start leading-tight">
+                                            <span className="text-[10px] font-bold text-white font-mono">{truncateAddress(address || accountId || '')}</span>
+                                            <span className="text-[9px] font-bold text-neon-cyan uppercase tracking-tighter">{balance} MDT Available</span>
+                                        </div>
+                                        <ChevronDown size={12} className={`text-white transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                                    </button>
 
-            {/* Mobile Menu */}
-            {isMobileMenuOpen && (
-                <div className="lg:hidden absolute top-16 left-0 w-full bg-[#0a0e17] border-b border-white/10 p-6 animate-fade-in-up">
-                    <div className="flex flex-col gap-4">
-                        {navLinks.map((link) => (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-text-secondary hover:text-white py-2"
-                            >
-                                {link.name}
-                            </Link>
-                        ))}
+                                    {/* Dropdown Menu */}
+                                    {isProfileOpen && (
+                                        <div className="absolute right-0 mt-3 w-64 bg-[#0d121f] border border-white/10 rounded-2xl shadow-2xl overflow-hidden glass-panel animate-in fade-in slide-in-from-top-2">
+                                            <div className="p-4 border-b border-white/5 bg-white/[0.02]">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="w-10 h-10 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center">
+                                                        <UserCircle className="text-neon-cyan" size={20} />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-white uppercase">{type} Connected</span>
+                                                        <span className="text-[10px] text-white font-mono">{accountId}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {isMiner ? (
+                                                        <span className="px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-[9px] font-bold text-neon-cyan uppercase">✓ Active Miner</span>
+                                                    ) : null}
+                                                    {isValidator ? (
+                                                        <span className="px-2 py-0.5 rounded-full bg-neon-purple/10 border border-neon-purple/20 text-[9px] font-bold text-neon-purple uppercase">✓ Active Validator</span>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="p-2">
+                                                {(!isMiner && !isValidator) && (
+                                                    <button 
+                                                        onClick={() => { setIsRegisterOpen(true); setIsProfileOpen(false); }}
+                                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-white hover:bg-neon-cyan/10 transition-all"
+                                                    >
+                                                        <PlusCircle size={16} className="text-neon-cyan" /> Register as Node
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    onClick={() => { disconnect(); setIsProfileOpen(false); }}
+                                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-red-400 hover:bg-red-400/10 transition-all"
+                                                >
+                                                    <LogOut size={16} /> Disconnect Wallet
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={() => setIsWalletModalOpen(true)}
+                                    className="group relative flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-neon-cyan/40 transition-all overflow-hidden h-11 hover:bg-white/5"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <Wallet className="text-neon-cyan group-hover:scale-110 transition-transform" size={16} />
+                                    <span className="text-xs font-bold uppercase tracking-widest text-slate-200 group-hover:text-white">Connect Wallet</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            )}
-        </nav>
+            </nav>
+
+            {/* Modals moved outside nav to avoid stacking context issues with backdrop-blur */}
+            <RegistrationModal 
+                isOpen={isRegisterOpen} 
+                onClose={() => setIsRegisterOpen(false)} 
+            />
+            
+            <WalletConnectModal
+                isOpen={isWalletModalOpen}
+                onClose={() => setIsWalletModalOpen(false)}
+            />
+        </>
     );
 }

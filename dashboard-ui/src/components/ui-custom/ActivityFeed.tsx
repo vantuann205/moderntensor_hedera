@@ -2,96 +2,87 @@
 
 import { useActivity } from '@/lib/hooks/useProtocolData';
 import { Skeleton } from '@/components/ui/skeleton';
-import Link from 'next/link';
-import { Cpu, Zap, Shield, UserPlus, Coins, Clock, ExternalLink, ArrowRight } from 'lucide-react';
+import { Cpu, Zap, Shield, UserPlus, CheckCircle2, Clock } from 'lucide-react';
+
+function getEventStyle(type: string) {
+    switch (type) {
+        case 'miner_joined':
+            return { Icon: UserPlus, color: 'text-neon-cyan', borderColor: 'border-neon-cyan/30', bg: 'bg-neon-cyan/5', label: 'MINER_JOIN' };
+        case 'task_completed':
+            return { Icon: CheckCircle2, color: 'text-neon-green', borderColor: 'border-neon-green/30', bg: 'bg-neon-green/5', label: 'TASK_DONE' };
+        case 'task_assigned':
+            return { Icon: Cpu, color: 'text-neon-yellow', borderColor: 'border-yellow-500/30', bg: 'bg-yellow-500/5', label: 'TASK_QUEUE' };
+        case 'reward_emitted':
+            return { Icon: Zap, color: 'text-neon-purple', borderColor: 'border-neon-purple/30', bg: 'bg-neon-purple/5', label: 'REWARD_TX' };
+        default:
+            return { Icon: Shield, color: 'text-slate-400', borderColor: 'border-white/10', bg: 'bg-white/[0.02]', label: 'PROTOCOL' };
+    }
+}
 
 export default function ActivityFeed() {
-    const { data: activity, isLoading } = useActivity();
+    const { data: activityData, isLoading } = useActivity();
+    const activities = Array.isArray(activityData) ? activityData : [];
 
-    if (isLoading) return (
-        <div className="p-4 space-y-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-12 w-full bg-white/5" />
-            ))}
-        </div>
-    );
+    const formatUTC7 = (ts: any) => {
+        if (!ts) return '';
+        // If it's already a relative string like '2m ago', return as is
+        if (typeof ts === 'string' && (ts.includes('ago') || ts.includes(':'))) return ts;
+        
+        const date = new Date(Number(ts) * (String(ts).length > 10 ? 1 : 1000));
+        return date.toLocaleTimeString('en-GB', { 
+            timeZone: 'Asia/Ho_Chi_Minh', 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
 
     return (
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-            {activity?.length === 0 ? (
-                <div className="p-12 text-center text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em] italic">
-                    Waiting for HCS Broadcasts...
-                </div>
-            ) : (
-                <div className="divide-y divide-white/5">
-                    {activity?.map((item: any) => {
-                        const type = item.content?.type || item.type;
-                        let Icon = Zap;
-                        let label = 'Protocol Event';
-                        let color = 'text-neon-cyan';
-                        let description = '';
+        <div className="flex flex-col h-full font-mono text-xs text-secondary">
+            {/* Terminal header */}
+            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-panel-border bg-black/10 dark:bg-black/40">
+                <span className="w-2 h-2 rounded-full bg-red-500" />
+                <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                <span className="w-2 h-2 rounded-full bg-neon-green" />
+                <span className="ml-2 text-[9px] text-slate-500 uppercase tracking-widest">METAGRAPH_CONSOLE_V2.4</span>
+            </div>
 
-                        switch (type) {
-                            case 'miner_register':
-                                Icon = UserPlus;
-                                label = 'Miner Registered';
-                                color = 'text-neon-cyan';
-                                description = `Miner ${item.content.miner_id || '—'} joined the network`;
-                                break;
-                            case 'validator_register':
-                                Icon = Shield;
-                                label = 'Validator Joined';
-                                color = 'text-neon-purple';
-                                description = `Oracle ${item.content.validator_id || '—'} activated`;
-                                break;
-                            case 'task_create':
-                                Icon = Cpu;
-                                label = 'Task Created';
-                                color = 'text-neon-yellow';
-                                description = `New compute task ${item.content.task_id?.slice(0, 8)}... broadcasted`;
-                                break;
-                            case 'score_submit':
-                                Icon = Coins;
-                                label = 'Score Verified';
-                                color = 'text-emerald-400';
-                                description = `Task ${item.content.task_id?.slice(0, 8)}... verified by Oracle`;
-                                break;
-                        }
-
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 bg-white/5 dark:bg-transparent">
+                {isLoading ? (
+                    [...Array(5)].map((_, i) => (
+                        <Skeleton key={i} className="h-8 w-full bg-white/5 rounded" />
+                    ))
+                ) : (!activities || activities.length === 0) ? (
+                    <div className="text-slate-500 italic text-xs">
+                        <span className="text-neon-cyan">{`>`}</span>
+                        NO_ACTIVE_STREAM_DETECTED...
+                    </div>
+                ) : (
+                    activities.map((activity: any) => {
+                        const { Icon, color, borderColor, bg, label } = getEventStyle(activity.type);
                         return (
-                            <div key={item.id} className="p-4 hover:bg-white/[0.02] transition-colors group flex items-start gap-4">
-                                <div className={`mt-1 p-2 rounded-lg bg-white/[0.03] border border-white/5 ${color} group-hover:scale-110 transition-transform`}>
-                                    <Icon size={14} />
-                                </div>
+                            <div key={activity.id} className={`flex items-start gap-2 px-2 py-2 rounded-lg border ${borderColor} ${bg} animate-fade-in-up`}>
+                                <Icon size={11} className={`${color} mt-0.5 flex-shrink-0`} />
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                        <span className="text-[10px] font-bold text-white uppercase tracking-tight">
-                                            {label}
-                                        </span>
-                                        <Link
-                                            href={`/explorer?topic=${item.topic_id}`}
-                                            className="text-[8px] font-bold text-slate-600 hover:text-neon-cyan transition-colors uppercase tracking-widest flex items-center gap-1"
-                                        >
-                                            Internal Verify <ArrowRight size={8} />
-                                        </Link>
-                                    </div>
-                                    <p className="text-[10px] text-slate-500 font-mono truncate">
-                                        {description || item.content.raw || 'Protocol synchronization event'}
-                                    </p>
-                                    <div className="mt-1 flex items-center justify-between">
-                                        <span className="text-[9px] font-mono text-slate-700">
-                                            Seq: #{item.sequence}
-                                        </span>
-                                        <span className="text-[9px] font-mono text-slate-600">
-                                            {new Date(Number(item.timestamp) * 1000).toLocaleTimeString()}
+                                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                                        <span className={`text-[9px] font-bold uppercase tracking-widest ${color}`}>{label}</span>
+                                        <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                                            <Clock size={8} />
+                                            {formatUTC7(activity.timestamp)}
                                         </span>
                                     </div>
+                                    <p className="text-[10px] text-primary truncate opacity-80">{activity.message}</p>
                                 </div>
                             </div>
                         );
-                    })}
-                </div>
-            )}
+                    })
+                )}
+            </div>
+
+            <div className="px-3 py-1.5 border-t border-white/5 text-[9px] text-slate-600 flex justify-between">
+                <span>LN {activities.length}, COL 0</span>
+                <span>UTF-8</span>
+            </div>
         </div>
     );
 }

@@ -13,9 +13,16 @@ hedera_path = project_root / "sdk" / "hedera"
 sys.path.insert(0, str(hedera_path))
 sys.path.insert(0, str(project_root))
 
-from dotenv import load_dotenv, set_key
-load_dotenv()
-
+def load_env(path: str):
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line: continue
+                k, _, v = line.partition('=')
+                os.environ[k.strip()] = v.strip().strip("'\"")
+    except: pass
+load_env(str(project_root / ".env"))
 # Use importlib to avoid triggering sdk package __init__
 import importlib.util
 def load_module(name, path):

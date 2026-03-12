@@ -1,84 +1,88 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs/promises';
+import path from 'path';
 
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
-
-let cachedTopics: string[] = [];
-let lastDiscovery = 0;
-const CACHE_TTL = 60000; // 60 seconds
-
-async function discoverTopics() {
-    const now = Date.now();
-    if (cachedTopics.length > 0 && (now - lastDiscovery) < CACHE_TTL) {
-        return cachedTopics;
-    }
-
-    try {
-        const res = await fetch(`${MIRROR_BASE}/api/v1/topics?limit=25&order=desc`);
-        if (!res.ok) return cachedTopics;
-        const data = await res.json();
-
-        cachedTopics = data.topics
-            .filter((t: any) => t.memo && t.memo.toLowerCase().includes('moderntensor'))
-            .map((t: any) => t.topic_id);
-
-        lastDiscovery = now;
-        return cachedTopics;
-    } catch (e) {
-        console.error('Topic discovery failed:', e);
-        return cachedTopics;
-    }
-}
+const DATA_DIR = path.join(process.cwd(), '..', 'data');
 
 export async function GET() {
     try {
-        let topics = [];
-        const envReg = process.env.NEXT_PUBLIC_REGISTRATION_TOPIC_ID;
-        const envTask = process.env.NEXT_PUBLIC_TASK_TOPIC_ID;
-        const envScore = process.env.NEXT_PUBLIC_SCORING_TOPIC_ID;
+        const activities: any[] = [];
 
-        if (envReg || envTask || envScore) {
-            topics = [envReg, envTask, envScore].filter(Boolean) as string[];
-        } else {
-            // Fallback to discovery
-            topics = await discoverTopics();
-        }
+        try {
+            // Derive activity feed from task assignments (the most real-time data we have)
+            const taskJson = await fs.readFile(path.join(DATA_DIR, 'task_manager.json'), 'utf8');
+            const taskData = JSON.parse(taskJson);
+            const tasks = taskData.tasks || {};
+            const assignments = taskData.assignments || {};
 
-        if (topics.length === 0) {
-            // Default known testnet topics for ModernTensor if discovery fails
-            topics = ['0.0.5134721', '0.0.5134722'];
-        }
-
-        const allMessages = await Promise.all(topics.map(async (topicId: string) => {
-            try {
-                const res = await fetch(`${MIRROR_BASE}/api/v1/topics/${topicId}/messages?limit=15&order=desc`);
-                if (!res.ok) return [];
-                const data = await res.json();
-                return data.messages.map((m: any) => {
-                    let content: any = {};
-                    try {
-                        const decoded = Buffer.from(m.message, 'base64').toString();
-                        content = JSON.parse(decoded);
-                    } catch (e) {
-                        content = { raw: Buffer.from(m.message, 'base64').toString().slice(0, 100) };
-                    }
-
-                    return {
-                        id: m.consensus_timestamp,
-                        topic_id: topicId,
-                        type: content.type || 'PROTOCOL_EVENT',
-                        content,
-                        payer: m.payer_account_id,
-                        timestamp: m.consensus_timestamp,
-                        sequence: m.sequence_number
-                    };
+            // Task events
+            Object.values(tasks).forEach((task: any) => {
+                activities.push({
+                    id: `task-${task.task_id}`,
+                    type: task.status === 'completed' ? 'task_completed' : 'task_assigned',
+                    message: `Task ${task.task_id.slice(0, 8)} [${task.task_type}] ${task.status}`,
+                    timestamp: new Date(task.created_at * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    raw_timestamp: task.created_at,
                 });
-            } catch (e) { return []; }
-        }));
+            });
 
-        const activeFeed = allMessages.flat().sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
+            // Assignment events (individual miner scores)
+            Object.values(assignments).forEach((assignList: any) => {
+                if (!Array.isArray(assignList)) return;
+                assignList.forEach((a: any) => {
+                    if (a.is_completed) {
+                        activities.push({
+                            id: `assign-${a.task_id}-${a.miner_id}`,
+                            type: 'task_completed',
+                            message: `Miner ${a.miner_id} scored ${(a.score * 100).toFixed(0)}% on task ${a.task_id.slice(0, 8)}`,
+                            timestamp: new Date((a.scored_at || a.assigned_at || Date.now() / 1000) * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                            raw_timestamp: a.scored_at || a.assigned_at || Date.now() / 1000,
+                        });
+                    }
+                });
+            });
+        } catch (e) { }
 
-        return NextResponse.json(activeFeed.slice(0, 30));
+        // Miner join events from registry
+        try {
+            const minerJson = await fs.readFile(path.join(DATA_DIR, 'miner_registry.json'), 'utf8');
+            const minerData = JSON.parse(minerJson);
+            const miners = minerData.miners || minerData;
+            const minersArr = typeof miners === 'object' && !Array.isArray(miners) ? Object.values(miners) : miners;
+            
+            minersArr.forEach((m: any) => {
+                activities.push({
+                    id: `miner-join-${m.miner_id}`,
+                    type: 'miner_joined',
+                    message: `Miner ${m.miner_id} registered on subnet ${(m.subnet_ids || [1]).join(',')}`,
+                    timestamp: new Date((m.registered_at || Date.now() / 1000) * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    raw_timestamp: m.registered_at || 0,
+                });
+            });
+        } catch (e) { }
+
+        // Emission events
+        try {
+            const emissionsJson = await fs.readFile(path.join(DATA_DIR, 'emissions.json'), 'utf8');
+            const emissionsData = JSON.parse(emissionsJson);
+            Object.values(emissionsData.epochs || {}).forEach((epoch: any) => {
+                if (epoch.is_finalized) {
+                    activities.push({
+                        id: `epoch-${epoch.epoch_number}`,
+                        type: 'reward_emitted',
+                        message: `Epoch ${epoch.epoch_number} finalized — ${epoch.distributed?.toFixed(2)} MDT distributed`,
+                        timestamp: new Date(epoch.end_time * 1000).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                        raw_timestamp: epoch.end_time,
+                    });
+                }
+            });
+        } catch (e) { }
+
+        // Sort by most recent first
+        activities.sort((a, b) => (b.raw_timestamp || 0) - (a.raw_timestamp || 0));
+
+        return NextResponse.json(activities.slice(0, 30));
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch HCS activity', details: error.message }, { status: 500 });
+        return NextResponse.json([], { status: 200 });
     }
 }

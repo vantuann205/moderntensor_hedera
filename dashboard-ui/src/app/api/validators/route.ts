@@ -3,63 +3,54 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), '..', 'data');
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
-
-async function indexValidatorsFromHCS() {
-    try {
-        const topicId = process.env.NEXT_PUBLIC_REGISTRATION_TOPIC_ID || '0.0.5134721';
-        const res = await fetch(`${MIRROR_BASE}/api/v1/topics/${topicId}/messages?limit=50&order=desc`);
-        if (!res.ok) return [];
-        const data = await res.json();
-
-        const validatorsMap = new Map();
-        data.messages.forEach((m: any) => {
-            try {
-                const payload = JSON.parse(Buffer.from(m.message, 'base64').toString());
-                // In this protocol, validators might be marked by a specific type or capability
-                if (payload.type === 'validator_register' || (payload.capabilities && payload.capabilities.includes('validation'))) {
-                    const id = payload.validator_id || payload.account_id;
-                    if (!validatorsMap.has(id)) {
-                        validatorsMap.set(id, {
-                            id,
-                            validator_id: id,
-                            account_id: payload.account_id,
-                            status: 'active',
-                            last_active: m.consensus_timestamp
-                        });
-                    }
-                }
-            } catch (e) { }
-        });
-        return Array.from(validatorsMap.values());
-    } catch (e) {
-        return [];
-    }
-}
 
 export async function GET() {
     try {
-        const filePath = path.join(DATA_DIR, 'validator_registry.json');
         let data: any[] = [];
 
+        // Try reading from validator_registry.json (created by sync_real_data.py from Hedera HCS)
         try {
-            const fileContents = await fs.readFile(filePath, 'utf8');
+            const fileContents = await fs.readFile(path.join(DATA_DIR, 'validator_registry.json'), 'utf8');
             const parsed = JSON.parse(fileContents);
             const valsObj = parsed.validators || parsed;
 
             if (typeof valsObj === 'object' && !Array.isArray(valsObj)) {
                 data = Object.values(valsObj);
             } else {
-                data = valsObj || [];
+                data = Array.isArray(valsObj) ? valsObj : [];
             }
-        } catch (err) { }
-
-        if (data.length === 0) {
-            data = await indexValidatorsFromHCS();
+        } catch (err) {
+            // No validator_registry.json — return empty, no fake fallback
+            data = [];
         }
 
         return NextResponse.json(data);
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch real validators data', details: error.message }, { status: 500 });
+        return NextResponse.json([], { status: 200 });
+    }
+}
+
+// Staking endpoint: POST /api/validators { validator_id, amount, staker_account }
+export async function POST(req: Request) {
+    try {
+        const body = await req.json();
+        const { validator_id, amount, staker_account } = body;
+
+        if (!validator_id || !amount) {
+            return NextResponse.json({ error: 'Missing validator_id or amount' }, { status: 400 });
+        }
+
+        const stakeRecord = {
+            validator_id,
+            staker_account: staker_account || 'unknown',
+            amount: Number(amount),
+            status: 'simulated',
+            timestamp: new Date().toISOString(),
+            message: `Stake of ${amount} HBAR recorded for validator ${validator_id}. Run sync_real_data.py to verify on-chain state.`,
+        };
+
+        return NextResponse.json(stakeRecord);
+    } catch (error: any) {
+        return NextResponse.json({ error: 'Stake failed', details: error.message }, { status: 500 });
     }
 }

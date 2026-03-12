@@ -3,13 +3,15 @@
 import { useTask } from '@/lib/hooks/useProtocolData';
 import { Skeleton } from '@/components/ui/skeleton';
 import StatusBadge from '@/components/ui-custom/StatusBadge';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { use } from 'react';
+import { useWallet } from '@/context/WalletContext';
 
 export default function TaskDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const { data: task, isLoading } = useTask(decodeURIComponent(id));
+    const { isConnected, isValidator } = useWallet();
 
     if (isLoading) return (
         <div className="space-y-6 animate-fade-in">
@@ -26,6 +28,20 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         </div>
     );
 
+    const formatUTC7 = (ts: any) => {
+        if (!ts) return '—';
+        const date = new Date(Number(ts) * (String(ts).length > 10 ? 1 : 1000));
+        return date.toLocaleString('en-GB', { 
+            timeZone: 'Asia/Ho_Chi_Minh', 
+            hour12: false,
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     const fields = [
         ['Protocol ID', task.id || task.task_id, 'mono'],
         ['Task Sector', task.type || task.task_type || 'code_review', 'badge'],
@@ -35,8 +51,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
         ['Protocol Reward', task.reward_amount || task.reward ? `${task.reward_amount || task.reward} MDT` : '—', 'highlight'],
         ['Consensus Score', task.score !== undefined && task.score !== null ? Number(task.score).toFixed(4) : '—', 'score'],
         ['Subnet Sector', task.subnet_id ?? task.subnet ?? '0', 'mono'],
-        ['Initialization', task.created_at ? new Date(Number(task.created_at) * (String(task.created_at).length > 10 ? 1 : 1000)).toLocaleString() : '—', 'text'],
-        ['Finalization', task.completed_at ? new Date(Number(task.completed_at) * (String(task.completed_at).length > 10 ? 1 : 1000)).toLocaleString() : '—', 'text'],
+        ['Initialization', formatUTC7(task.created_at), 'text'],
+        ['Finalization', formatUTC7(task.completed_at), 'text'],
     ];
 
     return (
@@ -56,10 +72,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <div className="flex items-center gap-4">
                     <StatusBadge status={task.status || 'pending'} />
-                    {task.tx_hash && (
-                        <a href={`https://hashscan.io/testnet/tx/${task.tx_hash}`} target="_blank" rel="noreferrer"
-                            className="bg-neon-cyan/10 border border-neon-cyan/20 p-2 rounded-lg text-neon-cyan hover:bg-neon-cyan/20 transition-all">
-                            <ExternalLink size={18} />
+                    {isConnected && isValidator && (task.status === 'pending' || task.status === 'active') && (
+                        <button className="flex items-center gap-2 px-4 py-2 bg-neon-purple text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-all">
+                             <Shield size={14} /> Verify Solution
+                        </button>
+                    )}
+                    {task.hcs_link && (
+                        <a href={task.hcs_link} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-2 bg-neon-cyan/10 border border-neon-cyan/20 px-4 py-2 rounded-lg text-neon-cyan hover:bg-neon-cyan/20 transition-all text-[10px] font-bold uppercase tracking-widest">
+                            <ExternalLink size={14} /> View On-Chain Proof
                         </a>
                     )}
                 </div>

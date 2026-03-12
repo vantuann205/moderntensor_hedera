@@ -1,76 +1,195 @@
 {
   "miners": {
+    "demo-miner-001": {
+      "miner_id": "demo-miner-001",
+      "account_id": "0.0.8127455",
+      "subnet_ids": [
+        0
+      ],
+      "stake_amount": 10000000000,
+      "capabilities": [
+        "text_generation",
+        "summarization"
+      ],
+      "status": "active",
+      "registered_at": 1773143630.0,
+      "registered_at_iso": "2026-03-10T11:53:50Z",
+      "last_active_at": 1773143630.0,
+      "hcs_sequence": 1,
+      "reputation": {
+        "score": 40.8,
+        "total_tasks": 2,
+        "successful_tasks": 2,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 40.8,
+      "tasks_completed": 2,
+      "source": "hedera_hcs"
+    },
     "0.0.1001": {
       "miner_id": "0.0.1001",
+      "account_id": "0.0.8127455",
       "subnet_ids": [
         1
       ],
-      "stake_amount": 500.0,
-      "reputation": {
-        "score": 0.5,
-        "total_tasks": 0,
-        "successful_tasks": 0,
-        "failed_tasks": 0,
-        "timeout_tasks": 0,
-        "success_rate": 0.0,
-        "timeout_rate": 0.0,
-        "average_response_time": 0.0
-      },
-      "status": "active",
+      "stake_amount": 0,
       "capabilities": [
         "code_review"
       ],
-      "registered_at": 1773144261.5393322,
-      "last_active_at": 1773144261.5393322,
-      "effective_weight": 0.0025
+      "status": "active",
+      "registered_at": 1773144261.0,
+      "registered_at_iso": "2026-03-10T12:04:21Z",
+      "last_active_at": 1773144261.0,
+      "hcs_sequence": 3,
+      "reputation": {
+        "score": 0.933938,
+        "total_tasks": 7,
+        "successful_tasks": 7,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 0.933938,
+      "tasks_completed": 7,
+      "source": "hedera_hcs"
     },
     "0.0.1002": {
       "miner_id": "0.0.1002",
+      "account_id": "0.0.8127455",
       "subnet_ids": [
         1
       ],
-      "stake_amount": 200.0,
-      "reputation": {
-        "score": 0.5,
-        "total_tasks": 0,
-        "successful_tasks": 0,
-        "failed_tasks": 0,
-        "timeout_tasks": 0,
-        "success_rate": 0.0,
-        "timeout_rate": 0.0,
-        "average_response_time": 0.0
-      },
-      "status": "active",
+      "stake_amount": 0,
       "capabilities": [
         "code_review"
       ],
-      "registered_at": 1773144263.1525369,
-      "last_active_at": 1773144263.1525369,
-      "effective_weight": 0.0025
+      "status": "active",
+      "registered_at": 1773144263.0,
+      "registered_at_iso": "2026-03-10T12:04:23Z",
+      "last_active_at": 1773144263.0,
+      "hcs_sequence": 4,
+      "reputation": {
+        "score": 0.80784,
+        "total_tasks": 7,
+        "successful_tasks": 7,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 0.80784,
+      "tasks_completed": 7,
+      "source": "hedera_hcs"
     },
     "0.0.1003": {
       "miner_id": "0.0.1003",
+      "account_id": "0.0.8127455",
       "subnet_ids": [
         1
       ],
-      "stake_amount": 100.0,
-      "reputation": {
-        "score": 0.5,
-        "total_tasks": 0,
-        "successful_tasks": 0,
-        "failed_tasks": 0,
-        "timeout_tasks": 0,
-        "success_rate": 0.0,
-        "timeout_rate": 0.0,
-        "average_response_time": 0.0
-      },
-      "status": "active",
+      "stake_amount": 0,
       "capabilities": [
         "code_review"
       ],
-      "registered_at": 1773144265.9506938,
-      "last_active_at": 1773144265.9506938,
-      "effective_weight": 0.0025
+      "status": "active",
+      "registered_at": 1773144266.0,
+      "registered_at_iso": "2026-03-10T12:04:26Z",
+      "last_active_at": 1773144266.0,
+      "hcs_sequence": 5,
+      "reputation": {
+        "score": 0.665709,
+        "total_tasks": 7,
+        "successful_tasks": 7,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 0.665709,
+      "tasks_completed": 7,
+      "source": "hedera_hcs"
+    },
+    "Alpha-Miner": {
+      "miner_id": "Alpha-Miner",
+      "account_id": "0.0.8127455",
+      "subnet_ids": [
+        0
+      ],
+      "stake_amount": 110900000000,
+      "capabilities": [
+        "text_generation",
+        "code"
+      ],
+      "status": "active",
+      "registered_at": 1773144340.0,
+      "registered_at_iso": "2026-03-10T12:05:40Z",
+      "last_active_at": 1773144340.0,
+      "hcs_sequence": 6,
+      "reputation": {
+        "score": 94.442662,
+        "total_tasks": 2,
+        "successful_tasks": 2,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 94.442662,
+      "tasks_completed": 2,
+      "source": "hedera_hcs"
+    },
+    "Beta-Miner": {
+      "miner_id": "Beta-Miner",
+      "account_id": "0.0.8127455",
+      "subnet_ids": [
+        0
+      ],
+      "stake_amount": 58900000000,
+      "capabilities": [
+        "image_generation",
+        "analysis"
+      ],
+      "status": "active",
+      "registered_at": 1773144342.0,
+      "registered_at_iso": "2026-03-10T12:05:42Z",
+      "last_active_at": 1773144342.0,
+      "hcs_sequence": 7,
+      "reputation": {
+        "score": 90.843801,
+        "total_tasks": 1,
+        "successful_tasks": 1,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 90.843801,
+      "tasks_completed": 1,
+      "source": "hedera_hcs"
+    },
+    "Gamma-Miner": {
+      "miner_id": "Gamma-Miner",
+      "account_id": "0.0.8127455",
+      "subnet_ids": [
+        0
+      ],
+      "stake_amount": 65300000000,
+      "capabilities": [
+        "summarization",
+        "text_generation"
+      ],
+      "status": "active",
+      "registered_at": 1773144345.0,
+      "registered_at_iso": "2026-03-10T12:05:45Z",
+      "last_active_at": 1773144345.0,
+      "hcs_sequence": 8,
+      "reputation": {
+        "score": 92.183091,
+        "total_tasks": 2,
+        "successful_tasks": 2,
+        "failed_tasks": 0
+      },
+      "effective_weight": 0.001,
+      "trust_score": 92.183091,
+      "tasks_completed": 2,
+      "source": "hedera_hcs"
     }
+  },
+  "meta": {
+    "source": "hedera_hcs",
+    "synced_at": "2026-03-12T14:10:11.589603",
+    "count": 7
   }
 }

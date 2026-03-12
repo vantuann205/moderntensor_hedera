@@ -2,11 +2,10 @@
 
 import Link from 'next/link';
 import NetworkStats from '@/components/ui-custom/NetworkStats';
-import TransactionList from '@/components/ui-custom/TransactionList';
 import ActivityFeed from '@/components/ui-custom/ActivityFeed';
 import ProtocolInfrastructure from '@/components/ui-custom/ProtocolInfrastructure';
 import AgentVerificationLive from '@/components/ui-custom/AgentVerificationLive';
-import { ArrowRight, Activity, Zap, Shield, Database, LayoutDashboard } from 'lucide-react';
+import { Activity, Shield, Database, LayoutDashboard } from 'lucide-react';
 
 export default function DashboardPage() {
   return (
@@ -53,19 +52,6 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                <Zap size={14} className="text-neon-yellow" />
-                Recent Ledger Activity
-              </h2>
-              <Link href="/tasks" className="text-[10px] font-bold text-slate-600 hover:text-white uppercase tracking-widest transition-colors flex items-center gap-1">
-                Explore All <ArrowRight size={10} />
-              </Link>
-            </div>
-            <TransactionList />
-          </div>
-
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
                 <Activity size={14} className="text-neon-cyan" />
                 Real-time Protocol Stream
               </h2>
@@ -105,17 +91,6 @@ export default function DashboardPage() {
                 <p className="text-xs text-slate-600 mt-1">Audit oracle integrity and consensus distribution.</p>
               </div>
             </Link>
-
-            <div className="panel p-6 bg-gradient-to-br from-neon-purple/5 to-neon-cyan/5 border-neon-cyan/20 relative overflow-hidden group text-left">
-              <div className="relative z-10">
-                <h3 className="text-lg font-display font-bold text-white italic uppercase tracking-tighter">Submit a <span className="text-neon-cyan">Challenge</span></h3>
-                <p className="text-xs text-slate-500 mt-2 mb-6">Request neural verification for your off-chain AI operations.</p>
-                <button className="w-full py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-white uppercase tracking-[0.2em] hover:bg-white/10 transition-all">
-                  Initialize Task
-                </button>
-              </div>
-              <Zap className="absolute -bottom-4 -right-4 text-neon-cyan/10 group-hover:text-neon-cyan/20 transition-colors" size={120} />
-            </div>
           </div>
         </div>
       </div>

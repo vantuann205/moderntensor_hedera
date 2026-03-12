@@ -396,33 +396,42 @@ class CodeReviewAgent:
     def _review_google(
         self, code: str, language: str, context: str
     ) -> CodeReviewResult:
-        """Review code using Google Gemini."""
-        import google.generativeai as genai
-
+        """Review code using Google Gemini (google-genai SDK)."""
         api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GOOGLE_API_KEY/GEMINI_API_KEY not set")
 
-        genai.configure(api_key=api_key)
-        model_name = (
-            self.config.model
-            if "gemini" in self.config.model
-            else "gemini-2.0-flash"
-        )
-        model = genai.GenerativeModel(model_name)
-        prompt = self._build_prompt(code, language, context)
+        try:
+            from google import genai
+            from google.genai import types as genai_types
+            client = genai.Client(api_key=api_key)
+            model_name = "gemini-2.0-flash" 
 
-        response = model.generate_content(
-            f"{prompt}\n\nReturn only valid JSON.",
-            generation_config=genai.types.GenerationConfig(
-                temperature=self.config.temperature,
-                max_output_tokens=self.config.max_tokens,
-            ),
-        )
-
-        result = self._parse_llm_response(response.text)
-        result.confidence = 0.90
-        return result
+            prompt = self._build_prompt(code, language, context)
+            response = client.models.generate_content(
+                model=model_name,
+                contents=f"{prompt}\n\nReturn only valid JSON.",
+                config=genai_types.GenerateContentConfig(
+                    temperature=self.config.temperature,
+                    max_output_tokens=self.config.max_tokens,
+                    response_mime_type="application/json",
+                )
+            )
+            result = self._parse_llm_response(response.text)
+            result.confidence = 0.92
+            result.provider = "google"
+            return result
+        except ImportError:
+            # Fallback to old API
+            import google.generativeai as genai_old
+            api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+            genai_old.configure(api_key=api_key)
+            model = genai_old.GenerativeModel("gemini-2.0-flash")
+            prompt = self._build_prompt(code, language, context)
+            response = model.generate_content(f"{prompt}\n\nReturn only valid JSON.")
+            result = self._parse_llm_response(response.text)
+            result.confidence = 0.90
+            return result
 
     # =========================================================================
     # Heuristic Review (Demo / Fallback)

@@ -3,40 +3,6 @@ import fs from 'fs/promises';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), '..', 'data');
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
-
-async function indexFromHCS() {
-    try {
-        const topicId = process.env.NEXT_PUBLIC_REGISTRATION_TOPIC_ID || '0.0.5134721';
-        const res = await fetch(`${MIRROR_BASE}/api/v1/topics/${topicId}/messages?limit=50&order=desc`);
-        if (!res.ok) return [];
-        const data = await res.json();
-
-        const minersMap = new Map();
-        data.messages.forEach((m: any) => {
-            try {
-                const payload = JSON.parse(Buffer.from(m.message, 'base64').toString());
-                if (payload.type === 'miner_register' || payload.type === 'REGISTRATION') {
-                    const id = payload.miner_id || payload.account_id;
-                    if (!minersMap.has(id)) {
-                        minersMap.set(id, {
-                            id,
-                            miner_id: id,
-                            account_id: payload.account_id,
-                            capabilities: payload.capabilities || [],
-                            stake: payload.stake_amount || 0,
-                            status: 'active',
-                            last_seen: m.consensus_timestamp
-                        });
-                    }
-                }
-            } catch (e) { }
-        });
-        return Array.from(minersMap.values());
-    } catch (e) {
-        return [];
-    }
-}
 
 export async function GET() {
     try {
@@ -51,17 +17,44 @@ export async function GET() {
             if (typeof minersObj === 'object' && !Array.isArray(minersObj)) {
                 data = Object.values(minersObj);
             } else {
-                data = minersObj || [];
+                data = Array.isArray(minersObj) ? minersObj : [];
             }
-        } catch (err) { }
-
-        // If local data is empty, index from the actual blockchain (HCS)
-        if (data.length === 0) {
-            data = await indexFromHCS();
+        } catch (err) {
+            // file not found, return empty array immediately (no HCS fallback that causes infinite loading)
         }
+
+        // Enrich miners with scores from task_manager.json
+        try {
+            const taskJson = await fs.readFile(path.join(DATA_DIR, 'task_manager.json'), 'utf8');
+            const taskData = JSON.parse(taskJson);
+            const assignments = Object.values(taskData.assignments || {}).flat() as any[];
+
+            // Build per-miner score avg from assignments
+            const scoreMap: Record<string, number[]> = {};
+            const taskCountMap: Record<string, number> = {};
+            assignments.forEach((a: any) => {
+                if (a.miner_id) {
+                    scoreMap[a.miner_id] = scoreMap[a.miner_id] || [];
+                    scoreMap[a.miner_id].push(a.score || 0);
+                    taskCountMap[a.miner_id] = (taskCountMap[a.miner_id] || 0) + 1;
+                }
+            });
+
+            data = data.map((m: any) => {
+                const scores = scoreMap[m.miner_id || m.id] || [];
+                const avgScore = scores.length > 0
+                    ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length
+                    : (m.reputation?.score || 0.5);
+                return {
+                    ...m,
+                    trust_score: avgScore,
+                    tasks_completed: taskCountMap[m.miner_id || m.id] || m.reputation?.successful_tasks || 0
+                };
+            });
+        } catch (e) { }
 
         return NextResponse.json(data);
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch real miners data', details: error.message }, { status: 500 });
+        return NextResponse.json([], { status: 200 }); // Always return 200 empty array, not 500
     }
 }
