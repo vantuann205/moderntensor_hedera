@@ -1,0 +1,152 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
+export interface ProtocolStats {
+  totalMiners: number;
+  totalValidators: number;
+  totalSubnets: number;
+  totalTasks: number;
+  totalScores: number;
+  totalStaked: number;
+  avgScore: number;
+  miners: any[];
+  tasks: any[];
+  scores: any[];
+}
+
+export function useProtocolStats() {
+  const [data, setData] = useState<ProtocolStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/protocol-stats');
+        const result = await response.json();
+        
+        if (result.success) {
+          setData(result.data);
+          setError(null);
+        } else {
+          setError(result.error || 'Failed to fetch stats');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch stats');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+    const interval = setInterval(fetchStats, 15000); // Refresh every 15s
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return { data, loading, error };
+}
+
+export function useMiners() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchMiners() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/hcs/miners');
+        const result = await response.json();
+        
+        if (result.success) {
+          setData(result.data);
+          setError(null);
+        } else {
+          setError(result.error || 'Failed to fetch miners');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch miners');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMiners();
+    const interval = setInterval(fetchMiners, 20000); // Refresh every 20s
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return { data, loading, error };
+}
+
+export function useTasks() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/hcs/tasks');
+        const result = await response.json();
+        
+        if (result.success) {
+          setData(result.data);
+          setError(null);
+        } else {
+          setError(result.error || 'Failed to fetch tasks');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch tasks');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTasks();
+    const interval = setInterval(fetchTasks, 20000); // Refresh every 20s
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return { data, loading, error };
+}
+
+export function useScores() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchScores() {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/hcs/scores');
+        const result = await response.json();
+        
+        if (result.success) {
+          setData(result.data);
+          setError(null);
+        } else {
+          setError(result.error || 'Failed to fetch scores');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch scores');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchScores();
+    const interval = setInterval(fetchScores, 20000); // Refresh every 20s
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return { data, loading, error };
+}
