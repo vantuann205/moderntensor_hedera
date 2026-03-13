@@ -1,7 +1,33 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useProtocolStats } from '@/hooks/useRealData';
+
+// Premium CountUp Component for that professional feel
+const CountUp: React.FC<{ end: number, duration?: number, prefix?: string, suffix?: string, decimals?: number }> = ({ end, duration = 1500, prefix = '', suffix = '', decimals = 0 }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const valRef = useRef(0);
+  useEffect(() => {
+    let startTime: number | null = null;
+    let animationFrame: number;
+    const startVal = valRef.current;
+    const change = end - startVal;
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = timestamp - startTime;
+      const percentage = Math.min(progress / duration, 1);
+      const ease = 1 - Math.pow(1 - percentage, 3);
+      const current = startVal + (change * ease);
+      valRef.current = current;
+      setDisplayValue(current);
+      if (progress < duration) animationFrame = requestAnimationFrame(animate);
+      else { valRef.current = end; setDisplayValue(end); }
+    };
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [end, duration]);
+  return <>{prefix}{displayValue.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</>;
+};
 
 interface SubnetDetailProps {
   subnet: any;
@@ -53,201 +79,156 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
     : 0;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-neon-cyan hover:text-white transition-colors"
+          className="flex items-center gap-2 text-neon-cyan hover:text-white transition-all hover:gap-3"
         >
           <span className="material-symbols-outlined">arrow_back</span>
-          <span>Back to Subnets</span>
+          <span className="font-display uppercase tracking-widest text-sm font-bold">Back to Subnets</span>
         </button>
       </div>
 
       {/* Subnet Header */}
-      <div className="glass-panel rounded-xl p-8 border border-neon-cyan/30">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-4xl font-display font-bold text-neon-cyan mb-2">
-              {subnet.name}
-            </h1>
-            <p className="text-text-secondary text-lg">{subnet.description}</p>
+      <div className="glass-panel rounded-2xl p-8 border border-neon-cyan/30 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-neon-cyan/5 blur-3xl -mr-32 -mt-32 rounded-full"></div>
+        <div className="relative z-10">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined text-neon-cyan group-hover:animate-pulse">hub</span>
+                <span className="text-neon-cyan text-xs font-bold font-display uppercase tracking-[0.2em] neon-text">Subnet {subnet.id}</span>
+              </div>
+              <h1 className="text-5xl font-display font-bold text-white mb-2 tracking-tight">
+                {subnet.name}
+              </h1>
+              <p className="text-text-secondary text-lg max-w-2xl leading-relaxed">{subnet.description}</p>
+            </div>
+            <div className="text-right">
+              <div className="text-4xl font-display font-bold text-white neon-text">{subnet.emission}</div>
+              <div className="text-xs text-text-secondary uppercase tracking-widest font-bold mt-1">Emission Rate</div>
+            </div>
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-white">{subnet.emission}</div>
-            <div className="text-sm text-text-secondary">Emission Rate</div>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-4 gap-6 mt-8">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-white">{miners.length}</div>
-            <div className="text-sm text-text-secondary">Active Miners</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-white">{tasks.length}</div>
-            <div className="text-sm text-text-secondary">Total Tasks</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-white">{(totalStaked / 100000000).toFixed(0)} MDT</div>
-            <div className="text-sm text-text-secondary">Total Staked</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-white">{avgScore.toFixed(1)}</div>
-            <div className="text-sm text-text-secondary">Avg Score</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Miners List */}
-      <div className="glass-panel rounded-xl p-6 border border-white/10">
-        <h2 className="text-2xl font-display font-bold text-white mb-4">
-          Miners ({miners.length})
-        </h2>
-        
-        {loading ? (
-          <div className="text-center py-8 text-text-secondary">Loading miners...</div>
-        ) : miners.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">No miners registered yet</div>
-        ) : (
-          <div className="space-y-3">
-            {miners.map((miner, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-panel-dark/50 rounded-lg border border-white/5 hover:border-neon-cyan/30 transition-colors group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-neon-cyan/20 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-neon-cyan">memory</span>
-                  </div>
-                  <div>
-                    <div className="font-bold text-white">{miner.minerId}</div>
-                    <div className="text-sm text-text-secondary">
-                      {miner.capabilities?.join(', ') || 'N/A'}
-                      {miner.consensusTimestamp && (
-                        <>
-                          {' • '}
-                          <a 
-                            href={`https://hashscan.io/testnet/transaction/${miner.consensusTimestamp}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-neon-cyan hover:underline"
-                          >
-                            View TX
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+            {[
+              { label: 'Active Miners', val: miners.length, icon: 'memory', color: 'text-neon-cyan' },
+              { label: 'Total Tasks', val: tasks.length, icon: 'task', color: 'text-neon-pink' },
+              { label: 'Total Staked', val: totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-green' },
+              { label: 'Avg Score', val: avgScore, decimals: 1, icon: 'verified', color: 'text-neon-purple' }
+            ].map((stat, i) => (
+              <div key={i} className="bg-panel-dark/50 border border-white/5 rounded-xl p-4 hover:border-white/20 transition-all">
+                <div className="flex items-center gap-2 mb-2 text-text-secondary">
+                  <span className={`material-symbols-outlined text-sm ${stat.color}`}>{stat.icon}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">{stat.label}</span>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-neon-cyan">
-                    {(miner.stakeAmount / 100000000).toFixed(0)} MDT
-                  </div>
-                  <div className="text-xs text-text-secondary">Staked</div>
+                <div className="text-2xl font-display font-bold text-white">
+                  <CountUp end={stat.val} suffix={stat.suffix} decimals={stat.decimals || 0} />
                 </div>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Recent Tasks */}
-      <div className="glass-panel rounded-xl p-6 border border-white/10">
-        <h2 className="text-2xl font-display font-bold text-white mb-4">
-          Recent Tasks ({tasks.length})
-        </h2>
-        
-        {loading ? (
-          <div className="text-center py-8 text-text-secondary">Loading tasks...</div>
-        ) : tasks.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">No tasks yet</div>
-        ) : (
-          <div className="space-y-3">
-            {tasks.slice(-10).reverse().map((task, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-panel-dark/50 rounded-lg border border-white/5 hover:border-neon-pink/30 transition-colors">
-                <div className="flex-1">
-                  <div className="font-bold text-white">{task.taskId}</div>
-                  <div className="text-sm text-text-secondary mt-1">
-                    {task.taskType} • {task.prompt?.substring(0, 60)}...
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Miners List */}
+        <div className="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col h-[500px]">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-neon-cyan">group</span>
+              Active Miners
+            </h2>
+            <span className="bg-neon-cyan/10 text-neon-cyan px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-cyan/20">
+              {miners.length} Online
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-full text-text-secondary gap-3">
+                <div className="w-8 h-8 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin"></div>
+                <span className="text-sm font-display uppercase tracking-widest">Scanning Network...</span>
+              </div>
+            ) : miners.length === 0 ? (
+              <div className="text-center py-12 text-text-secondary">No miners registered yet</div>
+            ) : (
+              miners.map((miner, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-panel-dark/40 rounded-xl border border-white/5 hover:border-neon-cyan/30 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center border border-neon-cyan/20">
+                      <span className="material-symbols-outlined text-neon-cyan text-xl">memory</span>
+                    </div>
+                    <div>
+                      <div className="font-mono text-sm text-white font-bold">{miner.minerId}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {miner.capabilities?.slice(0, 2).map((cap: string, ci: number) => (
+                          <span key={ci} className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-text-secondary uppercase tracking-tight">{cap}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-display font-bold text-neon-cyan">
+                      <CountUp end={miner.stakeAmount / 100000000} suffix=" MDT" />
+                    </div>
+                    <div className="text-[10px] text-text-secondary uppercase tracking-widest">Staked</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Recent Tasks */}
+        <div className="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col h-[500px]">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-neon-pink">rocket_launch</span>
+              Transmission Logs
+            </h2>
+            <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-pink/20">
+              Live Feed
+            </span>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-full text-text-secondary gap-3">
+                <div className="w-8 h-8 border-2 border-neon-pink/30 border-t-neon-pink rounded-full animate-spin"></div>
+                <span className="text-sm font-display uppercase tracking-widest">Intercepting Data...</span>
+              </div>
+            ) : tasks.length === 0 ? (
+              <div className="text-center py-12 text-text-secondary">No recorded transmissions</div>
+            ) : (
+              tasks.slice(-15).reverse().map((task, idx) => (
+                <div key={idx} className="p-4 bg-panel-dark/40 rounded-xl border border-white/5 hover:border-neon-pink/30 transition-all">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-mono text-[11px] text-neon-pink uppercase tracking-widest font-bold">{task.taskType}</div>
+                    <div className="text-neon-green font-display font-bold text-sm">
+                      +<CountUp end={task.rewardAmount / 100000000} suffix=" MDT" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-text-secondary line-clamp-1 italic mb-2">"{task.prompt}"</p>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-white/40 font-mono italic">ID: {task.taskId?.substring(0, 16)}...</span>
                     {task.consensusTimestamp && (
-                      <>
-                        {' • '}
-                        <a 
-                          href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-neon-pink hover:underline"
-                        >
-                          View TX
-                        </a>
-                      </>
+                      <a 
+                        href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-neon-pink hover:underline uppercase tracking-widest font-bold"
+                      >
+                        Verify TX
+                      </a>
                     )}
                   </div>
                 </div>
-                <div className="text-right ml-4">
-                  <div className="font-bold text-neon-green">
-                    {(task.rewardAmount / 100000000).toFixed(0)} MDT
-                  </div>
-                  <div className="text-xs text-text-secondary">Reward</div>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Validation Scores */}
-      <div className="glass-panel rounded-xl p-6 border border-white/10">
-        <h2 className="text-2xl font-display font-bold text-white mb-4">
-          Recent Validations ({scores.length})
-        </h2>
-        
-        {loading ? (
-          <div className="text-center py-8 text-text-secondary">Loading scores...</div>
-        ) : scores.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">No validations yet</div>
-        ) : (
-          <div className="space-y-3">
-            {scores.slice(-15).reverse().map((score, idx) => (
-              <div key={idx} className="flex items-center justify-between p-4 bg-panel-dark/50 rounded-lg border border-white/5 hover:border-purple-500/30 transition-colors">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-purple-400 text-sm">verified</span>
-                  </div>
-                  <div>
-                    <div className="text-sm text-white">
-                      <span className="text-purple-400">{score.validatorId}</span>
-                      {' → '}
-                      <span className="text-neon-cyan">{score.minerId}</span>
-                    </div>
-                    <div className="text-xs text-text-secondary">
-                      Task: {score.taskId}
-                      {score.consensusTimestamp && (
-                        <>
-                          {' • '}
-                          <a 
-                            href={`https://hashscan.io/testnet/transaction/${score.consensusTimestamp}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-purple-400 hover:underline"
-                          >
-                            View TX
-                          </a>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-neon-green">
-                    {score.score.toFixed(1)}
-                  </div>
-                  <div className="text-xs text-text-secondary">
-                    Confidence: {(score.confidence * 100).toFixed(0)}%
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -261,34 +242,43 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
   const { data: stats, loading, error } = useProtocolStats();
   const [selectedSubnet, setSelectedSubnet] = useState<any>(null);
 
-  // Create subnets from real data
+  // Define Subnets with premium gradients and visuals
   const subnets = [
     {
       id: 0,
       name: 'General Intelligence',
       description: 'Text generation, code review, and general AI tasks',
       emission: '45%',
-      miners: stats?.miners.filter(m => m.subnetIds?.includes(0)).length || 0,
-      tasks: stats?.tasks.length || 0,
-      color: 'neon-cyan'
+      miners: stats?.miners?.filter(m => m.subnetIds?.includes(0)).length || 0,
+      tasks: stats?.totalTasks || 0,
+      color: 'neon-cyan',
+      gradient: 'from-neon-cyan/20 to-transparent',
+      glow: 'shadow-[0_0_20px_rgba(0,243,255,0.1)]',
+      icon: 'psychology'
     },
     {
       id: 1,
       name: 'Image Generation',
       description: 'Image generation, style transfer, and visual AI',
       emission: '30%',
-      miners: stats?.miners.filter(m => m.subnetIds?.includes(1)).length || 0,
+      miners: stats?.miners?.filter(m => m.subnetIds?.includes(1)).length || 0,
       tasks: 0,
-      color: 'neon-pink'
+      color: 'neon-pink',
+      gradient: 'from-neon-pink/20 to-transparent',
+      glow: 'shadow-[0_0_20px_rgba(255,0,255,0.1)]',
+      icon: 'image'
     },
     {
       id: 2,
       name: 'Code Analysis',
       description: 'Code review, bug detection, and optimization',
       emission: '25%',
-      miners: stats?.miners.filter(m => m.subnetIds?.includes(2)).length || 0,
+      miners: stats?.miners?.filter(m => m.subnetIds?.includes(2)).length || 0,
       tasks: 0,
-      color: 'neon-purple'
+      color: 'neon-purple',
+      gradient: 'from-neon-purple/20 to-transparent',
+      glow: 'shadow-[0_0_20px_rgba(188,19,254,0.1)]',
+      icon: 'code'
     }
   ];
 
@@ -297,106 +287,128 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-8 animate-fade-in-up">
+      {/* Network Statistics - NOW AT THE TOP */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { label: 'Total Miners', val: stats.totalMiners, icon: 'memory', color: 'text-neon-cyan', bg: 'bg-neon-cyan/5' },
+            { label: 'Validators', val: stats.totalValidators, icon: 'verified', color: 'text-neon-pink', bg: 'bg-neon-pink/5' },
+            { label: 'Tasks Processed', val: stats.totalTasks, icon: 'terminal', color: 'text-neon-green', bg: 'bg-neon-green/5' },
+            { label: 'Total Staked', val: stats.totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', bg: 'bg-neon-purple/5' }
+          ].map((stat, i) => (
+            <div key={i} className={`glass-panel rounded-2xl p-6 border border-white/10 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300`}>
+              <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} blur-2xl rounded-full -mr-8 -mt-8 px-8 transition-transform group-hover:scale-150`}></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center border border-white/5`}>
+                    <span className={`material-symbols-outlined ${stat.color}`}>{stat.icon}</span>
+                  </div>
+                  <span className="text-xs font-bold text-text-secondary uppercase tracking-[0.15em] font-display">
+                    {stat.label}
+                  </span>
+                </div>
+                <div className="text-4xl font-display font-bold text-white tracking-tighter">
+                  <CountUp end={stat.val} suffix={stat.suffix} />
+                </div>
+                <div className="mt-2 h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className={`h-full ${stat.color.replace('text', 'bg')} w-[65%] blur-[1px]`}></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Hero Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-4 border-t border-white/5">
         <div>
-          <h1 className="text-4xl font-display font-bold text-white mb-2">
-            Subnets Hub
+          <h1 className="text-6xl font-display font-bold text-white tracking-tighter mb-2">
+            Subnets <span className="text-neon-cyan neon-text">Hub</span>
           </h1>
-          <p className="text-text-secondary">
-            Specialized AI compute networks on ModernTensor
+          <p className="text-text-secondary text-lg max-w-xl font-light">
+            Access specialized AI compute networks. Modular, scalable, and fully decentralized on Hedera.
           </p>
         </div>
-        <div className="glass-panel px-6 py-3 rounded-lg border border-neon-cyan/30">
-          <div className="text-sm text-text-secondary">Total Subnets</div>
-          <div className="text-3xl font-bold text-neon-cyan">{subnets.length}</div>
+        <div className="glass-panel px-6 py-4 rounded-2xl border border-neon-cyan/20 flex flex-col items-center min-w-[160px]">
+          <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
+          <span className="text-4xl font-display font-bold text-white leading-none">
+            <CountUp end={subnets.length} />
+          </span>
         </div>
       </div>
 
-      {loading && (
-        <div className="text-center py-12 text-text-secondary">
-          Loading subnet data from Hedera HCS...
+      {loading && !stats && (
+        <div className="flex flex-col items-center justify-center py-24 gap-4 animate-pulse">
+          <div className="w-12 h-12 border-4 border-neon-cyan/20 border-t-neon-cyan rounded-full animate-spin"></div>
+          <p className="text-neon-cyan font-display uppercase tracking-widest text-sm font-bold">Synchronizing with Hedera HCS Mirror Node...</p>
         </div>
       )}
 
-      {error && (
-        <div className="glass-panel rounded-xl p-6 border border-red-500/30 bg-red-500/10">
-          <div className="text-red-400">Error loading data: {error}</div>
+      {error && !stats && (
+        <div className="glass-panel rounded-2xl p-8 border border-red-500/30 bg-red-500/5 flex items-center gap-4">
+          <span className="material-symbols-outlined text-red-500 text-4xl">error</span>
+          <div>
+            <h3 className="text-white font-bold text-lg">Network Error</h3>
+            <p className="text-red-400/80 text-sm">Experimental HCS sync failed: {error}</p>
+          </div>
         </div>
       )}
 
+      {/* Subnet Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {subnets.map((subnet) => (
           <div
             key={subnet.id}
             onClick={() => setSelectedSubnet(subnet)}
-            className="glass-panel rounded-xl p-6 border border-white/10 hover:border-neon-cyan/50 transition-all cursor-pointer group"
+            className={`glass-panel rounded-2xl p-8 border border-white/10 hover:border-${subnet.color}/50 transition-all duration-500 cursor-pointer group bg-gradient-to-br ${subnet.gradient} relative overflow-hidden ${subnet.glow}`}
           >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-display font-bold text-white group-hover:text-neon-cyan transition-colors">
-                  {subnet.name}
-                </h3>
-                <p className="text-sm text-text-secondary mt-1">
-                  {subnet.description}
-                </p>
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
+              <span className={`material-symbols-outlined text-8xl ${subnet.color}`}>{subnet.icon}</span>
+            </div>
+            
+            <div className="flex items-start justify-between mb-8 relative z-10">
+              <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-${subnet.color}/30 transition-colors`}>
+                <span className={`material-symbols-outlined ${subnet.color} text-2xl`}>{subnet.icon}</span>
               </div>
-              <div className={`text-2xl font-bold text-${subnet.color}`}>
+              <div className={`text-3xl font-display font-bold text-white group-hover:${subnet.color} transition-colors neon-text`}>
                 {subnet.emission}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-6">
+            <div className="relative z-10">
+              <h3 className="text-2xl font-display font-bold text-white mb-2 group-hover:tracking-tight transition-all">
+                {subnet.name}
+              </h3>
+              <p className="text-sm text-text-secondary leading-relaxed mb-8 h-10 overflow-hidden line-clamp-2">
+                {subnet.description}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/5 relative z-10">
               <div>
-                <div className="text-2xl font-bold text-white">{subnet.miners}</div>
-                <div className="text-xs text-text-secondary">Miners</div>
+                <div className="text-xs text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Entities</div>
+                <div className="text-3xl font-display font-bold text-white">
+                  <CountUp end={subnet.miners} />
+                </div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-white">{subnet.tasks}</div>
-                <div className="text-xs text-text-secondary">Tasks</div>
+                <div className="text-xs text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Ops</div>
+                <div className="text-3xl font-display font-bold text-white">
+                  <CountUp end={subnet.tasks} />
+                </div>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-text-secondary">View Details</span>
-                <span className="material-symbols-outlined text-neon-cyan group-hover:translate-x-1 transition-transform">
-                  arrow_forward
-                </span>
-              </div>
+            <div className="mt-8 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-text-secondary group-hover:text-white transition-colors relative z-10">
+              <span className="w-8 h-[1px] bg-white/10 group-hover:w-12 group-hover:bg-white/30 transition-all"></span>
+              Inspect Subnet
+              <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
             </div>
           </div>
         ))}
       </div>
-
-      {/* Real-time Stats */}
-      {stats && (
-        <div className="glass-panel rounded-xl p-6 border border-white/10">
-          <h2 className="text-2xl font-display font-bold text-white mb-4">
-            Network Statistics
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <div className="text-3xl font-bold text-neon-cyan">{stats.totalMiners}</div>
-              <div className="text-sm text-text-secondary">Total Miners</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-neon-pink">{stats.totalValidators}</div>
-              <div className="text-sm text-text-secondary">Validators</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-neon-green">{stats.totalTasks}</div>
-              <div className="text-sm text-text-secondary">Tasks Processed</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-neon-purple">
-                {(stats.totalStaked / 100000000).toFixed(0)} MDT
-              </div>
-              <div className="text-sm text-text-secondary">Total Staked</div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
