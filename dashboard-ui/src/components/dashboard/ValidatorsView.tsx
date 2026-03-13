@@ -56,13 +56,6 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-4">
                         <h1 className="text-white text-4xl lg:text-5xl font-black leading-tight tracking-tight uppercase font-display neon-text">Network Validators</h1>
-                        <span className="px-3 py-1 rounded text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/40 uppercase tracking-widest flex items-center gap-2">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                            </span>
-                            {validators.length} Active
-                        </span>
                     </div>
                     <p className="text-slate-400 text-lg font-light max-w-2xl font-body tracking-wider">
                         AI validators scoring miner submissions on Hedera HCS
@@ -72,8 +65,8 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: 'Active Validators', val: validators.length, icon: 'groups', color: 'text-neon-cyan', border: 'neon-border-cyan' },
-                  { label: 'Total Validations', val: scores?.length || 0, icon: 'verified', color: 'text-neon-pink', border: 'neon-border-pink' },
+                  { label: 'Total Validators', val: validators.length, icon: 'groups', color: 'text-neon-cyan', border: 'neon-border-cyan' },
+                  { label: 'Total Scores', val: scores?.length || 0, icon: 'verified', color: 'text-neon-pink', border: 'neon-border-pink' },
                   { label: 'Avg Score', val: validators.length > 0 ? (validators.reduce((sum, v) => sum + v.avgScore, 0) / validators.length).toFixed(1) : '0', icon: 'ssid_chart', color: 'text-neon-purple', border: 'border-l-2 border-neon-purple' },
                   { label: 'Avg Confidence', val: validators.length > 0 ? ((validators.reduce((sum, v) => sum + v.avgConfidence, 0) / validators.length) * 100).toFixed(0) + '%' : '0%', icon: 'verified_user', color: 'text-green-400', border: 'border-l-2 border-green-500' }
                 ].map((stat, i) => (

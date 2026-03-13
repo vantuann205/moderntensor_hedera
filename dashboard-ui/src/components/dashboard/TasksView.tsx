@@ -56,13 +56,6 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-4">
                         <h1 className="text-white text-4xl lg:text-5xl font-black leading-tight tracking-tight uppercase font-display neon-text">Network Tasks</h1>
-                        <span className="px-3 py-1 rounded text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/40 uppercase tracking-widest flex items-center gap-2">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                            </span>
-                            {tasksWithStats.length} Total
-                        </span>
                     </div>
                     <p className="text-slate-400 text-lg font-light max-w-2xl font-body tracking-wider">
                         AI tasks submitted and processed on Hedera HCS
