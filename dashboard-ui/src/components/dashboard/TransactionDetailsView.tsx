@@ -198,16 +198,53 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                </div>
             </div>
 
-            {/* Raw Data Placeholder */}
-            <div className="glass-panel rounded-xl border border-white/5 bg-panel-dark/40 overflow-hidden p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-black text-white uppercase tracking-widest">Raw Data</h3>
-                  <span className="material-symbols-outlined text-slate-600 text-sm">code</span>
+            {/* Message / Raw Data Section */}
+            <div className="glass-panel rounded-xl border border-white/5 bg-panel-dark/40 overflow-hidden">
+                <div className="p-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+                  <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                    <span className="material-symbols-outlined text-neon-cyan text-sm">{tx.name === 'CONSENSUSSUBMITMESSAGE' ? 'mail' : 'code'}</span>
+                    {tx.name === 'CONSENSUSSUBMITMESSAGE' ? 'Message' : 'Raw Data'}
+                  </h3>
+                  <span className="material-symbols-outlined text-slate-600 text-sm">terminal</span>
                 </div>
-                <div className="bg-black/40 rounded p-4 border border-white/5 overflow-x-auto">
-                   <pre className="text-[10px] text-slate-400 font-mono leading-relaxed">
-                     {JSON.stringify(tx, null, 2)}
-                   </pre>
+                
+                <div className="p-6 flex flex-col gap-6">
+                  {tx.name === 'CONSENSUSSUBMITMESSAGE' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sequence Number</span>
+                        <span className="text-lg font-black text-neon-cyan font-mono">{tx.sequence_number || '—'}</span>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Hash Version</span>
+                        <span className="text-lg font-black text-white font-mono">{tx.running_hash_version || '—'}</span>
+                      </div>
+                      <div className="col-span-1 md:col-span-2 flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Hash</span>
+                        <span className="text-[10px] font-mono text-slate-400 break-all bg-black/20 p-2 rounded border border-white/5">{tx.running_hash || '—'}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-2">
+                    {tx.name === 'CONSENSUSSUBMITMESSAGE' && <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center md:text-left">Message Payload</span>}
+                    <div className="bg-black/40 rounded p-4 border border-white/5 overflow-x-auto relative group">
+                       <pre className="text-[11px] text-slate-300 font-mono leading-relaxed whitespace-pre-wrap">
+                         {(() => {
+                           if (tx.name === 'CONSENSUSSUBMITMESSAGE' && tx.message) {
+                             try {
+                               const decoded = atob(tx.message);
+                               return JSON.stringify(JSON.parse(decoded), null, 2);
+                             } catch {
+                               return atob(tx.message);
+                             }
+                           }
+                           return JSON.stringify(tx, null, 2);
+                         })()}
+                       </pre>
+                       <button className="absolute top-2 right-2 material-symbols-outlined text-xs text-slate-600 hover:text-neon-cyan opacity-0 group-hover:opacity-100 transition-all">content_copy</button>
+                    </div>
+                  </div>
                 </div>
             </div>
           </div>
