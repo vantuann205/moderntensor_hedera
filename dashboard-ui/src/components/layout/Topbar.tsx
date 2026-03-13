@@ -1,128 +1,150 @@
-'use client';
-
 import { useQuery } from '@tanstack/react-query';
-import { Wallet, ExternalLink, Activity } from 'lucide-react';
+import { Wallet, ExternalLink, Activity, LogOut, User, Zap } from 'lucide-react';
 import { useState } from 'react';
+import { useWallet } from '@/context/WalletContext';
+import WalletConnectModal from '../ui-custom/WalletConnectModal';
 
-const HEDERA_ACCOUNT_ID = process.env.NEXT_PUBLIC_HEDERA_ACCOUNT_ID || '0.0.8127455';
-const EVM_ADDRESS = process.env.NEXT_PUBLIC_EVM_ADDRESS || '0xf75a2924edfbc831f5936b1546ef54421a9f1fea';
-const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
-
-function formatHbar(tinybars: number) {
-    return (tinybars / 1e8).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+const MIRROR_BASE = 'https://testnet.mirrornode.hedera.com';
 
 export default function Topbar() {
     const [walletOpen, setWalletOpen] = useState(false);
-
-    const { data: accountData } = useQuery({
-        queryKey: ['hedera-account'],
-        queryFn: async () => {
-            const res = await fetch(`${MIRROR_BASE}/api/v1/accounts/${HEDERA_ACCOUNT_ID}`);
-            if (!res.ok) throw new Error('Failed to fetch account');
-            return res.json();
-        },
-        refetchInterval: 15000,
-        retry: 2,
-    });
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const { accountId, balance, address, isConnected, disconnect, type } = useWallet();
 
     const { data: txData } = useQuery({
-        queryKey: ['hedera-txs'],
+        queryKey: ['hedera-txs', accountId],
         queryFn: async () => {
-            const res = await fetch(`${MIRROR_BASE}/api/v1/transactions?account.id=${HEDERA_ACCOUNT_ID}&limit=5`);
+            if (!accountId) return { transactions: [] };
+            const res = await fetch(`${MIRROR_BASE}/api/v1/transactions?account.id=${accountId}&limit=5`);
             if (!res.ok) throw new Error('Failed to fetch transactions');
             return res.json();
         },
+        enabled: !!accountId,
         refetchInterval: 30000,
     });
 
-    const balance = accountData?.balance?.balance;
     const transactions = txData?.transactions || [];
 
     return (
-        <header className="h-14 bg-[#080f1d]/80 backdrop-blur border-b border-white/5 flex items-center justify-between px-6 z-10">
-            {/* Left: Page title via breadcrumb placeholder */}
-            <div className="flex items-center gap-2">
-                <span className="flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-cyan-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
-                </span>
-                <span className="text-xs font-mono text-slate-400 tracking-wider">HEDERA TESTNET</span>
+        <header className="h-16 bg-[#050b14]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-8 z-50 sticky top-0">
+            <WalletConnectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+            {/* Left: Network Indicator */}
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-1 bg-neon-cyan/5 border border-neon-cyan/20 rounded-full">
+                    <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neon-cyan opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-cyan" />
+                    </span>
+                    <span className="text-[10px] font-black text-neon-cyan tracking-widest uppercase">Hedera Testnet</span>
+                </div>
             </div>
 
-            {/* Right: Wallet info */}
-            <div className="flex items-center gap-3">
-                <a
-                    href={`https://hashscan.io/testnet/account/${HEDERA_ACCOUNT_ID}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hidden md:flex items-center gap-2 bg-white/5 border border-white/10 hover:border-cyan-400/40 px-3 py-1.5 rounded-lg transition-all group"
-                >
-                    <Activity size={12} className="text-cyan-400" />
-                    <span className="text-xs font-mono text-slate-300">{HEDERA_ACCOUNT_ID}</span>
-                    <ExternalLink size={10} className="text-slate-500 group-hover:text-cyan-400 transition-colors" />
-                </a>
+            {/* Right: Wallet Ecosystem */}
+            <div className="flex items-center gap-4">
+                {!isConnected ? (
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="group relative flex items-center gap-3 bg-[#0a0f1e] text-white px-7 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] border border-white/10 hover:border-neon-cyan/50 transition-all duration-500 overflow-hidden"
+                    >
+                        {/* Shimmer Effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                        
+                        <Zap size={14} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                        Connect Wallet
+                        
+                        <div className="absolute -inset-1 bg-neon-cyan/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        {/* Account ID Badge */}
+                        <a
+                            href={`https://hashscan.io/testnet/account/${accountId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hidden lg:flex items-center gap-2 bg-white/5 border border-white/10 hover:border-white/20 px-4 py-2 rounded-xl transition-all group"
+                        >
+                            <User size={14} className="text-slate-500 group-hover:text-white transition-colors" />
+                            <span className="text-[11px] font-black text-white font-mono">{accountId}</span>
+                            <ExternalLink size={10} className="text-slate-600 group-hover:text-neon-cyan" />
+                        </a>
 
-                <button
-                    onClick={() => setWalletOpen(o => !o)}
-                    className="relative flex items-center gap-2 bg-cyan-400/10 border border-cyan-400/30 px-3 py-1.5 rounded-lg hover:bg-cyan-400/20 transition-all"
-                >
-                    <Wallet size={14} className="text-cyan-400" />
-                    {balance !== undefined ? (
-                        <span className="text-xs font-mono font-semibold text-cyan-400">
-                            ℏ {formatHbar(balance)}
-                        </span>
-                    ) : (
-                        <span className="text-xs font-mono text-slate-400">Loading...</span>
-                    )}
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-green-400 border border-[#080f1d]" />
-                </button>
+                        {/* Balance Trigger */}
+                        <button
+                            onClick={() => setWalletOpen(o => !o)}
+                            className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all relative border ${walletOpen ? 'bg-white/10 border-white/20' : 'bg-white/5 border-white/5 hover:border-white/10'}`}
+                        >
+                            <div className="flex flex-col items-end">
+                                <span className="text-[11px] font-black text-white font-display">ℏ {balance || '0.00'}</span>
+                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">{type}</span>
+                            </div>
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${type === 'hashpack' ? 'bg-neon-cyan/10 border-neon-cyan/20' : 'bg-orange-500/10 border-orange-500/20'} border`}>
+                                <img 
+                                    src={type === 'hashpack' ? "https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png" : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3ymr3UNKopfI0NmUY95Dr-0589vG-91KuAA&s"} 
+                                    className={`w-5 h-5 object-contain ${type === 'metamask' ? 'rounded-md' : ''}`} 
+                                    alt="Wallet"
+                                />
+                            </div>
+                        </button>
+                    </div>
+                )}
             </div>
 
-            {/* Wallet dropdown */}
-            {walletOpen && (
-                <div className="absolute top-14 right-4 z-50 w-80 bg-[#0c1527] border border-cyan-400/20 rounded-xl shadow-2xl shadow-black/60 p-4 animate-fade-in">
-                    <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-bold uppercase tracking-widest text-cyan-400">Wallet</span>
-                        <span className="text-[10px] bg-green-400/15 text-green-400 px-2 py-0.5 rounded-full border border-green-400/30">CONNECTED</span>
-                    </div>
-
-                    <div className="space-y-2 text-xs font-mono mb-4">
-                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                            <span className="text-slate-400">Account ID</span>
-                            <span className="text-white">{HEDERA_ACCOUNT_ID}</span>
+            {/* Wallet Dashboard Overlay */}
+            {walletOpen && isConnected && (
+                <div className="absolute top-20 right-8 z-50 w-96 bg-[#050b14]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-6 animate-fade-in-up glass-panel">
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Account</span>
+                            <h3 className="text-xl font-black text-white uppercase tracking-tighter font-display mt-1">Wallet Dashboard</h3>
                         </div>
-                        <div className="flex justify-between items-center py-2 border-b border-white/5">
-                            <span className="text-slate-400">Balance</span>
-                            <span className="text-cyan-400 font-semibold">{balance !== undefined ? `ℏ ${formatHbar(balance)}` : '—'}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                            <span className="text-slate-400">EVM</span>
-                            <span className="text-slate-300 truncate ml-2">{EVM_ADDRESS.slice(0, 14)}...{EVM_ADDRESS.slice(-6)}</span>
+                        <div className="flex h-2 w-2">
+                             <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-400 opacity-75" />
+                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
                         </div>
                     </div>
 
-                    <div className="mb-4">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Recent Transactions</div>
-                        <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                    <div className="grid gap-4 mb-8">
+                        <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex flex-col gap-1">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Available Balance</span>
+                            <div className="flex items-end justify-between">
+                                <span className="text-2xl font-black text-white font-mono">ℏ {balance}</span>
+                                <span className="text-[10px] text-neon-cyan font-bold bg-neon-cyan/10 px-2 py-0.5 rounded border border-neon-cyan/20">TESTNET</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">EVM Address</span>
+                                <span className="text-[10px] font-mono text-slate-400 mt-1">{address ? `${address.slice(0, 12)}...${address.slice(-8)}` : '—'}</span>
+                            </div>
+                            <button className="material-symbols-outlined text-sm text-slate-600 hover:text-white transition-colors">content_copy</button>
+                        </div>
+                    </div>
+
+                    <div className="mb-8">
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Activity</span>
+                            <span className="text-[10px] text-neon-cyan font-bold animate-pulse">SYNCING...</span>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                             {transactions.length === 0 ? (
-                                <div className="text-[10px] text-slate-600 text-center py-4 italic">No recent transactions</div>
+                                <div className="text-[11px] text-slate-600 text-center py-8 border border-white/5 border-dashed rounded-xl">No recent network activity</div>
                             ) : (
                                 transactions.map((tx: any) => (
                                     <a
-                                        key={tx.transaction_id}
-                                        href={`https://hashscan.io/testnet/transaction/${tx.transaction_id}`}
+                                        key={tx.consensus_timestamp}
+                                        href={`https://hashscan.io/testnet/transaction/${tx.consensus_timestamp}`}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="flex items-center justify-between py-1.5 border-b border-white/[0.03] hover:bg-white/[0.02] px-1 rounded transition-colors group"
+                                        className="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 rounded-xl hover:bg-white/5 transition-all group"
                                     >
                                         <div className="flex flex-col">
-                                            <span className="text-[9px] text-slate-300 truncate w-32">{tx.name || 'Transaction'}</span>
-                                            <span className="text-[8px] text-slate-500">{new Date(Number(tx.consensus_timestamp) * 1000).toLocaleTimeString()}</span>
+                                            <span className="text-[10px] font-black text-white uppercase tracking-wider">{tx.name.replace(/_/g, ' ')}</span>
+                                            <span className="text-[8px] text-slate-500 font-bold font-mono mt-0.5">{new Date(parseFloat(tx.consensus_timestamp) * 1000).toLocaleTimeString()}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <span className={`text-[9px] font-bold ${tx.result === 'SUCCESS' ? 'text-green-400' : 'text-red-400'}`}>{tx.result}</span>
-                                            <ExternalLink size={8} className="text-slate-600 group-hover:text-cyan-400" />
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[9px] font-black ${tx.result === 'SUCCESS' ? 'text-green-400' : 'text-red-400'}`}>{tx.result}</span>
+                                            <ExternalLink size={10} className="text-slate-600 group-hover:text-neon-cyan" />
                                         </div>
                                     </a>
                                 ))
@@ -130,14 +152,22 @@ export default function Topbar() {
                         </div>
                     </div>
 
-                    <a
-                        href={`https://hashscan.io/testnet/account/${HEDERA_ACCOUNT_ID}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2 bg-cyan-400/10 text-cyan-400 rounded-lg text-xs font-bold hover:bg-cyan-400/20 transition-all border border-cyan-400/20"
-                    >
-                        View on Hashscan <ExternalLink size={11} />
-                    </a>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={disconnect}
+                            className="flex-grow flex items-center justify-center gap-2 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                        >
+                            <LogOut size={14} /> Disconnect
+                        </button>
+                        <a 
+                            href={`https://hashscan.io/testnet/account/${accountId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-12 h-12 flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-slate-400 hover:text-white transition-all"
+                        >
+                            <ExternalLink size={16} />
+                        </a>
+                    </div>
                 </div>
             )}
         </header>

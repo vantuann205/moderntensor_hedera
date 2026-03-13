@@ -3,15 +3,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { ExternalLink, Hash, Clock, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useWallet } from '@/context/WalletContext';
 
-const ACCOUNT_ID = process.env.NEXT_PUBLIC_HEDERA_ACCOUNT_ID || '0.0.8127455';
 const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirrornode.hedera.com';
 
 export function useRecentTransactions() {
+    const { accountId } = useWallet();
     return useQuery({
-        queryKey: ['recent-transactions', ACCOUNT_ID],
+        queryKey: ['recent-transactions', accountId],
         queryFn: async () => {
-            const res = await fetch(`${MIRROR_BASE}/api/v1/accounts/${ACCOUNT_ID}/transactions?limit=10`);
+            if (!accountId) return [];
+            const res = await fetch(`${MIRROR_BASE}/api/v1/accounts/${accountId}/transactions?limit=10`);
             if (!res.ok) throw new Error('Failed to fetch transactions');
             const data = await res.json();
             return data.transactions || [];
@@ -41,7 +43,8 @@ export default function TransactionList() {
             ) : (
                 transactions?.map((tx: any) => {
                     const isSuccess = tx.result === 'SUCCESS';
-                    const amount = tx.transfers?.find((tf: any) => tf.account === ACCOUNT_ID)?.amount || 0;
+                    const { accountId } = useWallet();
+                    const amount = tx.transfers?.find((tf: any) => tf.account === accountId)?.amount || 0;
                     const isIncoming = amount > 0;
 
                     return (

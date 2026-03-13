@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, WalletCards, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
 
@@ -10,82 +11,98 @@ interface WalletConnectModalProps {
 }
 
 export default function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps) {
-    const { connectHashPack, connectMetaMask, isConnected } = useWallet();
+    const { connectHashPack, connectMetaMask } = useWallet();
+    const [mounted, setMounted] = useState(false);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
-    const handleConnectHashPack = async () => {
-        await connectHashPack();
-        onClose();
-    };
+    if (!isOpen || !mounted) return null;
 
-    const handleConnectMetaMask = async () => {
-        await connectMetaMask();
-        onClose();
-    };
-
-    return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            {/* Background with soft blur and subtle darkness */}
+            <div 
+                className="absolute inset-0 bg-black/50 backdrop-blur-md animate-fade-in" 
+                onClick={onClose} 
+            />
             
-            <div className="relative w-full max-w-md bg-[#0a0e17] border border-white/10 rounded-2xl shadow-2xl overflow-hidden glass-panel">
-                <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/[0.02]">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-neon-purple/10 flex items-center justify-center border border-neon-purple/20">
-                            <WalletCards className="w-4 h-4 text-neon-purple" />
+            <div className="relative w-full max-w-md bg-[#050b14]/95 border border-white/10 rounded-3xl shadow-[0_30px_60px_rgba(0,0,0,0.8)] overflow-hidden glass-panel animate-scale-in">
+                
+                {/* Visual Highlights */}
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-neon-cyan/50 to-transparent" />
+                <div className="absolute top-[-50px] left-[-50px] w-32 h-32 bg-neon-purple/20 rounded-full blur-3xl" />
+                <div className="absolute bottom-[-50px] right-[-50px] w-32 h-32 bg-neon-cyan/20 rounded-full blur-3xl" />
+
+                <div className="flex items-center justify-between p-8 border-b border-white/5 relative z-10">
+                    <div className="flex flex-col gap-1">
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tighter font-display">Wallet Gateway</h2>
+                        <div className="flex items-center gap-2">
+                             <div className="h-1.5 w-1.5 rounded-full bg-neon-cyan animate-pulse" />
+                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Connect to protocol</span>
                         </div>
-                        <h2 className="text-lg font-display font-bold text-white uppercase tracking-wider">Connect Protocol Wallet</h2>
                     </div>
-                    <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
+                    <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-500 hover:text-white hover:bg-white/10 transition-all">
                         <X size={20} />
                     </button>
                 </div>
 
-                <div className="p-6 grid gap-4">
-                    <p className="text-xs text-slate-400 font-mono mb-2">Select a supported wallet to access decentralized compute rewards and verify your node status.</p>
+                <div className="p-8 grid gap-5 relative z-10">
+                    <p className="text-[11px] text-slate-400 font-medium leading-relaxed">Choose your gateway to the ModernTensor network. Authenticate to manage subnets, claim rewards, and verify validator status.</p>
                     
                     {/* HashPack */}
                     <button 
-                        onClick={handleConnectHashPack}
-                        className="flex items-center justify-between p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all group"
+                        onClick={async () => { await connectHashPack(); onClose(); }}
+                        className="group relative flex items-center justify-between p-5 rounded-2xl border border-white/5 bg-panel-dark/40 hover:bg-panel-dark/60 hover:border-neon-cyan/50 hover:shadow-[0_0_20px_rgba(34,211,238,0.1)] transition-all duration-300"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-black/40 p-2 border border-white/10 flex items-center justify-center group-hover:border-neon-cyan/50 transition-colors">
-                                <img src="https://www.hashpack.app/img/logo.svg" alt="HashPack" className="w-full h-full" />
+                        <div className="flex items-center gap-5">
+                            <div className="w-12 h-12 rounded-xl bg-[#111827] p-2.5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <img src="https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png" alt="HashPack" className="w-full h-full object-contain" />
                             </div>
-                            <div className="text-left">
-                                <div className="text-sm font-bold text-white group-hover:text-neon-cyan transition-colors">HashPack Wallet</div>
-                                <div className="text-[10px] text-slate-500">Official Hedera Native Extension</div>
+                            <div className="text-left flex flex-col">
+                                <span className="text-sm font-black text-white uppercase tracking-wider group-hover:text-neon-cyan transition-colors font-display">HashPack Wallet</span>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Hedera Native • Testnet</span>
                             </div>
                         </div>
-                        <div className="px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-[9px] font-bold text-neon-cyan uppercase">Native</div>
+                        <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-[8px] font-black text-neon-cyan uppercase tracking-widest">Premium</span>
+                            <span className="material-symbols-outlined text-slate-700 group-hover:text-neon-cyan group-hover:translate-x-1 transition-all">chevron_right</span>
+                        </div>
                     </button>
 
                     {/* MetaMask */}
                     <button 
-                        onClick={handleConnectMetaMask}
-                        className="flex items-center justify-between p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all group"
+                        onClick={async () => { await connectMetaMask(); onClose(); }}
+                        className="group relative flex items-center justify-between p-5 rounded-2xl border border-white/5 bg-panel-dark/40 hover:bg-panel-dark/60 hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.1)] transition-all duration-300"
                     >
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-black/40 p-2 border border-white/10 flex items-center justify-center group-hover:border-orange-500/50 transition-colors">
-                                <img src="https://raw.githubusercontent.com/MetaMask/brand-resources/master/SVG/metamask-fox.svg" alt="MetaMask" className="w-full h-full" />
+                        <div className="flex items-center gap-5">
+                            <div className="w-12 h-12 rounded-xl bg-[#111827] p-2.5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3ymr3UNKopfI0NmUY95Dr-0589vG-91KuAA&s" alt="MetaMask" className="w-full h-full object-contain rounded-md" />
                             </div>
-                            <div className="text-left">
-                                <div className="text-sm font-bold text-white group-hover:text-orange-500 transition-colors">MetaMask / EVM</div>
-                                <div className="text-[10px] text-white/50">Connect via Hedera JSON-RPC</div>
+                            <div className="text-left flex flex-col">
+                                <span className="text-sm font-black text-white uppercase tracking-wider group-hover:text-orange-500 transition-colors font-display">MetaMask / EVM</span>
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Compatible • Hedera RPC</span>
                             </div>
                         </div>
-                        <div className="px-2 py-0.5 rounded-full bg-white/10 border border-white/20 text-[9px] font-bold text-white/70 uppercase">Web3</div>
+                        <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-[8px] font-black text-orange-400 uppercase tracking-widest">Web3</span>
+                            <span className="material-symbols-outlined text-slate-700 group-hover:text-orange-500 group-hover:translate-x-1 transition-all">chevron_right</span>
+                        </div>
                     </button>
 
-                    <div className="mt-4 p-4 rounded-xl bg-neon-purple/5 border border-neon-purple/20 flex items-start gap-3">
-                        <ShieldCheck className="w-4 h-4 text-neon-purple shrink-0 mt-0.5" />
-                        <div className="text-[10px] text-slate-400 leading-relaxed">
-                            <span className="text-neon-purple font-bold">Security Notice:</span> Connection is purely for read/sign purposes. Your private keys are never shared with the ModernTensor dashboard.
+                    <div className="mt-4 p-5 rounded-2xl bg-neon-purple/5 border border-neon-purple/20 flex items-start gap-4">
+                        <div className="w-8 h-8 rounded-full bg-neon-purple/10 flex items-center justify-center shrink-0">
+                            <ShieldCheck className="w-4 h-4 text-neon-purple" />
+                        </div>
+                        <div className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                            <span className="text-neon-purple font-black uppercase tracking-widest block mb-0.5">Protocol Verification</span>
+                            Authentication is read-only. Your keys remain encrypted within your wallet provider at all times.
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

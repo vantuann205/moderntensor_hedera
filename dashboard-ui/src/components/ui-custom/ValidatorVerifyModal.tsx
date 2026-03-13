@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CheckCircle2, X, ShieldCheck, Activity, AlertTriangle, ThumbsUp, ThumbsDown, Target } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useWallet } from '@/context/WalletContext';
 
 interface ValidatorVerifyModalProps {
     isOpen: boolean;
@@ -13,7 +14,8 @@ interface ValidatorVerifyModalProps {
 
 export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId }: ValidatorVerifyModalProps) {
     const queryClient = useQueryClient();
-    const [validatorId, setValidatorId] = useState(process.env.NEXT_PUBLIC_HEDERA_ACCOUNT_ID || '0.0.8127455');
+    const { accountId } = useWallet();
+    const [validatorId, setValidatorId] = useState(accountId || '');
     const [score, setScore] = useState(80);
     const [confidence, setConfidence] = useState(0.9);
     const [notes, setNotes] = useState('');

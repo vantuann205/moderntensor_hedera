@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { Send, Terminal, X, Code, Activity, Play, Target } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { useWallet } from '@/context/WalletContext';
+
 interface SubmitTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -11,9 +13,10 @@ interface SubmitTaskModalProps {
 
 export default function SubmitTaskModal({ isOpen, onClose }: SubmitTaskModalProps) {
     const queryClient = useQueryClient();
+    const { accountId } = useWallet();
     
     const [reward, setReward] = useState('50.0');
-    const [requester, setRequester] = useState(process.env.NEXT_PUBLIC_HEDERA_ACCOUNT_ID || '0.0.8127455');
+    const [requester, setRequester] = useState(accountId || '');
     const [language, setLanguage] = useState('solidity');
     const [code, setCode] = useState('pragma solidity ^0.8.0;\ncontract Foo {\n    function bar() external {\n        // Need review\n    }\n}');
     

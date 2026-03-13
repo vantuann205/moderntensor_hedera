@@ -12,6 +12,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: blocks });
     }
 
+    if (type === 'block') {
+      const height = searchParams.get('id');
+      if (!height) return NextResponse.json({ success: false, error: 'Missing ID' }, { status: 400 });
+      const block = await mirrorNodeClient.getBlock(height);
+      return NextResponse.json({ success: true, data: block });
+    }
+
     if (type === 'transactions') {
       const transactions = await mirrorNodeClient.getLatestTransactions(limit);
       return NextResponse.json({ success: true, data: transactions });

@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   description: "Next-generation Hedera network dashboard",
 };
 
+import Providers from "@/components/Providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +41,9 @@ export default function RootLayout({
       >
         <div className="noise-bg"></div>
         <div className="scanline-overlay"></div>
-        <LayoutContent>{children}</LayoutContent>
+        <Providers>
+          <LayoutContent>{children}</LayoutContent>
+        </Providers>
       </body>
     </html>
   );

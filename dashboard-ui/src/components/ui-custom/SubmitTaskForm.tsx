@@ -34,7 +34,7 @@ export default function SubmitTaskForm() {
         await new Promise(r => setTimeout(r, 1500));
         setLoading(false);
         setSuccess(true);
-        toast.success("Task assigned to miner_0.0.8127455");
+        toast.success("Task assigned to protocol_miner");
 
         setTimeout(() => {
             setSuccess(false);

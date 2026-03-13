@@ -28,7 +28,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 const APP_METADATA = {
     name: "ModernTensor Dashboard",
     description: "AI Marketplace Agentic Dashboard",
-    icons: ["https://www.hashpack.app/img/logo.svg"],
+    icons: ["https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png"],
     url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
 };
 
@@ -98,7 +98,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 await hashconnect.init();
                 setHc(hashconnect);
 
-                hashconnect.pairingEvent.on((data) => {
+                hashconnect.pairingEvent.on((data: any) => {
                     console.log("HashPack Paired", data);
                     const account = data.accountIds[0];
                     if (account) {
@@ -118,7 +118,11 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const connectHashPack = async () => {
         if (!hc) return;
         try {
-            await hc.openPairingModal();
+            if (typeof (hc as any).connectToLocalWallet === 'function') {
+                await (hc as any).connectToLocalWallet();
+            } else {
+                await hc.openPairingModal();
+            }
         } catch (e) {
             console.error("HashPack Connection Failed", e);
         }
@@ -161,17 +165,25 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         localStorage.removeItem('mt_wallet_id');
     };
 
-    // Auto-reconnect
+    // Auto-reconnect and persistent sync
     useEffect(() => {
         const savedType = localStorage.getItem('mt_wallet_type');
         const savedId = localStorage.getItem('mt_wallet_id');
+        
         if (savedType && savedId) {
-            if (savedType === 'hashpack') {
-                // Auto-reconnect managed by hashconnect
-            } else if (savedType === 'metamask') {
-                checkRealStatus(savedId, 'metamask');
-            }
+            checkRealStatus(savedId, savedType as 'hashpack' | 'metamask');
         }
+
+        // Periodic balance sync if connected
+        const interval = setInterval(() => {
+            const currentId = localStorage.getItem('mt_wallet_id');
+            const currentType = localStorage.getItem('mt_wallet_type');
+            if (currentId && currentType) {
+                checkRealStatus(currentId, currentType as 'hashpack' | 'metamask');
+            }
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, [checkRealStatus]);
 
     return (

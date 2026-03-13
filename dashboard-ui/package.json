@@ -13,11 +13,13 @@
     "@tanstack/react-query": "^5.90.21",
     "clsx": "^2.1.1",
     "ethers": "^6.16.0",
+    "hashconnect": "^3.0.14",
     "lucide-react": "^0.577.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.5.0",
     "viem": "^2.47.2",
     "wagmi": "^3.5.0"

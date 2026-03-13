@@ -15,15 +15,22 @@ import TokenomicsView from "../dashboard/TokenomicsView";
 import AllBlocksView from "../dashboard/AllBlocksView";
 import AllTransactionsView from "../dashboard/AllTransactionsView";
 import TransactionDetailsView from "../dashboard/TransactionDetailsView";
+import BlockDetailsView from "../dashboard/BlockDetailsView";
 
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
   const [isBooting, setIsBooting] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.HOME);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+  const [selectedBlockHeight, setSelectedBlockHeight] = useState<string | null>(null);
 
   const handleSelectTransaction = (id: string) => {
     setSelectedTransactionId(id);
     setCurrentView(ViewState.TRANSACTION_DETAILS);
+  };
+
+  const handleSelectBlock = (height: string) => {
+    setSelectedBlockHeight(height);
+    setCurrentView(ViewState.BLOCK_DETAILS);
   };
 
   const renderView = () => {
@@ -32,7 +39,7 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
         return <HomeView />;
       case ViewState.EXPLORER:
         return <ExplorerView 
-          onSelectBlock={(h) => setCurrentView(ViewState.BLOCK_DETAILS)} 
+          onSelectBlock={handleSelectBlock} 
           onSelectTransaction={handleSelectTransaction} 
           onViewAllBlocks={() => setCurrentView(ViewState.ALL_BLOCKS)}
           onViewAllTransactions={() => setCurrentView(ViewState.ALL_TRANSACTIONS)}
@@ -58,7 +65,7 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
       case ViewState.TOKENOMICS:
         return <TokenomicsView />;
       case ViewState.ALL_BLOCKS:
-        return <AllBlocksView onBack={() => setCurrentView(ViewState.EXPLORER)} onSelectBlock={(h) => setCurrentView(ViewState.BLOCK_DETAILS)} />;
+        return <AllBlocksView onBack={() => setCurrentView(ViewState.EXPLORER)} onSelectBlock={handleSelectBlock} />;
       case ViewState.ALL_TRANSACTIONS:
         return <AllTransactionsView onBack={() => setCurrentView(ViewState.EXPLORER)} onSelectTransaction={handleSelectTransaction} />;
       case ViewState.TRANSACTION_DETAILS:
@@ -66,7 +73,12 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
           transactionId={selectedTransactionId || ''} 
           onBack={() => setCurrentView(ViewState.EXPLORER)} 
           onSelectAccount={(id) => console.log('Selected account:', id)}
-          onSelectBlock={(h) => console.log('Selected block:', h)}
+          onSelectBlock={handleSelectBlock}
+        />;
+      case ViewState.BLOCK_DETAILS:
+        return <BlockDetailsView 
+          blockHeight={selectedBlockHeight || ''} 
+          onBack={() => setCurrentView(ViewState.EXPLORER)} 
         />;
       default:
         return <HomeView />;

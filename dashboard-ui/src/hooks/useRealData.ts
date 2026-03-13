@@ -229,3 +229,32 @@ export function useTransactionDetails(id: string | null) {
 
   return { data, loading, error };
 }
+
+export function useBlockDetails(id: string | null) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+        setData(null);
+        return;
+    }
+    async function fetchDetails() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/explorer/mirror?type=block&id=${id}`);
+        const result = await response.json();
+        if (result.success) setData(result.data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDetails();
+  }, [id]);
+
+  return { data, loading, error };
+}
