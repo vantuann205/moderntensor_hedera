@@ -7,7 +7,7 @@ from dotenv import load_dotenv; load_dotenv()
 from sdk.hedera.config import load_hedera_config
 from sdk.hedera.client import HederaClient
 from sdk.hedera.hcs import HCSService, MinerRegistration, ScoreSubmission, TaskSubmission
-from sdk.hedera.contracts import SmartContractService
+from sdk.hedera.payment_escrow import PaymentEscrowService
 from sdk.hedera.subnet_registry import SubnetRegistryService
 from sdk.hedera.staking_vault import StakingVaultService, StakeRole
 from sdk.hedera.governor import MDTGovernorService
@@ -35,10 +35,13 @@ def main():
     client = HederaClient(config)
     hcs = HCSService(client)
 
-    escrow = SmartContractService(client)
+    escrow = PaymentEscrowService(client)
     registry = SubnetRegistryService(client)
     staking = StakingVaultService(client)
     governor = MDTGovernorService(client)
+
+    MDT_TOKEN = os.getenv("HEDERA_MDT_TOKEN_ID", "0.0.8146318")
+    MDT = 10**8
 
     balance = client.get_balance()
     ok(f"Connected: {client.operator_id_str}")
@@ -52,9 +55,15 @@ def main():
 
     # ── PHASE 1: SubnetRegistry — Register subnet ──
     header("Phase 1: Register Subnet (SubnetRegistry)", "🌐")
+    REGISTRATION_COST = 10000 * MDT
     try:
+        ok(f"Approving {REGISTRATION_COST // MDT} MDT for Subnet Registry...")
+        client.approve_token_allowance(MDT_TOKEN, registry.contract_id, REGISTRATION_COST)
+        time.sleep(2)
         receipt = registry.register_subnet(
-            name="AI-CodeReview-v1", min_validations=3, min_stake=100_00000000,
+            name="AI-CodeReview-v1",
+            description="Premium AI Code Review Subnet",
+            fee_rate=300 # 3%
         )
         ok("Subnet registered on SubnetRegistry (on-chain tx)")
     except Exception as e:
@@ -62,16 +71,15 @@ def main():
 
     # ── PHASE 2: StakingVault — Stake tokens ──
     header("Phase 2: Stake MDT (StakingVault)", "💰")
+    STAKE_AMOUNT = 1000 * MDT
     try:
-        receipt = staking.stake(amount=100_00000000, role=StakeRole.VALIDATOR)
-        ok("Staked 100 MDT as VALIDATOR (on-chain tx)")
+        ok(f"Approving {STAKE_AMOUNT // MDT} MDT for StakingVault...")
+        client.approve_token_allowance(MDT_TOKEN, staking.contract_id, STAKE_AMOUNT)
+        time.sleep(2)
+        receipt = staking.stake(amount=STAKE_AMOUNT, role=StakeRole.MINER)
+        ok("Staked 1000 MDT as MINER (on-chain tx)")
     except Exception as e:
-        warn(f"StakingVault.stake(validator): {e}")
-    try:
-        receipt = staking.stake(amount=50_00000000, role=StakeRole.MINER)
-        ok("Staked 50 MDT as MINER (on-chain tx)")
-    except Exception as e:
-        warn(f"StakingVault.stake(miner): {e}")
+        warn(f"StakingVault.stake: {e}")
 
     # ── PHASE 3: Start Axon servers ──
     header("Phase 3: Start Miner Axon Servers", "⛏️")
@@ -111,12 +119,14 @@ def main():
     # ── PHASE 5: Create task (HCS + PaymentEscrow + SubnetRegistry) ──
     header("Phase 5: Create Task (HCS + 2 Contracts)", "📋")
     task_id = f"task-{int(time.time())}"
+    REWARD_AMOUNT = 50 * MDT
+    DEPOSIT_AMOUNT = int(REWARD_AMOUNT * 1.23)
     try:
         task_sub = TaskSubmission(
             task_id=task_id, requester_id=client.operator_id_str,
             task_type="code_review",
             prompt="Review token transfer for vulnerabilities",
-            reward_amount=50_00000000, deadline=int(time.time())+3600,
+            reward_amount=REWARD_AMOUNT, deadline=int(time.time())+3600,
         )
         receipt = hcs.create_task(task_sub)
         ok("Task on HCS")
@@ -124,13 +134,19 @@ def main():
         fail(f"HCS task: {e}")
 
     try:
-        receipt = escrow.create_task(task_hash=task_id, reward_amount=50_00000000, duration=3600)
+        ok(f"Approving {DEPOSIT_AMOUNT / MDT:.2f} MDT for PaymentEscrow...")
+        client.approve_token_allowance(MDT_TOKEN, escrow.contract_id, DEPOSIT_AMOUNT)
+        time.sleep(2)
+        receipt = escrow.create_task(task_hash=task_id, reward_amount=REWARD_AMOUNT, duration=3600)
         ok("Task on PaymentEscrow (on-chain tx)")
     except Exception as e:
         warn(f"PaymentEscrow.createTask: {e}")
 
     try:
-        receipt = registry.create_task(subnet_id=0, task_hash=task_id, reward_amount=50_00000000, duration=3600)
+        ok(f"Approving {DEPOSIT_AMOUNT / MDT:.2f} MDT for SubnetRegistry...")
+        client.approve_token_allowance(MDT_TOKEN, registry.contract_id, DEPOSIT_AMOUNT)
+        time.sleep(2)
+        receipt = registry.create_task(subnet_id=0, task_hash=task_id, reward_amount=REWARD_AMOUNT, duration=3600)
         ok("Task on SubnetRegistry (on-chain tx)")
     except Exception as e:
         warn(f"SubnetRegistry.createTask: {e}")

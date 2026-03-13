@@ -1,0 +1,47 @@
+{
+  "validators": {
+    "Validator-Nexus-01": {
+      "validator_id": "Validator-Nexus-01",
+      "id": "Validator-Nexus-01",
+      "account_id": "0.0.8127455",
+      "subnet_ids": [
+        1
+      ],
+      "stake_amount": 0,
+      "capabilities": [
+        "validation",
+        "scoring"
+      ],
+      "status": "active",
+      "registered_at": 1773144348.0,
+      "registered_at_iso": "2026-03-10T12:05:48Z",
+      "total_emissions": 0,
+      "hcs_sequence": 9,
+      "source": "hedera_hcs"
+    },
+    "Validator-Sentinel-02": {
+      "validator_id": "Validator-Sentinel-02",
+      "id": "Validator-Sentinel-02",
+      "account_id": "0.0.8127455",
+      "subnet_ids": [
+        1
+      ],
+      "stake_amount": 0,
+      "capabilities": [
+        "validation",
+        "scoring"
+      ],
+      "status": "active",
+      "registered_at": 1773144350.0,
+      "registered_at_iso": "2026-03-10T12:05:50Z",
+      "total_emissions": 0,
+      "hcs_sequence": 10,
+      "source": "hedera_hcs"
+    }
+  },
+  "meta": {
+    "source": "hedera_hcs",
+    "synced_at": "2026-03-12T14:10:11.589603",
+    "count": 2
+  }
+}

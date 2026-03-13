@@ -1,21 +1,30 @@
 {
-  "start_timestamp": 1772598097.2381873,
-  "total_distributed": 68493.15068492999,
+  "start_timestamp": 1773238211.5896034,
+  "total_distributed": 0.0,
   "epochs": {
-    "0": {
-      "epoch_number": 0,
-      "start_time": 1772598097.2381873,
-      "end_time": 1772684497.2381873,
-      "total_emission": 68493.1506849315,
-      "distributed": 68493.15068492999,
+    "1": {
+      "epoch_number": 1,
+      "start_time": 1773238211.5896034,
+      "end_time": 1773324611.5896034,
+      "total_emission": 0.0,
+      "distributed": 0.0,
       "is_finalized": true,
       "distributions": {
-        "0.0.3001": 1062.93929288,
-        "0.0.3002": 531.46964644,
-        "0.0.3003": 265.73482322,
-        "0.0.3004": 199.30111741,
-        "0.0.9001": 66433.70580498
+        "demo-miner-001": 0.0,
+        "0.0.1003": 0.0,
+        "0.0.1001": 0.0,
+        "0.0.1002": 0.0,
+        "Gamma-Miner": 0.0,
+        "Alpha-Miner": 0.0,
+        "Beta-Miner": 0.0,
+        "0.0.3001": 0.0,
+        "agent-defi-007": 0.0,
+        "0.0.8127455": 0.0
       }
     }
+  },
+  "meta": {
+    "source": "hedera_hcs",
+    "synced_at": "2026-03-12T14:10:11.589603"
   }
 }
