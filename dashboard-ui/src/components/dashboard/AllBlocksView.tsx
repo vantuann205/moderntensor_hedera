@@ -1,8 +1,21 @@
-"use client";
-
-import React from 'react';
+import React, { useState } from 'react';
+import { useLatestBlocks } from '@/hooks/useRealData';
 
 export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () => void; onSelectBlock?: (h: string) => void }) {
+  const { data: blocks, loading } = useLatestBlocks(20);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const formatTimestamp = (timestamp: string) => {
+    if (!timestamp) return 'Just now';
+    const date = new Date(parseFloat(timestamp) * 1000);
+    return date.toLocaleTimeString();
+  };
+
+  const filteredBlocks = blocks.filter(block => 
+    block.height.toString().includes(searchQuery) ||
+    block.hash.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex justify-center py-8 px-4 lg:px-12 relative z-10 w-full min-h-screen animate-fade-in-up">
       <div className="w-full max-w-[1400px] flex flex-col gap-8">
@@ -13,16 +26,22 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
              <span className="text-neon-cyan">BLOCKS</span>
           </div>
 
-          <div className="relative w-full max-w-3xl">
+          <form onSubmit={(e) => e.preventDefault()} className="relative w-full max-w-3xl">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm">search</span>
-            <input className="w-full bg-[#0a1120]/80 border border-white/10 rounded-full pl-12 pr-4 py-4 text-white focus:outline-none focus:border-neon-cyan text-xs font-mono backdrop-blur-md" placeholder="Search by Block Height / Hash / Validator..." type="text"/>
-          </div>
+            <input 
+              className="w-full bg-[#0a1120]/80 border border-white/10 rounded-full pl-12 pr-4 py-4 text-white focus:outline-none focus:border-neon-cyan text-xs font-mono backdrop-blur-md" 
+              placeholder="Search by Block Height / Hash..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              type="text"
+            />
+          </form>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { label: 'Total Blocks', val: '#2,481,920', icon: 'layers', color: 'text-neon-cyan', border: 'neon-border-cyan' },
-              { label: 'Avg Block Time', val: '12.0s', icon: 'timelapse', color: 'text-neon-pink', border: 'neon-border-pink' },
-              { label: 'Finalization', val: '820 blk', icon: 'verified_user', color: 'text-neon-blue', border: 'border-l-2 border-neon-blue' }
+              { label: 'Blockchain', val: 'Hedera', icon: 'hub', color: 'text-neon-cyan', border: 'neon-border-cyan' },
+              { label: 'Protocol', val: 'v1 API', icon: 'timelapse', color: 'text-neon-pink', border: 'neon-border-pink' },
+              { label: 'Consensus', val: 'Gossip', icon: 'verified_user', color: 'text-neon-blue', border: 'border-l-2 border-neon-blue' }
             ].map((stat, i) => (
               <div key={i} className={`glass-panel p-6 rounded-xl ${stat.border} relative overflow-hidden group`}>
                 <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">{stat.label}</p>
@@ -45,20 +64,22 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
                 <thead>
                   <tr className="bg-white/5 border-b border-white/10 text-[10px] uppercase font-black text-slate-500">
                     <th className="px-6 py-5">Block Height</th>
-                    <th className="px-6 py-4">Validator</th>
-                    <th className="px-6 py-4 text-center">Txs</th>
+                    <th className="px-6 py-4">Txs (Count)</th>
+                    <th className="px-6 py-4">Gas Used</th>
                     <th className="px-6 py-4">Hash</th>
                     <th className="px-6 py-4 text-right">Time</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-white/5">
-                  {[...Array(10)].map((_, i) => (
-                    <tr key={i} className="group hover:bg-neon-cyan/5 transition-all cursor-pointer" onClick={() => onSelectBlock?.((2481920-i).toString())}>
-                      <td className="px-6 py-5 text-neon-cyan font-black">#{2481920 - i}</td>
-                      <td className="px-6 py-4"><span className="text-slate-300">TensorStats_{45 - i}</span></td>
-                      <td className="px-6 py-4 text-center"><span className="bg-white/5 px-2 py-0.5 rounded text-xs text-white">42</span></td>
-                      <td className="px-6 py-4 font-mono text-slate-500 text-xs">0x9f8a...3b2c</td>
-                      <td className="px-6 py-4 text-right text-slate-500 text-[10px]">{i * 12}s ago</td>
+                  {loading ? (
+                    <tr><td colSpan={5} className="px-6 py-20 text-center animate-pulse text-slate-500 uppercase tracking-widest">Scanning Chain...</td></tr>
+                  ) : filteredBlocks.map((block, i) => (
+                    <tr key={i} className="group hover:bg-neon-cyan/5 transition-all cursor-pointer" onClick={() => onSelectBlock?.(block.height.toString())}>
+                      <td className="px-6 py-5 text-neon-cyan font-black">#{block.height}</td>
+                      <td className="px-6 py-4 text-center"><span className="bg-white/5 px-2 py-0.5 rounded text-xs text-white">{block.count}</span></td>
+                      <td className="px-6 py-4 text-slate-300 font-bold">{block.gas_used.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-mono text-slate-500 text-[10px] truncate max-w-[150px]" title={block.hash}>{block.hash}</td>
+                      <td className="px-6 py-4 text-right text-slate-500 text-[10px]">{formatTimestamp(block.timestamp)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -70,3 +91,4 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
     </div>
   );
 }
+

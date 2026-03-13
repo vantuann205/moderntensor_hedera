@@ -14,10 +14,17 @@ import TasksView from "../dashboard/TasksView";
 import TokenomicsView from "../dashboard/TokenomicsView";
 import AllBlocksView from "../dashboard/AllBlocksView";
 import AllTransactionsView from "../dashboard/AllTransactionsView";
+import TransactionDetailsView from "../dashboard/TransactionDetailsView";
 
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
   const [isBooting, setIsBooting] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.HOME);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+
+  const handleSelectTransaction = (id: string) => {
+    setSelectedTransactionId(id);
+    setCurrentView(ViewState.TRANSACTION_DETAILS);
+  };
 
   const renderView = () => {
     switch (currentView) {
@@ -26,9 +33,10 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
       case ViewState.EXPLORER:
         return <ExplorerView 
           onSelectBlock={(h) => setCurrentView(ViewState.BLOCK_DETAILS)} 
-          onSelectTransaction={(h) => setCurrentView(ViewState.TRANSACTION_DETAILS)} 
+          onSelectTransaction={handleSelectTransaction} 
           onViewAllBlocks={() => setCurrentView(ViewState.ALL_BLOCKS)}
           onViewAllTransactions={() => setCurrentView(ViewState.ALL_TRANSACTIONS)}
+          onSelectAccount={(id) => console.log('Selected account:', id)}
         />;
       case ViewState.SUBNETS:
         return <SubnetsHub onSelect={(id) => setCurrentView(ViewState.SUBNET_DETAILS)} />;
@@ -52,7 +60,14 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
       case ViewState.ALL_BLOCKS:
         return <AllBlocksView onBack={() => setCurrentView(ViewState.EXPLORER)} onSelectBlock={(h) => setCurrentView(ViewState.BLOCK_DETAILS)} />;
       case ViewState.ALL_TRANSACTIONS:
-        return <AllTransactionsView onBack={() => setCurrentView(ViewState.EXPLORER)} onSelectTransaction={(h) => setCurrentView(ViewState.TRANSACTION_DETAILS)} />;
+        return <AllTransactionsView onBack={() => setCurrentView(ViewState.EXPLORER)} onSelectTransaction={handleSelectTransaction} />;
+      case ViewState.TRANSACTION_DETAILS:
+        return <TransactionDetailsView 
+          transactionId={selectedTransactionId || ''} 
+          onBack={() => setCurrentView(ViewState.EXPLORER)} 
+          onSelectAccount={(id) => console.log('Selected account:', id)}
+          onSelectBlock={(h) => console.log('Selected block:', h)}
+        />;
       default:
         return <HomeView />;
     }

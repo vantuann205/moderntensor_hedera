@@ -150,3 +150,82 @@ export function useScores() {
 
   return { data, loading, error };
 }
+
+export function useLatestBlocks(limit: number = 10) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchBlocks() {
+      try {
+        const response = await fetch(`/api/explorer/mirror?type=blocks&limit=${limit}`);
+        const result = await response.json();
+        if (result.success) setData(result.data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchBlocks();
+    const interval = setInterval(fetchBlocks, 10000);
+    return () => clearInterval(interval);
+  }, [limit]);
+
+  return { data, loading, error };
+}
+
+export function useLatestTransactions(limit: number = 10) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchTransactions() {
+      try {
+        const response = await fetch(`/api/explorer/mirror?type=transactions&limit=${limit}`);
+        const result = await response.json();
+        if (result.success) setData(result.data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTransactions();
+    const interval = setInterval(fetchTransactions, 10000);
+    return () => clearInterval(interval);
+  }, [limit]);
+
+  return { data, loading, error };
+}
+
+export function useTransactionDetails(id: string | null) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+        setData(null);
+        return;
+    }
+    async function fetchDetails() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/explorer/mirror?type=transaction&id=${id}`);
+        const result = await response.json();
+        if (result.success) setData(result.data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDetails();
+  }, [id]);
+
+  return { data, loading, error };
+}
