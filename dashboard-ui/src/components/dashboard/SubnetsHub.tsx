@@ -250,6 +250,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       description: 'Text generation, code review, and general AI tasks',
       emission: '45%',
       miners: stats?.miners?.filter(m => m.subnetIds?.includes(0)).length || 0,
+      validators: Math.ceil((stats?.totalValidators || 0) * 0.5), // Estimate for demo
       tasks: stats?.totalTasks || 0,
       color: 'neon-cyan',
       gradient: 'from-neon-cyan/20 to-transparent',
@@ -262,6 +263,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       description: 'Image generation, style transfer, and visual AI',
       emission: '30%',
       miners: stats?.miners?.filter(m => m.subnetIds?.includes(1)).length || 0,
+      validators: Math.ceil((stats?.totalValidators || 0) * 0.3), // Estimate for demo
       tasks: 0,
       color: 'neon-pink',
       gradient: 'from-neon-pink/20 to-transparent',
@@ -274,6 +276,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       description: 'Code review, bug detection, and optimization',
       emission: '25%',
       miners: stats?.miners?.filter(m => m.subnetIds?.includes(2)).length || 0,
+      validators: Math.ceil((stats?.totalValidators || 0) * 0.2), // Estimate for demo
       tasks: 0,
       color: 'neon-purple',
       gradient: 'from-neon-purple/20 to-transparent',
@@ -288,9 +291,27 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
 
   return (
     <div className="p-6 space-y-8 animate-fade-in-up">
-      {/* Network Statistics - NOW AT THE TOP */}
+      {/* Hero Section - NOW AT THE VERY TOP */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-2">
+        <div>
+          <h1 className="text-6xl font-display font-bold text-white tracking-tighter mb-2">
+            Subnets <span className="text-neon-cyan neon-text">Hub</span>
+          </h1>
+          <p className="text-text-secondary text-lg max-w-xl font-light">
+            Access specialized AI compute networks. Modular, scalable, and fully decentralized on Hedera.
+          </p>
+        </div>
+        <div className="glass-panel px-6 py-4 rounded-2xl border border-neon-cyan/20 flex flex-col items-center min-w-[160px]">
+          <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
+          <span className="text-4xl font-display font-bold text-white leading-none">
+            <CountUp end={subnets.length} />
+          </span>
+        </div>
+      </div>
+
+      {/* Network Statistics */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-6 border-t border-white/5">
           {[
             { label: 'Total Miners', val: stats.totalMiners, icon: 'memory', color: 'text-neon-cyan', bg: 'bg-neon-cyan/5' },
             { label: 'Validators', val: stats.totalValidators, icon: 'verified', color: 'text-neon-pink', bg: 'bg-neon-pink/5' },
@@ -320,24 +341,6 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
         </div>
       )}
 
-      {/* Hero Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pt-4 border-t border-white/5">
-        <div>
-          <h1 className="text-6xl font-display font-bold text-white tracking-tighter mb-2">
-            Subnets <span className="text-neon-cyan neon-text">Hub</span>
-          </h1>
-          <p className="text-text-secondary text-lg max-w-xl font-light">
-            Access specialized AI compute networks. Modular, scalable, and fully decentralized on Hedera.
-          </p>
-        </div>
-        <div className="glass-panel px-6 py-4 rounded-2xl border border-neon-cyan/20 flex flex-col items-center min-w-[160px]">
-          <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
-          <span className="text-4xl font-display font-bold text-white leading-none">
-            <CountUp end={subnets.length} />
-          </span>
-        </div>
-      </div>
-
       {loading && !stats && (
         <div className="flex flex-col items-center justify-center py-24 gap-4 animate-pulse">
           <div className="w-12 h-12 border-4 border-neon-cyan/20 border-t-neon-cyan rounded-full animate-spin"></div>
@@ -363,10 +366,6 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
             onClick={() => setSelectedSubnet(subnet)}
             className={`glass-panel rounded-2xl p-8 border border-white/10 hover:border-${subnet.color}/50 transition-all duration-500 cursor-pointer group bg-gradient-to-br ${subnet.gradient} relative overflow-hidden ${subnet.glow}`}
           >
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
-              <span className={`material-symbols-outlined text-8xl ${subnet.color}`}>{subnet.icon}</span>
-            </div>
-            
             <div className="flex items-start justify-between mb-8 relative z-10">
               <div className={`w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-${subnet.color}/30 transition-colors`}>
                 <span className={`material-symbols-outlined ${subnet.color} text-2xl`}>{subnet.icon}</span>
@@ -385,16 +384,22 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 pt-6 border-t border-white/5 relative z-10">
+            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/5 relative z-10">
               <div>
-                <div className="text-xs text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Entities</div>
-                <div className="text-3xl font-display font-bold text-white">
+                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Miners</div>
+                <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.miners} />
                 </div>
               </div>
               <div>
-                <div className="text-xs text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Ops</div>
-                <div className="text-3xl font-display font-bold text-white">
+                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Validators</div>
+                <div className="text-2xl font-display font-bold text-white">
+                  <CountUp end={subnet.validators} />
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Tasks</div>
+                <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.tasks} />
                 </div>
               </div>
@@ -411,4 +416,5 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
     </div>
   );
 }
+
 
