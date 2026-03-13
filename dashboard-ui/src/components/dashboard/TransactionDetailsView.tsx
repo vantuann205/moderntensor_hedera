@@ -222,12 +222,19 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Fee Collection Account</span>
-                <span className="text-sm font-bold text-white font-mono">0.0.98 (Hedera Node 0)</span>
+                <span className="text-sm font-bold text-white font-mono">
+                    {tx.node || '—'} {tx.node === '0.0.3' ? '(Hedera Node 0)' : ''}
+                </span>
               </div>
             </div>
-            <button className="px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-[10px] font-black uppercase tracking-widest rounded hover:bg-neon-cyan/20 transition-all">
+            <a 
+              href={`https://hashscan.io/testnet/transaction/${tx.consensus_timestamp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-[10px] font-black uppercase tracking-widest rounded hover:bg-neon-cyan/20 transition-all"
+            >
               View on HashScan
-            </button>
+            </a>
         </div>
 
       </div>
