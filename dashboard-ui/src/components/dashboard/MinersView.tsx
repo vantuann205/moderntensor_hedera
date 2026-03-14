@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 
+import { useWallet } from '@/context/WalletContext';
+
 interface MinersViewProps {
   onBack: () => void;
   onSelectMiner: (minerId: string) => void;
@@ -31,6 +33,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState(10000);
+  const { accountId: myAccountId, isConnected } = useWallet();
 
   useEffect(() => {
     async function load() {
@@ -164,9 +167,12 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                         const subnets: number[] = m.subnet_ids ?? [0];
                         const regTime = m.consensusTimestamp || m.registered_at;
                         const scoreColor = trust >= 0.9 ? 'text-neon-green' : trust >= 0.7 ? 'text-neon-cyan' : 'text-yellow-400';
+                        const isMe = isConnected && myAccountId && (id === myAccountId || m.account_id === myAccountId);
                         return (
                           <tr key={`${id}-${m.hcs_sequence}`}
-                            className="group hover:bg-neon-cyan/5 transition-colors cursor-pointer"
+                            className={`group transition-colors cursor-pointer ${isMe
+                              ? 'bg-neon-cyan/10 border-l-2 border-neon-cyan hover:bg-neon-cyan/15'
+                              : 'hover:bg-neon-cyan/5'}`}
                             onClick={() => onSelectMiner(id)}>
                             <td className="px-5 py-4 text-center text-slate-500 group-hover:text-neon-cyan font-bold">{idx + 1}</td>
                             <td className="px-5 py-4">
@@ -175,7 +181,12 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                                   <span className="material-symbols-outlined text-neon-cyan text-sm">dns</span>
                                 </div>
                                 <div>
-                                  <div className="font-bold text-white group-hover:text-neon-cyan transition-colors">{id}</div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="font-bold text-white group-hover:text-neon-cyan transition-colors">{id}</div>
+                                    {isMe && (
+                                      <span className="text-[9px] font-black bg-neon-cyan text-black px-1.5 py-0.5 rounded uppercase tracking-widest">YOU</span>
+                                    )}
+                                  </div>
                                   <div className="flex gap-1 mt-0.5">
                                     {subnets.map(s => (
                                       <span key={s} className="text-[9px] text-neon-cyan/60 border border-neon-cyan/20 px-1.5 rounded-full">S-{s}</span>

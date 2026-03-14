@@ -13,9 +13,9 @@ const MDT_TOKEN_ID = process.env.NEXT_PUBLIC_MDT_TOKEN_ID || '0.0.8198586';
 const PYTHON = process.env.PYTHON_PATH
   || 'C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe';
 
-// Min stakes per StakingVault.sol
-const MIN_MINER_STAKE = 1000;   // MDT
-const MIN_VALIDATOR_STAKE = 50000; // MDT
+// Min stakes per StakingVaultV2.sol
+const MIN_MINER_STAKE = 10;    // MDT (StakingVaultV2: minMinerStake = 10 MDT)
+const MIN_VALIDATOR_STAKE = 500; // MDT (StakingVaultV2: minValidatorStake = 500 MDT)
 
 async function getMDTBalance(accountId: string): Promise<number> {
   const res = await fetch(

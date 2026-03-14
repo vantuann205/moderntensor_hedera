@@ -5,7 +5,7 @@ async function main() {
     const [deployer] = await hre.ethers.getSigners();
     console.log("Deployer:", deployer.address);
 
-    const mdtTokenNum = 7852345;
+    const mdtTokenNum = 8198586;  // HTS 0.0.8198586 (real MDT on testnet)
     const mdtTokenAddress = "0x" + mdtTokenNum.toString(16).padStart(40, "0");
     const treasury = deployer.address;
 

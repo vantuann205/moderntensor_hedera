@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BootSequence from "./BootSequence";
 import ParticleBackground from "./ParticleBackground";
 import Navbar from "./Navbar";
@@ -17,12 +17,22 @@ import AllBlocksView from "../dashboard/AllBlocksView";
 import AllTransactionsView from "../dashboard/AllTransactionsView";
 import TransactionDetailsView from "../dashboard/TransactionDetailsView";
 import BlockDetailsView from "../dashboard/BlockDetailsView";
+import MinerDashboard from "../dashboard/MinerDashboard";
+import { useWallet } from "@/context/WalletContext";
 
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
   const [isBooting, setIsBooting] = useState(true);
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.HOME);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [selectedBlockHeight, setSelectedBlockHeight] = useState<string | null>(null);
+  const { isMiner, isConnected, accountId } = useWallet();
+
+  // When wallet connects and account is a registered miner → go to miner dashboard
+  useEffect(() => {
+    if (isConnected && isMiner && currentView === ViewState.HOME) {
+      setCurrentView(ViewState.MINER_DASHBOARD);
+    }
+  }, [isConnected, isMiner]); // eslint-disable-line
 
   const handleSelectTransaction = (id: string) => {
     setSelectedTransactionId(id);
@@ -41,8 +51,11 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
       case ViewState.REGISTER_ROLE:
         return <RoleRegistrationView
           onBack={() => setCurrentView(ViewState.HOME)}
-          onViewChange={setCurrentView}
+          onViewChange={(v) => setCurrentView(v)}
+          onRegistered={() => setCurrentView(ViewState.MINER_DASHBOARD)}
         />;
+      case ViewState.MINER_DASHBOARD:
+        return <MinerDashboard onBack={() => setCurrentView(ViewState.HOME)} />;
       case ViewState.EXPLORER:
         return <ExplorerView 
           onSelectBlock={handleSelectBlock} 

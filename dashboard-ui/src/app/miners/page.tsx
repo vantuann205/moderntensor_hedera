@@ -36,7 +36,7 @@ function toMDT(raw: any): number {
 // ── Register Modal ───────────────────────────────────────────────────────────
 function RegisterMinerModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { accountId, isConnected } = useWallet();
-  const [stakeAmount, setStakeAmount] = useState('1000');
+  const [stakeAmount, setStakeAmount] = useState('10');
   const [capabilities, setCapabilities] = useState<string[]>(['text_generation']);
   const [subnetIds, setSubnetIds] = useState('0');
   const [loading, setLoading] = useState(false);
@@ -91,9 +91,9 @@ function RegisterMinerModal({ onClose, onSuccess }: { onClose: () => void; onSuc
           </div>
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
-              Stake Amount (MDT) <span className="text-neon-cyan">· min 1000 MDT</span>
+              Stake Amount (MDT) <span className="text-neon-cyan">· min 10 MDT · StakingVaultV2</span>
             </label>
-            <Input type="number" min={1000} value={stakeAmount} onChange={e => setStakeAmount(e.target.value)}
+            <Input type="number" min={10} value={stakeAmount} onChange={e => setStakeAmount(e.target.value)}
               className="bg-black/40 border-white/10 text-white font-mono focus:border-neon-cyan/40 h-11" />
           </div>
           <div>

@@ -23,6 +23,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./ValidationLib.sol";
 
+// Hedera HTS precompile
+interface IHederaTokenService {
+    function associateToken(address account, address token) external returns (int64 responseCode);
+}
+address constant HTS_PRECOMPILE = address(0x167);
+
 interface IStakingVaultV2 {
     function isMiner(address user) external view returns (bool);
     function isValidator(address user) external view returns (bool);
@@ -240,6 +246,8 @@ contract SubnetRegistryV2 is ReentrancyGuard, Ownable, Pausable {
         mdtToken = IERC20(_mdtToken);
         protocolTreasury = _treasury;
         stakingVault = IStakingVaultV2(_stakingVault);
+        // Associate this contract with MDT HTS token
+        IHederaTokenService(HTS_PRECOMPILE).associateToken(address(this), _mdtToken);
     }
 
     // =========================================================================

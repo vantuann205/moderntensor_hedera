@@ -54,15 +54,42 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             const evmAddress = data.evm_address || idOrAddress;
             const balance = (data.balance?.balance / 1e8).toFixed(2) || '0.00';
 
-            const minerRes = await fetch('/api/miners');
-            const minerData = await minerRes.json();
-            const miners = minerData.miners || {};
-            
+            // Primary: check on-chain StakingVaultV2.isMiner(evmAddress)
+            let isM = false;
+            try {
+                const STAKING_VAULT = '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f'; // 0.0.8219632
+                const HEDERA_RPC = 'https://testnet.hashio.io/api';
+                // eth_call: isMiner(address) → selector 0x6d70f7ae
+                const callData = '0x6d70f7ae' + evmAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+                const rpcRes = await fetch(HEDERA_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0', id: 1, method: 'eth_call',
+                        params: [{ to: STAKING_VAULT, data: callData }, 'latest'],
+                    }),
+                });
+                const rpcData = await rpcRes.json();
+                // result is 0x0...01 (true) or 0x0...00 (false)
+                isM = rpcData.result !== '0x' && BigInt(rpcData.result || '0x0') === 1n;
+            } catch (_) {}
+
+            // Fallback: check HCS registration topic
+            if (!isM) {
+                try {
+                    const hcsRes = await fetch('/api/hcs/miners');
+                    const hcsData = await hcsRes.json();
+                    const hcsMiners: any[] = hcsData.success ? hcsData.data : [];
+                    isM = hcsMiners.some((m: any) =>
+                        m.miner_id === accountId || m.account_id === accountId
+                    );
+                } catch (_) {}
+            }
+
             const validatorRes = await fetch('/api/validators');
             const validatorData = await validatorRes.json();
             const validators = validatorData.validators || [];
 
-            const isM = !!Object.values(miners).find((m: any) => m.account_id === accountId);
             const isV = !!validators.find((v: any) => v.account_id === accountId || v.id === accountId);
 
             setState({

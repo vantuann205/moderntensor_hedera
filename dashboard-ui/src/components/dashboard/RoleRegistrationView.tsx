@@ -8,10 +8,11 @@ interface Props {
   onBack: () => void;
   onViewChange: (v: ViewState) => void;
   defaultRole?: 'miner' | 'holder';
+  onRegistered?: () => void;
 }
 
 const CAPABILITIES = ['text_generation', 'code_review', 'image_analysis', 'data_labeling', 'summarization'];
-const MIN_STAKE = { miner: 1000, holder: 10, validator: 50000 };
+const MIN_STAKE = { miner: 10, holder: 1, validator: 500 };
 type Step = 'idle' | 'checking' | 'need_faucet' | 'faucet_pending' | 'staking' | 'hcs' | 'done' | 'error';
 
 interface BalanceInfo {
@@ -21,10 +22,10 @@ interface BalanceInfo {
   hasEnough: boolean;
 }
 
-export default function RoleRegistrationView({ onBack, onViewChange, defaultRole = 'miner' }: Props) {
+export default function RoleRegistrationView({ onBack, onViewChange, defaultRole = 'miner', onRegistered }: Props) {
   const { accountId, address: walletEvm, isConnected, type: walletType } = useWallet();
   const [role, setRole] = useState<'miner' | 'holder'>(defaultRole);
-  const [stake, setStake] = useState(1000);
+  const [stake, setStake] = useState(10);
   const [caps, setCaps] = useState<string[]>(['text_generation']);
   const [step, setStep] = useState<Step>('idle');
   const [balance, setBalance] = useState<BalanceInfo | null>(null);
@@ -131,6 +132,8 @@ export default function RoleRegistrationView({ onBack, onViewChange, defaultRole
       setHcsResult(data);
       log(`✓ HCS sequence #${data.sequence} · topic ${data.topicId}`);
       setStep('done');
+      // Navigate to miners view after 1.5s so user sees success state
+      setTimeout(() => onRegistered?.(), 1500);
     } catch (e: any) { setError(e.message); setStep('error'); }
   };
 
@@ -271,7 +274,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, defaultRole
 
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
-              Stake Amount (MDT) <span className="text-neon-cyan">· min {minStake} MDT · StakingVault.sol</span>
+              Stake Amount (MDT) <span className="text-neon-cyan">· min {minStake} MDT · StakingVaultV2.sol</span>
             </label>
             <input type="number" min={minStake} value={stake}
               onChange={e => setStake(Number(e.target.value))}
