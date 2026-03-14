@@ -6,6 +6,7 @@ import { ViewState } from '@/types';
 import NeuralMetagraph from './NeuralMetagraph';
 import { useWallet } from '@/context/WalletContext';
 import { useProtocolStats } from '@/hooks/useRealData';
+import SubmitTaskModal from '@/components/ui-custom/SubmitTaskModal';
 
 interface HomeViewProps {
   onViewChange?: (view: ViewState) => void;
@@ -134,6 +135,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
   const [chart, setChart] = useState(initialChart);
   const [mdtSupply, setMdtSupply] = useState<number | null>(null);
   const [mdtMaxSupply, setMdtMaxSupply] = useState<number | null>(null);
+  const [showSubmitTask, setShowSubmitTask] = useState(false);
   const [activeNodes, setActiveNodes] = useState<number>(0);
 
   // Animate chart
@@ -170,6 +172,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
 
   const handleRoleAction = (role: typeof ROLES[0]) => {
     if (!onViewChange) return;
+    if (role.id === 'requester') { setShowSubmitTask(true); return; }
     onViewChange(role.registerView);
   };
 
@@ -414,6 +417,8 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
           </tbody>
         </table>
       </div>
+
+      <SubmitTaskModal isOpen={showSubmitTask} onClose={() => setShowSubmitTask(false)} />
 
       {/* ── Connect Wallet CTA (only when NOT connected) ── */}
       {!isConnected && (

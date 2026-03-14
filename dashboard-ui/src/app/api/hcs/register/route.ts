@@ -152,9 +152,24 @@ export async function POST(req: Request) {
 
     const sequence = hcsResult.sequence || '0';
 
-    // Convert transaction_id "0.0.8127455@1773481351.775521039" → "1773481351.775521039"
+    // Query mirror node to get real consensus_timestamp for this sequence
     const rawTxId: string = hcsResult.transaction_id || '';
-    const txTimestamp = rawTxId.includes('@') ? rawTxId.split('@')[1] : rawTxId;
+    let txTimestamp = '';
+    try {
+      const mirrorRes = await fetch(
+        `https://testnet.mirrornode.hedera.com/api/v1/topics/${REGISTRATION_TOPIC_ID}/messages/${sequence}`,
+        { cache: 'no-store' }
+      );
+      if (mirrorRes.ok) {
+        const mirrorData = await mirrorRes.json();
+        txTimestamp = mirrorData.consensus_timestamp || '';
+      }
+    } catch (_) {}
+
+    // Fallback
+    if (!txTimestamp) {
+      txTimestamp = rawTxId.includes('@') ? rawTxId.split('@')[1] : rawTxId;
+    }
 
     return NextResponse.json({
       success: true,

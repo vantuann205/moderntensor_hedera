@@ -27,12 +27,7 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
   const [selectedBlockHeight, setSelectedBlockHeight] = useState<string | null>(null);
   const { isMiner, isConnected, accountId } = useWallet();
 
-  // When wallet connects and account is a registered miner → go to miner dashboard
-  useEffect(() => {
-    if (isConnected && isMiner && currentView === ViewState.HOME) {
-      setCurrentView(ViewState.MINER_DASHBOARD);
-    }
-  }, [isConnected, isMiner]); // eslint-disable-line
+  // No auto-navigate — user stays on HOME, cards show registered state
 
   const handleSelectTransaction = (id: string) => {
     setSelectedTransactionId(id);

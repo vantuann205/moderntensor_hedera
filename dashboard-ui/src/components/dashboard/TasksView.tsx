@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTasks, useScores, useMiners } from '@/hooks/useRealData';
+import SubmitTaskModal from '@/components/ui-custom/SubmitTaskModal';
 
 interface TasksViewProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
   const { data: scores } = useScores();
   const { data: miners } = useMiners();
   const [filterType, setFilterType] = useState<string>('all');
+  const [showSubmit, setShowSubmit] = useState(false);
 
   // Calculate task stats from scores
   const tasksWithStats = React.useMemo(() => {
@@ -21,19 +23,18 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
     return tasks.map((task: any) => {
       const taskScores = scores?.filter((s: any) => s.taskId === task.taskId) || [];
       const validations = taskScores.length;
-      const avgScore = validations > 0 
-        ? taskScores.reduce((sum: number, s: any) => sum + s.score, 0) / validations 
+      const avgScore = validations > 0
+        ? taskScores.reduce((sum: number, s: any) => sum + s.score, 0) / validations
         : 0;
-      
-      return {
-        ...task,
-        validations,
-        avgScore,
-        status: validations > 0 ? 'completed' : 'pending'
-      };
+
+      // Status: completed only if has validated scores, otherwise pending
+      const status = validations > 0 ? 'completed' : 'pending';
+
+      return { ...task, validations, avgScore, status };
     }).sort((a: any, b: any) => {
-      // Sort by timestamp descending (newest first)
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      const tA = a.consensusTimestamp ? Number(a.consensusTimestamp.replace('.', '')) : new Date(a.timestamp).getTime();
+      const tB = b.consensusTimestamp ? Number(b.consensusTimestamp.replace('.', '')) : new Date(b.timestamp).getTime();
+      return tB - tA;
     });
   }, [tasks, scores]);
 
@@ -61,9 +62,15 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                         AI tasks submitted and processed on Hedera HCS
                     </p>
                 </div>
-                
-                {/* Filter */}
-                <div className="flex gap-2">
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <button onClick={() => setShowSubmit(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20 transition-all">
+                    <span className="material-symbols-outlined text-sm">add_task</span>
+                    Submit Task
+                  </button>
+                  {/* Filter */}
+                  <div className="flex gap-2">
                   <button
                     onClick={() => setFilterType('all')}
                     className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -87,14 +94,17 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                       {type.replace('_', ' ')}
                     </button>
                   ))}
+                  </div>
                 </div>
             </div>
+
+            <SubmitTaskModal isOpen={showSubmit} onClose={() => setShowSubmit(false)} />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
                   { label: 'Total Tasks', val: tasksWithStats.length, icon: 'task', color: 'text-neon-cyan', border: 'neon-border-cyan' },
                   { label: 'Completed', val: tasksWithStats.filter((t: any) => t.status === 'completed').length, icon: 'check_circle', color: 'text-neon-green', border: 'neon-border-green' },
-                  { label: 'Total Rewards', val: (tasksWithStats.reduce((sum: number, t: any) => sum + (t.rewardAmount || 0), 0) / 1e10).toFixed(1) + 'K', icon: 'payments', color: 'text-neon-pink', border: 'neon-border-pink' },
+                  { label: 'Total Rewards', val: tasksWithStats.reduce((sum: number, t: any) => sum + (t.rewardAmount || 0), 0) / 1e8 > 1000 ? (tasksWithStats.reduce((sum: number, t: any) => sum + (t.rewardAmount || 0), 0) / 1e8 / 1000).toFixed(1) + 'K' : (tasksWithStats.reduce((sum: number, t: any) => sum + (t.rewardAmount || 0), 0) / 1e8).toFixed(1), icon: 'payments', color: 'text-neon-pink', border: 'neon-border-pink' },
                   { label: 'Avg Score', val: tasksWithStats.length > 0 ? (tasksWithStats.reduce((sum: number, t: any) => sum + t.avgScore, 0) / tasksWithStats.filter((t: any) => t.avgScore > 0).length).toFixed(1) : '0', icon: 'star', color: 'text-neon-purple', border: 'border-l-2 border-neon-purple' }
                 ].map((stat, i) => (
                   <div key={i} className={`glass-panel p-5 rounded-xl ${stat.border} relative overflow-hidden group`}>
@@ -135,76 +145,88 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                               <table className="w-full text-left border-collapse">
                                   <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
                                       <tr>
-                                          <th className="px-6 py-5">Task ID</th>
-                                          <th className="px-6 py-5">Type</th>
-                                          <th className="px-6 py-5">Prompt</th>
-                                          <th className="px-6 py-5 text-right">Reward</th>
-                                          <th className="px-6 py-5 text-right">Validations</th>
-                                          <th className="px-6 py-5 text-right">Avg Score</th>
-                                          <th className="px-6 py-5 text-center">Status</th>
+                                          <th className="px-4 py-4">Task ID</th>
+                                          <th className="px-4 py-4">Task Type</th>
+                                          <th className="px-4 py-4">Prompt</th>
+                                          <th className="px-4 py-4 text-right">Reward</th>
+                                          <th className="px-4 py-4 text-center">Subnet</th>
+                                          <th className="px-4 py-4">Requester</th>
+                                          <th className="px-4 py-4 text-right">Deadline</th>
+                                          <th className="px-4 py-4">Timestamp</th>
+                                          <th className="px-4 py-4 text-center">Status</th>
                                       </tr>
                                   </thead>
                                   <tbody className="text-sm divide-y divide-white/5 font-mono tracking-widest">
-                                      {filteredTasks.map((task: any, idx: number) => (
+                                      {filteredTasks.map((task: any) => (
                                           <tr key={task.taskId} className="group hover:bg-neon-cyan/5 transition-colors cursor-pointer" onClick={() => onSelectTask(task.taskId)}>
-                                              <td className="px-6 py-5">
-                                                  <div className="flex items-center gap-4">
-                                                      <div className="size-10 rounded-lg bg-neon-pink/20 p-[1px] shadow-[0_0_10px_rgba(0,0,0,0.4)]">
-                                                          <div className="w-full h-full bg-slate-900 rounded-[7px] flex items-center justify-center">
-                                                              <span className="material-symbols-outlined text-neon-pink text-sm">task</span>
-                                                          </div>
+                                              {/* Task ID */}
+                                              <td className="px-4 py-4">
+                                                  <div className="flex items-center gap-2">
+                                                      <div className="size-8 rounded-lg bg-neon-pink/20 flex items-center justify-center shrink-0">
+                                                          <span className="material-symbols-outlined text-neon-pink text-sm">task</span>
                                                       </div>
-                                                      <div className="flex flex-col">
-                                                          <span className="font-bold text-white group-hover:text-neon-cyan transition-colors text-xs">{task.taskId}</span>
-                                                          <span className="text-[10px] text-slate-500">
-                                                            {task.consensusTimestamp ? (
-                                                              <>
-                                                                <a 
-                                                                  href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
-                                                                  target="_blank"
-                                                                  rel="noopener noreferrer"
-                                                                  className="text-neon-cyan hover:underline"
-                                                                  onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                  View on HashScan
-                                                                </a>
-                                                              </>
-                                                            ) : (
-                                                              'On HCS'
-                                                            )}
-                                                          </span>
+                                                      <div className="flex flex-col min-w-0">
+                                                          <span className="font-bold text-white group-hover:text-neon-cyan transition-colors text-[10px] truncate max-w-[120px]">{task.taskId}</span>
+                                                          {task.consensusTimestamp ? (
+                                                            <a href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
+                                                              target="_blank" rel="noopener noreferrer"
+                                                              className="text-[9px] text-neon-cyan hover:underline"
+                                                              onClick={e => e.stopPropagation()}>
+                                                              HashScan ↗
+                                                            </a>
+                                                          ) : <span className="text-[9px] text-slate-600">On HCS</span>}
                                                       </div>
                                                   </div>
                                               </td>
-                                              <td className="px-6 py-5">
-                                                <span className="px-2 py-1 rounded text-[9px] bg-neon-purple/10 text-neon-purple border border-neon-purple/30">
-                                                  {task.taskType?.replace('_', ' ')}
-                                                </span>
+                                              {/* Task Type */}
+                                              <td className="px-4 py-4">
+                                                  <span className="px-2 py-1 rounded text-[9px] bg-neon-purple/10 text-neon-purple border border-neon-purple/30 whitespace-nowrap">
+                                                      {task.taskType?.replace(/_/g, ' ')}
+                                                  </span>
                                               </td>
-                                              <td className="px-6 py-5">
-                                                <div className="text-white max-w-xs truncate text-xs">
-                                                  {task.prompt}
-                                                </div>
+                                              {/* Prompt */}
+                                              <td className="px-4 py-4 max-w-[160px]">
+                                                  <div className="text-white truncate text-[11px]" title={task.prompt}>{task.prompt || '—'}</div>
                                               </td>
-                                              <td className="px-6 py-5 text-right">
-                                                  <div className="font-bold text-neon-green">{(task.rewardAmount / 1e10).toFixed(1)}K</div>
-                                                  <div className="text-[10px] text-slate-500">MDT</div>
+                                              {/* Reward */}
+                                              <td className="px-4 py-4 text-right whitespace-nowrap">
+                                                  <div className="font-bold text-neon-green text-xs">{(task.rewardAmount / 1e8).toFixed(2)}</div>
+                                                  <div className="text-[9px] text-slate-500">MDT</div>
                                               </td>
-                                              <td className="px-6 py-5 text-right text-white font-bold">
-                                                {task.validations}
+                                              {/* Subnet */}
+                                              <td className="px-4 py-4 text-center">
+                                                  <span className="px-2 py-1 rounded text-[9px] bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
+                                                      {task.subnetId ?? 0}
+                                                  </span>
                                               </td>
-                                              <td className="px-6 py-5 text-right">
-                                                <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px] text-slate-300">
-                                                  {task.avgScore > 0 ? task.avgScore.toFixed(1) : 'N/A'}
-                                                </span>
+                                              {/* Requester */}
+                                              <td className="px-4 py-4">
+                                                  <span className="text-[10px] text-slate-400 font-mono">{task.requester || '—'}</span>
                                               </td>
-                                              <td className="px-6 py-5 text-center">
-                                                  <span className={`px-3 py-1 rounded text-[10px] font-bold ${
-                                                    task.status === 'completed' 
-                                                      ? 'bg-green-500/10 text-green-400 border border-green-500/40'
-                                                      : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/40'
+                                              {/* Deadline */}
+                                              <td className="px-4 py-4 text-right">
+                                                  <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                                                      {task.deadline ? `${task.deadline}h` : '24h'}
+                                                  </span>
+                                              </td>
+                                              {/* Timestamp */}
+                                              <td className="px-4 py-4">
+                                                  <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                                      {task.consensusTimestamp
+                                                          ? new Date(Number(task.consensusTimestamp.split('.')[0]) * 1000).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
+                                                          : task.timestamp
+                                                              ? new Date(task.timestamp).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
+                                                              : '—'}
+                                                  </span>
+                                              </td>
+                                              {/* Status */}
+                                              <td className="px-4 py-4 text-center">
+                                                  <span className={`px-2 py-1 rounded text-[9px] font-bold whitespace-nowrap ${
+                                                      task.status === 'completed'
+                                                          ? 'bg-green-500/10 text-green-400 border border-green-500/40'
+                                                          : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/40'
                                                   }`}>
-                                                    {task.status.toUpperCase()}
+                                                      {task.status?.toUpperCase()}
                                                   </span>
                                               </td>
                                           </tr>
