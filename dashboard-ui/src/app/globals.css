@@ -223,3 +223,12 @@ body {
 .animate-scan-input {
   animation: scan-input 2s linear infinite;
 }
+
+/* Force hide WalletConnect Modal as requested by user to favor HashPack extension */
+wcm-modal, wcm-modal-router, .wcm-card, wcm-modal-backcard, .wcm-container {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -9999 !important;
+}

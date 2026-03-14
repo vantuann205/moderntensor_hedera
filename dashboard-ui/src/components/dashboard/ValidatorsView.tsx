@@ -27,7 +27,8 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
           avgScore: 0,
           totalScore: 0,
           avgConfidence: 0,
-          totalConfidence: 0
+          totalConfidence: 0,
+          consensusTimestamp: score.consensusTimestamp // first score's tx
         });
       }
       
@@ -130,16 +131,22 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                                                       <div className="flex flex-col">
                                                           <span className="font-bold text-white group-hover:text-neon-cyan transition-colors">{val.id}</span>
                                                           <span className="text-[10px] text-slate-500">
-                                                            Verify on{' '}
-                                                            <a 
-                                                              href={`https://hashscan.io/testnet/topic/0.0.8198584`}
-                                                              target="_blank"
-                                                              rel="noopener noreferrer"
-                                                              className="text-neon-cyan hover:underline"
-                                                              onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                              HashScan
-                                                            </a>
+                                                            {val.consensusTimestamp ? (
+                                                              <>
+                                                                Verify on{' '}
+                                                                <a 
+                                                                  href={`https://hashscan.io/testnet/transaction/${val.consensusTimestamp}`}
+                                                                  target="_blank"
+                                                                  rel="noopener noreferrer"
+                                                                  className="text-neon-cyan hover:underline"
+                                                                  onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                  HashScan
+                                                                </a>
+                                                              </>
+                                                            ) : (
+                                                              'Recorded on HCS'
+                                                            )}
                                                           </span>
                                                       </div>
                                                   </div>

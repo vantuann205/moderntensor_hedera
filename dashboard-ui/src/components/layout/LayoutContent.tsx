@@ -6,6 +6,7 @@ import ParticleBackground from "./ParticleBackground";
 import Navbar from "./Navbar";
 import { ViewState } from "@/types";
 import HomeView from "../dashboard/HomeView";
+import RoleRegistrationView from "../dashboard/RoleRegistrationView";
 import ExplorerView from "../dashboard/ExplorerView";
 import SubnetsHub from "../dashboard/SubnetsHub";
 import MinersView from "../dashboard/MinersView";
@@ -36,7 +37,12 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
   const renderView = () => {
     switch (currentView) {
       case ViewState.HOME:
-        return <HomeView />;
+        return <HomeView onViewChange={setCurrentView} />;
+      case ViewState.REGISTER_ROLE:
+        return <RoleRegistrationView
+          onBack={() => setCurrentView(ViewState.HOME)}
+          onViewChange={setCurrentView}
+        />;
       case ViewState.EXPLORER:
         return <ExplorerView 
           onSelectBlock={handleSelectBlock} 
