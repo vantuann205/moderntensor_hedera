@@ -129,10 +129,11 @@ const ROLES = [
 ];
 
 export default function HomeView({ onViewChange }: HomeViewProps) {
-  const { isConnected, accountId } = useWallet();
+  const { isConnected, accountId, isMiner, isValidator } = useWallet();
   const { data: stats } = useProtocolStats();
   const [chart, setChart] = useState(initialChart);
   const [mdtSupply, setMdtSupply] = useState<number | null>(null);
+  const [mdtMaxSupply, setMdtMaxSupply] = useState<number | null>(null);
   const [activeNodes, setActiveNodes] = useState<number>(0);
 
   // Animate chart
@@ -151,7 +152,12 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
   useEffect(() => {
     fetch('/api/token-info')
       .then(r => r.json())
-      .then(d => { if (d.success) setMdtSupply(d.data.circulatingSupply); })
+      .then(d => {
+        if (d.success) {
+          setMdtSupply(d.data.circulatingSupply);
+          setMdtMaxSupply(d.data.maxSupply || d.data.totalSupply);
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -194,36 +200,78 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-            {ROLES.map(role => (
-              <div
-                key={role.id}
-                className={`glass-panel rounded-2xl p-6 border transition-all duration-300 cursor-pointer group ${role.borderClass} ${role.glowClass} flex flex-col gap-4`}
-                onClick={() => handleRoleAction(role)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className={`w-12 h-12 rounded-xl bg-${role.color}/10 border border-${role.color}/30 flex items-center justify-center`}>
-                    <span className={`material-symbols-outlined text-${role.color} text-2xl`}>{role.icon}</span>
+            {ROLES.map(role => {
+              const isActive =
+                (role.id === 'miner' && isMiner) ||
+                (role.id === 'validator' && isValidator);
+              const dashboardView =
+                role.id === 'miner' ? ViewState.MINER_DASHBOARD :
+                role.id === 'validator' ? ViewState.VALIDATORS : null;
+              const handleClick = () => {
+                if (!onViewChange) return;
+                if (isActive && dashboardView) onViewChange(dashboardView);
+                else handleRoleAction(role);
+              };
+              return (
+                <div
+                  key={role.id}
+                  className={`glass-panel rounded-2xl p-6 border transition-all duration-300 cursor-pointer group flex flex-col gap-4 ${
+                    isActive
+                      ? 'border-neon-green/60 shadow-[0_0_30px_rgba(0,255,163,0.2)]'
+                      : `${role.borderClass} ${role.glowClass}`
+                  }`}
+                  onClick={handleClick}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className={`w-12 h-12 rounded-xl bg-${role.color}/10 border border-${role.color}/30 flex items-center justify-center relative`}>
+                      <span className={`material-symbols-outlined text-${role.color} text-2xl`}>{role.icon}</span>
+                      {isActive && (
+                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-neon-green border-2 border-bg-dark flex items-center justify-center">
+                          <span className="material-symbols-outlined text-bg-dark" style={{ fontSize: 10 }}>check</span>
+                        </span>
+                      )}
+                    </div>
+                    {isActive ? (
+                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-neon-green/50 text-neon-green bg-neon-green/10 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse inline-block" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-${role.color}/30 text-${role.color} bg-${role.color}/5`}>
+                        {role.minStake === '0 MDT' ? 'FREE' : `Min ${role.minStake}`}
+                      </span>
+                    )}
                   </div>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-${role.color}/30 text-${role.color} bg-${role.color}/5`}>
-                    {role.minStake === '0 MDT' ? 'FREE' : `Min ${role.minStake}`}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-white font-display font-bold text-lg">{role.title}</h3>
-                  <p className={`text-${role.color} text-xs font-semibold mb-2`}>{role.subtitle}</p>
-                  <p className="text-slate-400 text-xs leading-relaxed">{role.desc}</p>
-                </div>
-                <div className="mt-auto pt-3 border-t border-white/5">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest">Earn</span>
-                    <span className="text-xs font-bold text-white">{role.earn}</span>
+                  <div>
+                    <h3 className="text-white font-display font-bold text-lg">{role.title}</h3>
+                    <p className={`text-${role.color} text-xs font-semibold mb-2`}>{role.subtitle}</p>
+                    {isActive ? (
+                      <p className="text-neon-green text-xs leading-relaxed font-semibold">
+                        ✓ Registered &amp; staked — you are active on the network.
+                      </p>
+                    ) : (
+                      <p className="text-slate-400 text-xs leading-relaxed">{role.desc}</p>
+                    )}
                   </div>
-                  <button className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-${role.color}/40 text-${role.color} bg-${role.color}/5 group-hover:bg-${role.color}/20`}>
-                    {role.action}
-                  </button>
+                  <div className="mt-auto pt-3 border-t border-white/5">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest">Earn</span>
+                      <span className="text-xs font-bold text-white">{role.earn}</span>
+                    </div>
+                    {isActive ? (
+                      <button className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-neon-green/50 text-neon-green bg-neon-green/10 group-hover:bg-neon-green/20 flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-sm">dashboard</span>
+                        {role.id === 'miner' ? 'Miner Dashboard' : 'Validator Dashboard'}
+                      </button>
+                    ) : (
+                      <button className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-${role.color}/40 text-${role.color} bg-${role.color}/5 group-hover:bg-${role.color}/20`}>
+                        {role.action}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -277,10 +325,14 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
               <span className="text-xl text-text-secondary ml-2">MDT</span>
             </p>
             <div className="w-full bg-panel-border h-2 mt-4 rounded-full overflow-hidden">
-              <div className="bg-gradient-to-r from-neon-cyan to-blue-600 h-full w-[28%] shadow-[0_0_10px_rgba(0,243,255,0.8)]" />
+              <div className="bg-gradient-to-r from-neon-cyan to-blue-600 h-full shadow-[0_0_10px_rgba(0,243,255,0.8)] transition-all duration-1000"
+                style={{ width: mdtSupply !== null && mdtMaxSupply ? `${Math.min((mdtSupply / mdtMaxSupply) * 100, 100).toFixed(1)}%` : '0%' }} />
             </div>
-            <p className="text-[10px] text-slate-500 mt-2">
-              Token: <a href="https://hashscan.io/testnet/token/0.0.8198586" target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">0.0.8198586</a>
+            <p className="text-[10px] text-slate-500 mt-2 flex justify-between">
+              <a href="https://hashscan.io/testnet/token/0.0.8198586" target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">0.0.8198586</a>
+              {mdtSupply !== null && mdtMaxSupply ? (
+                <span>{((mdtSupply / mdtMaxSupply) * 100).toFixed(1)}% of {mdtMaxSupply.toLocaleString()} max</span>
+              ) : null}
             </p>
           </div>
 
@@ -324,34 +376,41 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-panel-border text-sm">
-            {stats ? (
-              Object.keys(stats.minersPerSubnet || {}).length > 0
-                ? Object.keys(stats.minersPerSubnet || {}).map(sid => (
-                  <tr key={sid} className="hover:bg-neon-cyan/5 transition-colors">
-                    <td className="px-6 py-4 font-bold text-white">Subnet {sid}</td>
-                    <td className="px-6 py-4 text-right font-mono text-neon-cyan">{stats.minersPerSubnet?.[Number(sid)] ?? 0}</td>
-                    <td className="px-6 py-4 text-right font-mono text-purple-400">{stats.validatorsPerSubnet?.[Number(sid)] ?? 0}</td>
-                    <td className="px-6 py-4 text-right font-mono text-neon-green">{stats.tasksPerSubnet?.[Number(sid)] ?? 0}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-block size-2.5 rounded-full bg-neon-green shadow-[0_0_8px_#00ffa3]" />
-                    </td>
-                  </tr>
-                ))
-                : (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                      Loading subnet data from Hedera HCS...
-                    </td>
-                  </tr>
-                )
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                  <span className="material-symbols-outlined animate-spin text-neon-cyan mr-2">refresh</span>
-                  Fetching real data from Hedera...
-                </td>
-              </tr>
-            )}
+            {[
+              { id: 0, name: 'Text Generation', color: 'neon-cyan' },
+              { id: 1, name: 'Code Review',     color: 'neon-purple' },
+              { id: 2, name: 'Image Analysis',  color: 'neon-green' },
+            ].map(subnet => {
+              const miners    = stats?.minersPerSubnet?.[subnet.id]    ?? 0;
+              const validators = stats?.validatorsPerSubnet?.[subnet.id] ?? 0;
+              const tasks     = stats?.tasksPerSubnet?.[subnet.id]     ?? 0;
+              const isLoading = !stats;
+              return (
+                <tr key={subnet.id} className="hover:bg-neon-cyan/5 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-2 h-2 rounded-full bg-${subnet.color} shadow-[0_0_6px_currentColor]`} />
+                      <div>
+                        <div className="font-bold text-white text-sm">Subnet {subnet.id}</div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-widest">{subnet.name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-neon-cyan">
+                    {isLoading ? <span className="text-slate-600">—</span> : miners}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-purple-400">
+                    {isLoading ? <span className="text-slate-600">—</span> : validators}
+                  </td>
+                  <td className="px-6 py-4 text-right font-mono text-neon-green">
+                    {isLoading ? <span className="text-slate-600">—</span> : tasks}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className="inline-block size-2.5 rounded-full bg-neon-green shadow-[0_0_8px_#00ffa3]" />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
