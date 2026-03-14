@@ -23,7 +23,7 @@ export function WalletConnect() {
         >
           <div className={`w-6 h-6 rounded flex items-center justify-center ${type === 'hashpack' ? 'bg-neon-cyan/10 border-neon-cyan/20' : 'bg-orange-500/10 border-orange-500/20'} border`}>
             <img 
-              src={type === 'hashpack' ? "https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png" : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3ymr3UNKopfI0NmUY95Dr-0589vG-91KuAA&s"} 
+              src={type === 'hashpack' ? "https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png" : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQm75vp4StozEiplXmRw_lonYrfxv8rvfUIDw&s"} 
               className={`w-4 h-4 object-contain ${type === 'metamask' ? 'rounded-md' : ''}`} 
               alt="W"
             />

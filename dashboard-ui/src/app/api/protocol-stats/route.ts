@@ -30,6 +30,20 @@ export async function GET() {
     const uniqueSubnets = new Set(miners.flatMap(m => m.subnetIds || []));
     const totalSubnets = uniqueSubnets.size || 1; // At least 1 subnet
 
+    // Calculate distributions accurately from full arrays
+    const minersPerSubnet: Record<number, number> = {};
+    miners.forEach(m => {
+      (m.subnetIds || []).forEach((sid: number) => {
+        minersPerSubnet[sid] = (minersPerSubnet[sid] || 0) + 1;
+      });
+    });
+
+    const tasksPerSubnet: Record<number, number> = {};
+    tasks.forEach(t => {
+      const sid = t.subnetId || 0;
+      tasksPerSubnet[sid] = (tasksPerSubnet[sid] || 0) + 1;
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -40,6 +54,8 @@ export async function GET() {
         totalScores,
         totalStaked,
         avgScore: Math.round(avgScore * 100) / 100,
+        minersPerSubnet,
+        tasksPerSubnet,
         miners: miners.slice(-10), // Last 10 miners
         tasks: tasks.slice(-10), // Last 10 tasks
         scores: scores.slice(-10) // Last 10 scores

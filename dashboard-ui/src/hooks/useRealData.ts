@@ -13,6 +13,8 @@ export interface ProtocolStats {
   miners: any[];
   tasks: any[];
   scores: any[];
+  minersPerSubnet?: Record<number, number>;
+  tasksPerSubnet?: Record<number, number>;
 }
 
 export function useProtocolStats() {

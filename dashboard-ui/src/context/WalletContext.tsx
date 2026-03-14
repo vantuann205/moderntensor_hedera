@@ -118,11 +118,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const connectHashPack = async () => {
         if (!hc) return;
         try {
-            if (typeof (hc as any).connectToLocalWallet === 'function') {
-                await (hc as any).connectToLocalWallet();
-            } else {
-                await hc.openPairingModal();
-            }
+            await hc.openPairingModal();
         } catch (e) {
             console.error("HashPack Connection Failed", e);
         }

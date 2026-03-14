@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useProtocolStats } from '@/hooks/useRealData';
 
 // Premium CountUp Component for that professional feel
@@ -55,14 +56,21 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           scoresRes.json()
         ]);
 
-        // Filter by subnet
         const subnetMiners = minersData.data?.filter((m: any) => 
           m.subnetIds?.includes(subnet.id)
         ) || [];
         
+        const subnetTasks = tasksData.data?.filter((t: any) =>
+          (t.subnetId || 0) === subnet.id
+        ) || [];
+
+        // Filter scores relevant precisely to this subnet's tasks
+        const subnetTaskIds = new Set(subnetTasks.map((t: any) => t.taskId));
+        const subnetScores = (scoresData.data || []).filter((s: any) => subnetTaskIds.has(s.taskId));
+
         setMiners(subnetMiners);
-        setTasks(tasksData.data || []);
-        setScores(scoresData.data || []);
+        setTasks(subnetTasks);
+        setScores(subnetScores);
       } catch (error) {
         console.error('Error fetching subnet data:', error);
       } finally {
@@ -73,17 +81,22 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
     fetchSubnetData();
   }, [subnet.id]);
 
+  // Extract active validators for this subnet by viewing the scores
+  const uniqueValidators = Array.from(new Set(scores.map(s => s.validatorId))).filter(Boolean);
   const totalStaked = miners.reduce((sum, m) => sum + (m.stakeAmount || 0), 0);
-  const avgScore = scores.length > 0 
-    ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length 
-    : 0;
+
+  const REWARD_DATA = [
+    { name: 'Miner Reward', value: 80, color: '#00f3ff' }, // neon-cyan
+    { name: 'Validator Reward', value: 15, color: '#ff00ff' }, // neon-pink
+    { name: 'Delegator / Pool (Fee)', value: 5, color: '#bc13fe' } // neon-purple
+  ];
 
   return (
     <div className="p-6 space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-neon-cyan hover:text-white transition-all hover:gap-3"
+          className="flex items-center gap-2 text-neon-cyan hover:text-white transition-all hover:gap-3 px-4 py-2 bg-neon-cyan/5 rounded-xl border border-neon-cyan/20"
         >
           <span className="material-symbols-outlined">arrow_back</span>
           <span className="font-display uppercase tracking-widest text-sm font-bold">Back to Subnets</span>
@@ -91,54 +104,61 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
       </div>
 
       {/* Subnet Header */}
-      <div className="glass-panel rounded-2xl p-8 border border-neon-cyan/30 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-neon-cyan/5 blur-3xl -mr-32 -mt-32 rounded-full"></div>
-        <div className="relative z-10">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
+      <div className="glass-panel rounded-3xl p-10 border border-neon-cyan/30 relative overflow-hidden group shadow-[0_0_40px_rgba(0,243,255,0.05)]">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-neon-cyan/10 blur-[100px] -mr-32 -mt-32 rounded-full"></div>
+        <div className="relative z-10 flex flex-col md:flex-row gap-8 justify-between items-start md:items-center">
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="p-2 bg-neon-cyan/10 rounded-xl border border-neon-cyan/20">
                 <span className="material-symbols-outlined text-neon-cyan group-hover:animate-pulse">hub</span>
-                <span className="text-neon-cyan text-xs font-bold font-display uppercase tracking-[0.2em] neon-text">Subnet {subnet.id}</span>
-              </div>
-              <h1 className="text-5xl font-display font-bold text-white mb-2 tracking-tight">
-                {subnet.name}
-              </h1>
-              <p className="text-text-secondary text-lg max-w-2xl leading-relaxed">{subnet.description}</p>
+              </span>
+              <span className="text-neon-cyan text-sm font-bold font-display uppercase tracking-[0.2em] neon-text">Subnet {subnet.id}</span>
             </div>
-            <div className="text-right">
-              <div className="text-4xl font-display font-bold text-white neon-text">{subnet.emission}</div>
-              <div className="text-xs text-text-secondary uppercase tracking-widest font-bold mt-1">Emission Rate</div>
-            </div>
+            <h1 className="text-5xl md:text-6xl font-display font-black text-white mb-4 tracking-tighter drop-shadow-lg">
+              {subnet.name}
+            </h1>
+            <p className="text-text-secondary text-lg max-w-2xl leading-relaxed">{subnet.description}</p>
           </div>
+          
+          <div className="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col items-end min-w-[200px]">
+            <div className="text-[10px] text-text-secondary uppercase tracking-[0.2em] font-bold mb-2 flex items-center gap-2">
+               <span className="w-2 h-2 rounded-full bg-neon-pink animate-pulse"></span> Emission Rate
+            </div>
+            <div className="text-5xl font-display font-black text-white neon-text">{subnet.emission}</div>
+          </div>
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
-            {[
-              { label: 'Active Miners', val: miners.length, icon: 'memory', color: 'text-neon-cyan' },
-              { label: 'Total Tasks', val: tasks.length, icon: 'task', color: 'text-neon-pink' },
-              { label: 'Total Staked', val: totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-green' },
-              { label: 'Avg Score', val: avgScore, decimals: 1, icon: 'verified', color: 'text-neon-purple' }
-            ].map((stat, i) => (
-              <div key={i} className="bg-panel-dark/50 border border-white/5 rounded-xl p-4 hover:border-white/20 transition-all">
-                <div className="flex items-center gap-2 mb-2 text-text-secondary">
-                  <span className={`material-symbols-outlined text-sm ${stat.color}`}>{stat.icon}</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest">{stat.label}</span>
-                </div>
-                <div className="text-2xl font-display font-bold text-white">
-                  <CountUp end={stat.val} suffix={stat.suffix} decimals={stat.decimals || 0} />
-                </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mt-12 pt-8 border-t border-white/10">
+          {[
+            { label: 'Network Miners', val: miners.length, icon: 'memory', color: 'text-neon-cyan', suffix: '', decimals: 0 },
+            { label: 'Active Validators', val: uniqueValidators.length, icon: 'shield_person', color: 'text-neon-pink', suffix: '', decimals: 0 },
+            { label: 'Tasks Completed', val: tasks.length, icon: 'task', color: 'text-neon-green', suffix: '', decimals: 0 },
+            { label: 'Subnet Stake', val: totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', decimals: 0 }
+          ].map((stat, i) => (
+            <div key={i} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-text-secondary">
+                <span className={`material-symbols-outlined text-sm ${stat.color}`}>{stat.icon}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest">{stat.label}</span>
               </div>
-            ))}
-          </div>
+              <div className="text-3xl font-display font-bold text-white tracking-tight">
+                <CountUp end={stat.val} suffix={stat.suffix} decimals={stat.decimals || 0} />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Miners List */}
-        <div className="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col h-[500px]">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-neon-cyan">group</span>
-              Active Miners
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Column: Miners */}
+        <div className="glass-panel rounded-3xl p-8 border border-white/10 flex flex-col h-[550px] relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-cyan to-transparent"></div>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-display font-bold text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center border border-neon-cyan/20">
+                <span className="material-symbols-outlined text-neon-cyan">memory</span>
+              </div>
+              Miners
             </h2>
             <span className="bg-neon-cyan/10 text-neon-cyan px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-cyan/20">
               {miners.length} Online
@@ -147,27 +167,20 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-full text-text-secondary gap-3">
-                <div className="w-8 h-8 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin"></div>
-                <span className="text-sm font-display uppercase tracking-widest">Scanning Network...</span>
+              <div className="flex flex-col items-center justify-center h-full text-text-secondary gap-4">
+                <div className="w-10 h-10 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin"></div>
+                <span className="text-xs font-display uppercase tracking-widest">Scanning Network...</span>
               </div>
             ) : miners.length === 0 ? (
               <div className="text-center py-12 text-text-secondary">No miners registered yet</div>
             ) : (
               miners.map((miner, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-panel-dark/40 rounded-xl border border-white/5 hover:border-neon-cyan/30 transition-all group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center border border-neon-cyan/20">
-                      <span className="material-symbols-outlined text-neon-cyan text-xl">memory</span>
-                    </div>
-                    <div>
-                      <div className="font-mono text-sm text-white font-bold">{miner.minerId}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        {miner.capabilities?.slice(0, 2).map((cap: string, ci: number) => (
-                          <span key={ci} className="text-[9px] bg-white/5 px-2 py-0.5 rounded text-text-secondary uppercase tracking-tight">{cap}</span>
-                        ))}
-                      </div>
-                    </div>
+                <div key={idx} className="flex items-center justify-between p-4 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-neon-cyan/30 transition-all hover:bg-white/[0.04]">
+                  <div className="flex items-center gap-4 hidden overflow-hidden sm:flex">
+                     <div className="w-2 h-2 rounded-full bg-neon-cyan"></div>
+                     <div>
+                        <div className="font-mono text-xs text-white font-bold truncate max-w-[120px]">{miner.minerId}</div>
+                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-display font-bold text-neon-cyan">
@@ -181,46 +194,117 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           </div>
         </div>
 
-        {/* Recent Tasks */}
-        <div className="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col h-[500px]">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-display font-bold text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-neon-pink">rocket_launch</span>
-              Transmission Logs
+        {/* Middle Column: Validators & Chart */}
+        <div className="flex flex-col gap-6">
+          <div className="glass-panel rounded-3xl p-8 border border-white/10 relative overflow-hidden h-[260px] flex flex-col">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-purple to-transparent"></div>
+            <h2 className="text-xl font-display font-bold text-white flex items-center gap-3 mb-6">
+               <span className="material-symbols-outlined text-neon-purple">donut_large</span>
+               Reward Distribution
             </h2>
-            <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-pink/20">
+            <div className="flex-1 flex items-center justify-center relative -mt-4">
+               {/* Fixed missing return around PieChart element by explicitly returning the node */}
+               <ResponsiveContainer width="100%" height={200}>
+                 <PieChart>
+                   <Pie
+                     data={REWARD_DATA}
+                     cx="50%"
+                     cy="50%"
+                     innerRadius={60}
+                     outerRadius={80}
+                     paddingAngle={5}
+                     dataKey="value"
+                     stroke="none"
+                   >
+                     {REWARD_DATA.map((entry, index) => (
+                       <Cell key={`cell-${index}`} fill={entry.color} />
+                     ))}
+                   </Pie>
+                   <Tooltip 
+                     contentStyle={{ backgroundColor: '#0a0f1e', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                     itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                     formatter={(value: any) => [`${value}%`, 'Share']}
+                   />
+                   <Legend verticalAlign="bottom" height={24} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                 </PieChart>
+               </ResponsiveContainer>
+               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-4">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Smart Contract</div>
+               </div>
+            </div>
+          </div>
+
+          <div className="glass-panel rounded-3xl p-8 border border-white/10 flex-1 relative overflow-hidden flex flex-col max-h-[266px]">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-pink to-transparent"></div>
+            <div className="flex items-center justify-between mb-6">
+               <h2 className="text-xl font-display font-bold text-white flex items-center gap-3">
+                  <span className="material-symbols-outlined text-neon-pink">shield_person</span>
+                  Validators
+               </h2>
+               <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-pink/20">
+                  {uniqueValidators.length} Active
+               </span>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+               {uniqueValidators.length === 0 ? (
+                  <div className="text-center py-8 text-text-secondary text-sm">No validators recorded yet</div>
+               ) : (
+                  uniqueValidators.map((vid, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-white/[0.02] rounded-xl border border-white/5">
+                        <div className="w-8 h-8 rounded-lg bg-neon-pink/10 flex items-center justify-center border border-neon-pink/20">
+                           <span className="material-symbols-outlined text-neon-pink text-sm">security</span>
+                        </div>
+                        <div className="font-mono text-xs text-white font-bold truncate">{vid as string}</div>
+                    </div>
+                  ))
+               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Recent Tasks */}
+        <div className="glass-panel rounded-3xl p-8 border border-white/10 flex flex-col h-[550px] relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-display font-bold text-white flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center border border-neon-green/20">
+                 <span className="material-symbols-outlined text-neon-green">rocket_launch</span>
+              </div>
+              Transmissions
+            </h2>
+            <span className="bg-neon-green/10 text-neon-green px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-green/20">
               Live Feed
             </span>
           </div>
           
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-full text-text-secondary gap-3">
-                <div className="w-8 h-8 border-2 border-neon-pink/30 border-t-neon-pink rounded-full animate-spin"></div>
-                <span className="text-sm font-display uppercase tracking-widest">Intercepting Data...</span>
+              <div className="flex flex-col items-center justify-center h-full text-text-secondary gap-4">
+                <div className="w-10 h-10 border-2 border-neon-green/30 border-t-neon-green rounded-full animate-spin"></div>
+                <span className="text-xs font-display uppercase tracking-widest">Intercepting Data...</span>
               </div>
             ) : tasks.length === 0 ? (
               <div className="text-center py-12 text-text-secondary">No recorded transmissions</div>
             ) : (
               tasks.slice(-15).reverse().map((task, idx) => (
-                <div key={idx} className="p-4 bg-panel-dark/40 rounded-xl border border-white/5 hover:border-neon-pink/30 transition-all">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-mono text-[11px] text-neon-pink uppercase tracking-widest font-bold">{task.taskType}</div>
-                    <div className="text-neon-green font-display font-bold text-sm">
+                <div key={idx} className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-neon-green/30 transition-all hover:bg-white/[0.04]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="font-mono text-[10px] text-neon-green uppercase tracking-widest font-bold px-2 py-1 bg-neon-green/10 rounded-lg">{task.taskType}</div>
+                    <div className="text-white font-display font-black text-sm">
                       +<CountUp end={task.rewardAmount / 100000000} suffix=" MDT" />
                     </div>
                   </div>
-                  <p className="text-xs text-text-secondary line-clamp-1 italic mb-2">"{task.prompt}"</p>
-                  <div className="flex items-center justify-between text-[10px]">
-                    <span className="text-white/40 font-mono italic">ID: {task.taskId?.substring(0, 16)}...</span>
+                  <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed mb-3">"{task.prompt}"</p>
+                  <div className="flex items-center justify-between text-[10px] pt-3 border-t border-white/5">
+                    <span className="text-white/40 font-mono italic">ID: {task.taskId?.substring(0, 12)}...</span>
                     {task.consensusTimestamp && (
                       <a 
                         href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-neon-pink hover:underline uppercase tracking-widest font-bold"
+                        className="text-neon-cyan hover:text-white uppercase tracking-widest font-bold flex items-center gap-1"
                       >
-                        Verify TX
+                        Verify TX <span className="material-symbols-outlined text-[10px]">open_in_new</span>
                       </a>
                     )}
                   </div>
@@ -249,9 +333,9 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       name: 'General Intelligence',
       description: 'Text generation, code review, and general AI tasks',
       emission: '45%',
-      miners: stats?.miners?.filter(m => m.subnetIds?.includes(0)).length || 0,
+      miners: stats?.minersPerSubnet?.[0] || 0,
       validators: Math.ceil((stats?.totalValidators || 0) * 0.5), // Estimate for demo
-      tasks: stats?.totalTasks || 0,
+      tasks: stats?.tasksPerSubnet?.[0] || 0,
       color: 'neon-cyan',
       gradient: 'from-neon-cyan/20 to-transparent',
       glow: 'shadow-[0_0_20px_rgba(0,243,255,0.1)]',
@@ -262,9 +346,9 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       name: 'Image Generation',
       description: 'Image generation, style transfer, and visual AI',
       emission: '30%',
-      miners: stats?.miners?.filter(m => m.subnetIds?.includes(1)).length || 0,
+      miners: stats?.minersPerSubnet?.[1] || 0,
       validators: Math.ceil((stats?.totalValidators || 0) * 0.3), // Estimate for demo
-      tasks: 0,
+      tasks: stats?.tasksPerSubnet?.[1] || 0,
       color: 'neon-pink',
       gradient: 'from-neon-pink/20 to-transparent',
       glow: 'shadow-[0_0_20px_rgba(255,0,255,0.1)]',
@@ -275,9 +359,9 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       name: 'Code Analysis',
       description: 'Code review, bug detection, and optimization',
       emission: '25%',
-      miners: stats?.miners?.filter(m => m.subnetIds?.includes(2)).length || 0,
+      miners: stats?.minersPerSubnet?.[2] || 0,
       validators: Math.ceil((stats?.totalValidators || 0) * 0.2), // Estimate for demo
-      tasks: 0,
+      tasks: stats?.tasksPerSubnet?.[2] || 0,
       color: 'neon-purple',
       gradient: 'from-neon-purple/20 to-transparent',
       glow: 'shadow-[0_0_20px_rgba(188,19,254,0.1)]',
@@ -331,9 +415,6 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
                 </div>
                 <div className="text-4xl font-display font-bold text-white tracking-tighter">
                   <CountUp end={stat.val} suffix={stat.suffix} />
-                </div>
-                <div className="mt-2 h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                  <div className={`h-full ${stat.color.replace('text', 'bg')} w-[65%] blur-[1px]`}></div>
                 </div>
               </div>
             </div>
