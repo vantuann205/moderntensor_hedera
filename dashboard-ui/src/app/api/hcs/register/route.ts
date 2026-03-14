@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+
+const execAsync = promisify(exec);
 
 const REGISTRATION_TOPIC_ID = process.env.NEXT_PUBLIC_REGISTRATION_TOPIC_ID || '0.0.8198583';
+const PYTHON = 'C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe';
 
-// Submit HCS message via Hedera REST API (mirror node doesn't support writes)
-// We use the Hedera SDK via a server-side call
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -13,19 +19,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'accountId is required' }, { status: 400 });
     }
 
-    // Build the HCS message based on role
-    let message: Record<string, any>;
+    // Build HCS message exactly matching MinerRegistration.to_json() format
+    let hcsMessage: Record<string, any>;
 
     if (role === 'miner') {
       if (!stakeAmount || stakeAmount < 10) {
         return NextResponse.json({ error: 'Miner requires minimum 10 MDT stake' }, { status: 400 });
       }
-      message = {
+      hcsMessage = {
         type: 'miner_register',
         miner_id: accountId,
         account_id: accountId,
-        stake_amount: Math.floor(stakeAmount * 1e8), // convert to smallest unit
         capabilities: capabilities || ['text_generation'],
+        stake_amount: Math.floor(stakeAmount * 1e8), // MDT → smallest unit (8 decimals)
         subnet_ids: subnetIds || [0],
         timestamp: new Date().toISOString(),
       };
@@ -33,12 +39,12 @@ export async function POST(req: Request) {
       if (!stakeAmount || stakeAmount < 1) {
         return NextResponse.json({ error: 'Holder requires minimum 1 MDT stake' }, { status: 400 });
       }
-      message = {
+      hcsMessage = {
         type: 'miner_register',
         miner_id: accountId,
         account_id: accountId,
-        stake_amount: Math.floor(stakeAmount * 1e8),
         capabilities: ['passive_holder'],
+        stake_amount: Math.floor(stakeAmount * 1e8),
         subnet_ids: [0],
         role: 'holder',
         timestamp: new Date().toISOString(),
@@ -47,48 +53,40 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid role. Must be miner or holder' }, { status: 400 });
     }
 
-    // Submit to HCS via Python CLI (server-side, has operator key)
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const path = await import('path');
-    const execAsync = promisify(exec);
+    // Write params to a temp file (avoids shell escaping issues on Windows)
+    const tmpFile = path.join(os.tmpdir(), `hcs_register_${Date.now()}.json`);
+    const params = { topic_id: REGISTRATION_TOPIC_ID, message: hcsMessage };
+    fs.writeFileSync(tmpFile, JSON.stringify(params), 'utf-8');
 
-    const PYTHON = "C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe";
-    const cwd = path.join(process.cwd(), '..');
-    const msgJson = JSON.stringify(JSON.stringify(message)); // double stringify for shell
-
-    const command = `"${PYTHON}" -c "
-import sys, json
-sys.path.insert(0, '.')
-from sdk.hedera.client import HederaClient
-from sdk.hedera.hcs import HCSService
-import os
-
-client = HederaClient.from_env()
-hcs = HCSService(client)
-msg = json.loads(${JSON.stringify(JSON.stringify(message))})
-receipt = client.submit_message('${REGISTRATION_TOPIC_ID}', json.dumps(msg))
-print(json.dumps({'sequence': str(receipt.topic_sequence_number), 'status': str(receipt.status)}))
-"`;
-
-    const { stdout, stderr } = await execAsync(command, {
-      cwd,
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-      timeout: 30000,
-    });
-
-    if (stderr && !stdout) {
-      throw new Error(stderr);
-    }
+    // Project root is one level up from dashboard-ui
+    const projectRoot = path.join(process.cwd(), '..');
+    const scriptPath = path.join(projectRoot, 'scripts', 'hcs_submit.py');
 
     let result: any = {};
     try {
-      const lines = stdout.trim().split('\n');
+      const { stdout, stderr } = await execAsync(
+        `"${PYTHON}" "${scriptPath}" "${tmpFile}"`,
+        {
+          cwd: projectRoot,
+          env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+          timeout: 30000,
+        }
+      );
+
+      // Parse last JSON line from stdout
+      const lines = stdout.trim().split('\n').filter(Boolean);
       const lastLine = lines[lines.length - 1];
       result = JSON.parse(lastLine);
-    } catch {
-      result = { raw: stdout };
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+    } finally {
+      // Clean up temp file
+      try { fs.unlinkSync(tmpFile); } catch {}
     }
+
+    const sequence = result.sequence || '0';
 
     return NextResponse.json({
       success: true,
@@ -96,9 +94,12 @@ print(json.dumps({'sequence': str(receipt.topic_sequence_number), 'status': str(
       accountId,
       stakeAmount,
       topicId: REGISTRATION_TOPIC_ID,
-      sequence: result.sequence,
-      message: `${role === 'miner' ? 'Miner' : 'Holder'} registered on Hedera HCS topic ${REGISTRATION_TOPIC_ID}`,
+      sequence,
+      message: `${role === 'miner' ? 'Miner' : 'Holder'} registered on Hedera HCS`,
+      // Link to the specific topic on HashScan
       hashscanUrl: `https://hashscan.io/testnet/topic/${REGISTRATION_TOPIC_ID}`,
+      // Direct transaction link using sequence number
+      txUrl: `https://hashscan.io/testnet/topic/${REGISTRATION_TOPIC_ID}?sequenceNumber=${sequence}`,
     });
 
   } catch (err: any) {

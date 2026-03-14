@@ -293,18 +293,10 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             <p className="text-white text-4xl font-display font-bold">
               <CountUp end={activeNodes} />
             </p>
-            <div className="flex gap-4 mt-3">
-              <div className="text-xs text-slate-400">
-                <span className="text-neon-cyan font-bold">{stats?.totalMiners ?? '—'}</span> Miners
-              </div>
-              <div className="text-xs text-slate-400">
-                <span className="text-purple-400 font-bold">{stats?.totalValidators ?? '—'}</span> Validators
-              </div>
-            </div>
           </div>
 
           <div className="bg-panel-dark border border-panel-border p-6 rounded-xl relative overflow-hidden h-[160px]">
-            <NeuralMetagraph />
+            <NeuralMetagraph activeNodes={activeNodes} />
           </div>
         </div>
       </div>

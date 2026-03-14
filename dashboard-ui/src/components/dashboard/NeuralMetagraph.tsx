@@ -32,7 +32,11 @@ const CountUp: React.FC<{ end: number, duration?: number, prefix?: string, suffi
 
 import { useState } from "react";
 
-export default function NeuralMetagraph() {
+interface NeuralMetagraphProps {
+  activeNodes?: number;
+}
+
+export default function NeuralMetagraph({ activeNodes }: NeuralMetagraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -148,7 +152,12 @@ export default function NeuralMetagraph() {
       <div className="absolute top-0 left-0 w-full h-1 bg-neon-cyan/30 shadow-[0_0_15px_#00f3ff] animate-[scan_4s_ease-in-out_infinite] pointer-events-none opacity-50"></div>
       <div className="absolute top-4 left-4 text-xs text-neon-cyan font-mono border-l-2 border-neon-cyan/50 pl-2 bg-black/40 backdrop-blur py-1 pr-2 shadow-lg">
           <p className="text-[10px] text-text-secondary uppercase mb-0.5">Active Nodes</p>
-          <p className="font-bold text-sm"><CountUp end={4096} /></p>
+          <p className="font-bold text-sm">
+            {activeNodes !== undefined
+              ? <CountUp end={activeNodes} />
+              : <span className="text-slate-500">—</span>
+            }
+          </p>
       </div>
       <div className="absolute bottom-4 right-4 text-xs text-neon-purple font-mono border-r-2 border-neon-purple/50 pr-2 bg-black/40 backdrop-blur py-1 pl-2 text-right shadow-lg">
           <p className="text-[10px] text-text-secondary uppercase mb-0.5">Throughput</p>
