@@ -42,7 +42,7 @@ const CountUp: React.FC<{ end: number; duration?: number; prefix?: string; suffi
 const TickerContent = ({ price }: { price: number }) => (
   <div className="flex items-center gap-12 whitespace-nowrap px-6">
     {[
-      { label: 'HTR Price', value: `$${price.toFixed(2)}`, extra: <span className="text-neon-green flex items-center gap-0.5 font-bold text-xs"><span className="material-symbols-outlined text-sm">arrow_drop_up</span>4.2%</span> },
+      { label: 'MDT Price', value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>, extra: <span className="text-neon-green flex items-center gap-0.5 font-bold text-xs"><span className="material-symbols-outlined text-sm">arrow_drop_up</span>4.2%</span> },
       { label: 'Market Cap', value: '$2.42B' },
       { label: '24h Vol', value: '$145.2M' },
       { label: 'Total Staked', value: '4.1M (72%)' },
@@ -57,8 +57,8 @@ const TickerContent = ({ price }: { price: number }) => (
 );
 
 const initialChart = [
-  { time: '00:00', value: 380 }, { time: '04:00', value: 410 }, { time: '08:00', value: 395 },
-  { time: '12:00', value: 423.5 }, { time: '16:00', value: 418 }, { time: '20:00', value: 435 }, { time: '24:00', value: 428 },
+  { time: '00:00', value: 10.2 }, { time: '04:00', value: 10.8 }, { time: '08:00', value: 10.5 },
+  { time: '12:00', value: 11.3 }, { time: '16:00', value: 11.1 }, { time: '20:00', value: 11.7 }, { time: '24:00', value: 11.5 },
 ];
 
 // ── Role cards config ──
@@ -143,7 +143,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
     const iv = setInterval(() => {
       setChart(prev => {
         const next = prev.map(d => ({ ...d }));
-        next[next.length - 1].value = Math.max(350, next[next.length - 1].value + (Math.random() - 0.5) * 0.8);
+        next[next.length - 1].value = Math.max(10, Math.min(12, next[next.length - 1].value + (Math.random() - 0.5) * 0.2));
         return next;
       });
     }, 3000);
@@ -286,11 +286,11 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             <div>
               <h2 className="text-neon-cyan text-base font-bold flex items-center gap-2 font-display uppercase tracking-widest drop-shadow-[0_0_5px_rgba(0,243,255,0.8)]">
                 <span className="material-symbols-outlined text-xl animate-pulse">monitoring</span>
-                MTN/USDT Neural Market
+                MDT/USDT Neural Market
               </h2>
               <div className="mt-2 flex items-baseline gap-3">
                 <span className="text-6xl font-display font-bold text-white tracking-tighter">
-                  <CountUp end={price} prefix="$" decimals={2} />
+                  <CountUp end={price} prefix="$" decimals={2} duration={500} />
                 </span>
                 <span className="text-neon-green font-mono text-base bg-neon-green/10 px-3 py-1 rounded border border-neon-green/30">+4.2%</span>
               </div>

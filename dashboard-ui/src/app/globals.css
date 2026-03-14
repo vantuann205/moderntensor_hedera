@@ -224,7 +224,17 @@ body {
   animation: scan-input 2s linear infinite;
 }
 
-/* Force hide WalletConnect Modal as requested by user to favor HashPack extension */
+/* Hide number input arrows */
+.no-spinners::-webkit-outer-spin-button,
+.no-spinners::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinners {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 wcm-modal, wcm-modal-router, .wcm-card, wcm-modal-backcard, .wcm-container {
   display: none !important;
   opacity: 0 !important;

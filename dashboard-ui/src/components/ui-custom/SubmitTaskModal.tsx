@@ -75,146 +75,189 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-[#0a0e17] border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[200]">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
+      
+      <div className="absolute top-[22%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-[#0a0e17]/95 backdrop-blur-xl border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.8),0_0_40px_rgba(255,0,128,0.1)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
+
+        {/* Glow Effects */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-pink/50 to-transparent" />
+        <div className="absolute -top-32 -right-32 w-64 h-64 bg-neon-pink/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-neon-cyan/10 rounded-full blur-[80px] pointer-events-none" />
 
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-neon-pink/10 border border-neon-pink/30 flex items-center justify-center">
-              <Send className="w-4 h-4 text-neon-pink" />
+        <div className="relative flex items-center justify-between p-6 sm:p-8 border-b border-white/5 shrink-0 bg-gradient-to-b from-white/[0.02] to-transparent">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-neon-pink/10 border border-neon-pink/30 flex items-center justify-center shadow-[0_0_15px_rgba(255,0,128,0.2)]">
+              <Send className="w-5 h-5 text-neon-pink" />
             </div>
             <div>
-              <h2 className="text-base font-display font-bold text-white uppercase tracking-wider">Submit AI Task</h2>
-              <p className="text-[10px] text-slate-500 font-mono">Hedera HCS · Topic 0.0.8198585</p>
+              <h2 className="text-xl font-display font-black text-white uppercase tracking-wider">Submit AI Task</h2>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">Hedera HCS · Topic <span className="text-neon-cyan">0.0.8198585</span></p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
-            <X size={18} />
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
+            <X size={20} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-4">
+        {/* Body - Scrollable */}
+        <div className="relative p-6 sm:p-8 space-y-6 overflow-y-auto custom-scrollbar">
           {!result ? (
             <>
               {/* Task Type + Subnet */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Task Type</label>
-                  <select value={taskType} onChange={e => setTaskType(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-neon-pink/40">
-                    {TASK_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="group">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-pink transition-colors">Task Type</label>
+                  <div className="relative">
+                    <select value={taskType} onChange={e => setTaskType(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white font-medium appearance-none outline-none focus:border-neon-pink/50 focus:bg-neon-pink/5 focus:ring-1 focus:ring-neon-pink/50 transition-all cursor-pointer">
+                      {TASK_TYPES.map(t => <option key={t.value} value={t.value} className="bg-[#0a0e17]">{t.label}</option>)}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-focus-within:text-neon-pink">expand_more</span>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Subnet</label>
-                  <select value={subnetId} onChange={e => setSubnetId(Number(e.target.value))}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-neon-pink/40">
-                    {SUBNETS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                <div className="group">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-cyan transition-colors">Subnet Routing</label>
+                  <div className="relative">
+                    <select value={subnetId} onChange={e => setSubnetId(Number(e.target.value))}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white font-medium appearance-none outline-none focus:border-neon-cyan/50 focus:bg-neon-cyan/5 focus:ring-1 focus:ring-neon-cyan/50 transition-all cursor-pointer">
+                      {SUBNETS.map(s => <option key={s.id} value={s.id} className="bg-[#0a0e17]">{s.name}</option>)}
+                    </select>
+                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-focus-within:text-neon-cyan">expand_more</span>
+                  </div>
                 </div>
               </div>
 
               {/* Prompt */}
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Prompt / Task Description</label>
+              <div className="group">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-white transition-colors">Task Description / Prompt</label>
                 <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4}
-                  placeholder="Describe the AI task you want miners to complete..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-pink/40 resize-none placeholder:text-slate-600 font-mono" />
+                  placeholder="E.g., Analyze this image for anomalies, or generate a detailed report..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-sm text-white outline-none focus:border-white/30 focus:bg-white/5 transition-all resize-none placeholder:text-slate-600 font-mono shadow-inner" />
               </div>
 
               {/* Reward + Deadline */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Reward (MDT)</label>
-                  <input type="number" min="0.1" step="0.1" value={rewardMDT} onChange={e => setRewardMDT(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-neon-pink/40 font-mono" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="group">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-green transition-colors">Reward (MDT)</label>
+                  <div className="relative">
+                    <input type="number" min="0.1" step="0.1" value={rewardMDT} onChange={e => setRewardMDT(e.target.value)}
+                      className="no-spinners w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white outline-none focus:border-neon-green/50 focus:bg-neon-green/5 focus:ring-1 focus:ring-neon-green/50 transition-all font-mono font-bold" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 pointer-events-none">MDT</span>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Deadline (hours)</label>
-                  <input type="number" min="1" max="168" value={deadline} onChange={e => setDeadline(Number(e.target.value))}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-neon-pink/40 font-mono" />
+                <div className="group">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-purple transition-colors">Delivery Deadline</label>
+                  <div className="relative">
+                    <input type="number" min="1" max="168" value={deadline} onChange={e => setDeadline(Number(e.target.value))}
+                      className="no-spinners w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white outline-none focus:border-neon-purple/50 focus:bg-neon-purple/5 focus:ring-1 focus:ring-neon-purple/50 transition-all font-mono font-bold" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 pointer-events-none">HOURS</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Requester */}
+              {/* Requester Profile */}
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Requester (your account)</label>
-                <div className="px-4 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm font-mono text-slate-400">
-                  {isConnected ? accountId : <span className="text-red-400">Connect wallet first</span>}
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Requester Account</label>
+                <div className="px-4 py-3.5 bg-black/40 border border-white/5 rounded-xl text-sm font-mono text-slate-400 flex items-center justify-between shadow-inner">
+                  {isConnected ? (
+                    <div className="flex items-center gap-2">
+                       <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                       <span className="text-white font-bold">{accountId}</span>
+                    </div>
+                  ) : <span className="text-red-400 flex items-center gap-2"><span className="material-symbols-outlined text-sm">warning</span> Wallet Not Connected</span>}
                 </div>
               </div>
 
-              {/* Log */}
+              {/* Log Stream */}
               {logs.length > 0 && (
-                <div className="bg-black/60 rounded-xl border border-white/5 p-3 space-y-1 max-h-28 overflow-y-auto">
+                <div className="bg-black/60 rounded-xl border border-white/5 p-4 space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar font-mono shadow-inner relative">
                   {logs.map((l, i) => (
-                    <div key={i} className={`text-[10px] font-mono ${l.includes('ERROR') ? 'text-red-400' : l.includes('✓') ? 'text-neon-green' : 'text-slate-400'}`}>{l}</div>
+                    <div key={i} className={`text-[11px] ${l.includes('ERROR') ? 'text-red-400' : l.includes('✓') ? 'text-neon-green drop-shadow-[0_0_3px_rgba(0,255,163,0.5)]' : 'text-slate-400'}`}>
+                      <span className="opacity-50 mr-2 text-[9px]">{'>'}</span>{l}
+                    </div>
                   ))}
-                  {loading && <div className="text-neon-pink text-[10px] font-mono animate-pulse flex items-center gap-1"><Activity size={10} /> Submitting to Hedera...</div>}
+                  {loading && (
+                    <div className="text-neon-pink text-[11px] flex items-center gap-2 mt-2">
+                      <span className="opacity-50 mr-1 text-[9px]">{'>'}</span>
+                      <Activity size={12} className="animate-spin" />
+                      Broadcasting to Hedera Consensus Service...
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                 </div>
               )}
 
-              {error && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-400">✗ {error}</div>}
+              {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-400 flex items-start gap-2 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
+                <span className="material-symbols-outlined text-base shrink-0">error</span>
+                {error}
+              </div>}
             </>
           ) : (
-            /* Success state */
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-neon-green/10 border border-neon-green/30 flex items-center justify-center">
-                  <CheckCircle className="text-neon-green" size={20} />
+            /* Success State */
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-5 p-6 bg-neon-green/5 border border-neon-green/20 rounded-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-neon-green/10 to-transparent pointer-events-none" />
+                <div className="w-16 h-16 rounded-full bg-neon-green/20 border-2 border-neon-green/40 flex items-center justify-center shrink-0 shadow-[0_0_30px_rgba(0,255,163,0.3)]">
+                  <span className="material-symbols-outlined text-neon-green text-3xl">task_alt</span>
                 </div>
-                <div>
-                  <div className="text-sm font-black text-neon-green uppercase tracking-wider">Task Submitted to Hedera HCS</div>
-                  <div className="text-[10px] text-slate-500 font-mono mt-0.5">Sequence #{result.sequence} · {result.topicId}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-                <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase tracking-widest">Task ID</div>
-                  <div className="text-white break-all">{result.taskId}</div>
-                </div>
-                <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase tracking-widest">Reward</div>
-                  <div className="text-neon-green font-bold">{rewardMDT} MDT</div>
-                  <div className="text-slate-500">Subnet {subnetId}</div>
+                <div className="relative">
+                  <div className="text-lg font-black text-neon-green uppercase tracking-wide drop-shadow-[0_0_5px_rgba(0,255,163,0.5)]">Network Consensus Achieved</div>
+                  <div className="text-xs text-slate-400 font-mono mt-1 flex items-center gap-2">
+                    Sequence #{result.sequence}
+                    <span className="text-slate-600">•</span>
+                    Topic {result.topicId}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-3">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-1 shadow-inner relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><span className="material-symbols-outlined text-4xl">fingerprint</span></div>
+                  <div className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Unique Task ID</div>
+                  <div className="text-white text-xs font-mono break-all font-medium pt-1">{result.taskId}</div>
+                </div>
+                <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-1 shadow-inner relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><span className="material-symbols-outlined text-4xl text-neon-green">payments</span></div>
+                  <div className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Allocated Reward</div>
+                  <div className="text-neon-green text-xl font-black font-mono pt-1">{rewardMDT} MDT</div>
+                  <div className="text-xs text-slate-400 font-medium">Routed to Subnet {subnetId}</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <a href={result.txUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-neon-cyan text-xs font-bold hover:underline">
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>View on HashScan
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-neon-cyan/10 border border-neon-cyan/30 rounded-xl text-neon-cyan text-xs font-bold uppercase tracking-widest hover:bg-neon-cyan/20 hover:shadow-[0_0_20px_rgba(0,243,255,0.2)] transition-all">
+                  <span className="material-symbols-outlined text-lg">public</span>
+                  View Transaction
                 </a>
                 <a href={result.topicUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-slate-400 text-xs font-bold hover:text-white hover:underline">
-                  <span className="material-symbols-outlined text-sm">open_in_new</span>View Topic
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 hover:border-white/20 transition-all">
+                  <span className="material-symbols-outlined text-lg opacity-50">forum</span>
+                  View Topic Log
                 </a>
               </div>
-              {logs.map((l, i) => (
-                <div key={i} className={`text-[10px] font-mono ${l.includes('✓') ? 'text-neon-green' : 'text-slate-500'}`}>{l}</div>
-              ))}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/5 flex justify-end gap-3">
+        <div className="relative p-6 sm:p-8 border-t border-white/5 shrink-0 bg-[#0a0e17] flex justify-end gap-4">
           <button onClick={result ? reset : onClose}
-            className="px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+            className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
             {result ? 'Submit Another' : 'Cancel'}
           </button>
           {!result && (
             <button onClick={handleSubmit} disabled={loading || !isConnected || !prompt.trim()}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20 disabled:opacity-40 disabled:cursor-not-allowed">
-              {loading ? <Activity size={14} className="animate-spin" /> : <Send size={14} />}
-              {loading ? 'Submitting...' : 'Submit Task'}
+              className="flex justify-center items-center gap-2 min-w-[160px] px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,0,128,0.2)] bg-gradient-to-r from-neon-pink/20 to-neon-purple/20 border border-neon-pink/50 text-white hover:border-white hover:shadow-[0_0_30px_rgba(255,0,128,0.4)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-neon-pink/50 disabled:hover:shadow-none">
+              {loading ? <Activity size={16} className="animate-spin" /> : <Send size={16} />}
+              {loading ? 'Processing...' : 'Submit to Network'}
             </button>
           )}
           {result && (
             <button onClick={onClose}
-              className="px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-neon-green/10 border border-neon-green/40 text-neon-green hover:bg-neon-green/20 transition-all">
+              className="px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-neon-green/20 to-emerald-500/20 border border-neon-green/50 text-white shadow-[0_0_20px_rgba(0,255,163,0.2)] hover:shadow-[0_0_30px_rgba(0,255,163,0.4)] hover:border-white hover:brightness-110 transition-all">
               Done
             </button>
           )}
