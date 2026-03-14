@@ -334,7 +334,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       description: 'Text generation, code review, and general AI tasks',
       emission: '45%',
       miners: stats?.minersPerSubnet?.[0] || 0,
-      validators: Math.ceil((stats?.totalValidators || 0) * 0.5), // Estimate for demo
+      validators: stats?.validatorsPerSubnet?.[0] || 0,
       tasks: stats?.tasksPerSubnet?.[0] || 0,
       color: 'neon-cyan',
       gradient: 'from-neon-cyan/20 to-transparent',
@@ -347,7 +347,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       description: 'Image generation, style transfer, and visual AI',
       emission: '30%',
       miners: stats?.minersPerSubnet?.[1] || 0,
-      validators: Math.ceil((stats?.totalValidators || 0) * 0.3), // Estimate for demo
+      validators: stats?.validatorsPerSubnet?.[1] || 0,
       tasks: stats?.tasksPerSubnet?.[1] || 0,
       color: 'neon-pink',
       gradient: 'from-neon-pink/20 to-transparent',
@@ -360,7 +360,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
       description: 'Code review, bug detection, and optimization',
       emission: '25%',
       miners: stats?.minersPerSubnet?.[2] || 0,
-      validators: Math.ceil((stats?.totalValidators || 0) * 0.2), // Estimate for demo
+      validators: stats?.validatorsPerSubnet?.[2] || 0,
       tasks: stats?.tasksPerSubnet?.[2] || 0,
       color: 'neon-purple',
       gradient: 'from-neon-purple/20 to-transparent',

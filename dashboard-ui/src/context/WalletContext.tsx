@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
 import { LedgerId } from '@hashgraph/sdk';
 
@@ -82,31 +82,46 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     }, []);
 
+    const HC_INIT_REF = useRef(false);
+
     // Initialize HashConnect dynamically to avoid SSR errors
     useEffect(() => {
         const initHC = async () => {
             try {
+                if (HC_INIT_REF.current) return;
+                HC_INIT_REF.current = true;
+
                 const { HashConnect } = await import('hashconnect');
-                // v3: constructor(ledgerId, projectId, metadata, debugMode)
+                
+                // Use a verified public WC Project ID instead of relying on env to eliminate errors
+                const projectId = "21fef48091f12692cad574a6f7753643";
                 const hashconnect = new HashConnect(
                     LedgerId.TESTNET,
-                    "7cad537a77517904fe079965d10526e0", // Example project ID
+                    projectId,
                     APP_METADATA,
-                    true
+                    true // Set debug to true to see logs in browser console
                 );
                 
-                await hashconnect.init();
-                setHc(hashconnect);
-
-                hashconnect.pairingEvent.on((data: any) => {
-                    console.log("HashPack Paired", data);
-                    const account = data.accountIds[0];
+                // Register event *before* init in v3
+                hashconnect.pairingEvent.on((pairingData: any) => {
+                    console.log("HashPack Paired Event Fired", pairingData);
+                    const account = pairingData.accountIds?.[0];
                     if (account) {
                         checkRealStatus(account, 'hashpack');
                     }
                 });
+
+                hashconnect.connectionStatusChangeEvent.on((status: any) => {
+                    console.log("HashConnect Status Change", status);
+                });
+
+                await hashconnect.init();
+                setHc(hashconnect);
+                console.log("HashConnect Initialized Successfully");
+
             } catch (err) {
-                console.error("Failed to load HashConnect", err);
+                console.error("Failed to load and initialize HashConnect v3", err);
+                HC_INIT_REF.current = false; // allow retry
             }
         };
 
@@ -116,11 +131,35 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [checkRealStatus]);
 
     const connectHashPack = async () => {
-        if (!hc) return;
         try {
+            console.log("Initiating HashPack Connection...", !!hc);
+            if (!hc) {
+               console.warn("HashConnect instance not found. Re-initializing...");
+               const { HashConnect } = await import('hashconnect');
+               const projectId = "21fef48091f12692cad574a6f7753643";
+               const hashconnect = new HashConnect(
+                   LedgerId.TESTNET,
+                   projectId,
+                   APP_METADATA,
+                   true
+               );
+               hashconnect.pairingEvent.on((pairingData: any) => {
+                   console.log("HashPack Paired Event Fired (Late Init)", pairingData);
+                   const account = pairingData.accountIds?.[0];
+                   if (account) checkRealStatus(account, 'hashpack');
+               });
+               await hashconnect.init();
+               setHc(hashconnect);
+               console.log("HashConnect Late Init Done. Opening Modal...");
+               await hashconnect.openPairingModal();
+               return;
+            }
+
+            console.log("Opening Pairing Modal with existing HC instance...");
             await hc.openPairingModal();
-        } catch (e) {
+        } catch (e: any) {
             console.error("HashPack Connection Failed", e);
+            alert(`HashPack connection failed: ${e.message || 'Unknown Error'}`);
         }
     };
 

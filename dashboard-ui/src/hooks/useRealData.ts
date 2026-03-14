@@ -15,6 +15,7 @@ export interface ProtocolStats {
   scores: any[];
   minersPerSubnet?: Record<number, number>;
   tasksPerSubnet?: Record<number, number>;
+  validatorsPerSubnet?: Record<number, number>;
 }
 
 export function useProtocolStats() {

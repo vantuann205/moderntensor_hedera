@@ -39,9 +39,23 @@ export async function GET() {
     });
 
     const tasksPerSubnet: Record<number, number> = {};
+    const taskSubnetMap = new Map();
     tasks.forEach(t => {
       const sid = t.subnetId || 0;
       tasksPerSubnet[sid] = (tasksPerSubnet[sid] || 0) + 1;
+      taskSubnetMap.set(t.taskId, sid);
+    });
+
+    const valSetPerSubnet: Record<number, Set<string>> = {};
+    scores.forEach((s: any) => {
+        const sid = taskSubnetMap.get(s.taskId) ?? 0;
+        if(!valSetPerSubnet[sid]) valSetPerSubnet[sid] = new Set();
+        if(s.validatorId) valSetPerSubnet[sid].add(s.validatorId);
+    });
+    
+    const validatorsPerSubnet: Record<number, number> = {};
+    Object.keys(valSetPerSubnet).forEach(key => {
+        validatorsPerSubnet[Number(key)] = valSetPerSubnet[Number(key)].size;
     });
 
     return NextResponse.json({
@@ -56,6 +70,7 @@ export async function GET() {
         avgScore: Math.round(avgScore * 100) / 100,
         minersPerSubnet,
         tasksPerSubnet,
+        validatorsPerSubnet,
         miners: miners.slice(-10), // Last 10 miners
         tasks: tasks.slice(-10), // Last 10 tasks
         scores: scores.slice(-10) // Last 10 scores
