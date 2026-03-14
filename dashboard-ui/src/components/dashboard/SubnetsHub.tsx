@@ -56,9 +56,10 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           scoresRes.json()
         ]);
 
-        const subnetMiners = minersData.data?.filter((m: any) => 
-          m.subnetIds?.includes(subnet.id)
-        ) || [];
+        const subnetMiners = minersData.data?.filter((m: any) => {
+          const ids = m.subnet_ids ?? m.subnetIds ?? [];
+          return ids.includes(subnet.id);
+        }) || [];
         
         const subnetTasks = tasksData.data?.filter((t: any) =>
           (t.subnetId || 0) === subnet.id
@@ -83,7 +84,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
 
   // Extract active validators for this subnet by viewing the scores
   const uniqueValidators = Array.from(new Set(scores.map(s => s.validatorId))).filter(Boolean);
-  const totalStaked = miners.reduce((sum, m) => sum + (m.stakeAmount || 0), 0);
+  const totalStaked = miners.reduce((sum, m) => sum + (m.stake_amount ?? m.stakeAmount ?? 0), 0);
 
   const REWARD_DATA = [
     { name: 'Miner Reward', value: 80, color: '#00f3ff' }, // neon-cyan
@@ -179,12 +180,12 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                   <div className="flex items-center gap-4 hidden overflow-hidden sm:flex">
                      <div className="w-2 h-2 rounded-full bg-neon-cyan"></div>
                      <div>
-                        <div className="font-mono text-xs text-white font-bold truncate max-w-[120px]">{miner.minerId}</div>
+                        <div className="font-mono text-xs text-white font-bold truncate max-w-[120px]">{miner.miner_id || miner.minerId}</div>
                      </div>
                   </div>
                   <div className="text-right">
                     <div className="font-display font-bold text-neon-cyan">
-                      <CountUp end={miner.stakeAmount / 100000000} suffix=" MDT" />
+                      <CountUp end={(miner.stake_amount ?? miner.stakeAmount ?? 0) / 100000000} suffix=" MDT" />
                     </div>
                     <div className="text-[10px] text-text-secondary uppercase tracking-widest">Staked</div>
                   </div>
