@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useTasks, useScores, useMiners } from '@/hooks/useRealData';
 import SubmitTaskModal from '@/components/ui-custom/SubmitTaskModal';
+import { useSort } from '@/lib/hooks/useSort';
+import SortTh from '@/components/ui-custom/SortTh';
 
 interface TasksViewProps {
   onBack: () => void;
@@ -15,6 +17,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
   const { data: miners } = useMiners();
   const [filterType, setFilterType] = useState<string>('all');
   const [showSubmit, setShowSubmit] = useState(false);
+  const { sort, toggle, sortData } = useSort('timestamp', 'desc');
 
   // Calculate task stats from scores
   const tasksWithStats = React.useMemo(() => {
@@ -42,6 +45,20 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
     ? tasksWithStats 
     : tasksWithStats.filter((t: any) => t.taskType === filterType);
 
+  const sortedTasks = sortData(filteredTasks, (t: any, col) => {
+    if (col === 'taskId') return t.taskId;
+    if (col === 'taskType') return t.taskType;
+    if (col === 'reward') return t.rewardAmount;
+    if (col === 'subnet') return t.subnetId ?? 0;
+    if (col === 'requester') return t.requester;
+    if (col === 'deadline') return t.deadline ?? 24;
+    if (col === 'timestamp') return t.consensusTimestamp
+      ? Number(t.consensusTimestamp.split('.')[0])
+      : new Date(t.timestamp).getTime() / 1000;
+    if (col === 'status') return t.status;
+    return (t as any)[col];
+  });
+
   const taskTypes = [...new Set(tasks?.map((t: any) => t.taskType) || [])];
 
   return (
@@ -64,6 +81,11 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
+                  <a href="https://hashscan.io/testnet/topic/0.0.8198585" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-xs font-bold hover:bg-neon-cyan hover:text-black transition-all uppercase tracking-widest">
+                    <span className="material-symbols-outlined text-sm">open_in_new</span>
+                    Verify on HashScan
+                  </a>
                   <button onClick={() => setShowSubmit(true)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20 transition-all">
                     <span className="material-symbols-outlined text-sm">add_task</span>
@@ -145,19 +167,19 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                               <table className="w-full text-left border-collapse">
                                   <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
                                       <tr>
-                                          <th className="px-4 py-4">Task ID</th>
-                                          <th className="px-4 py-4">Task Type</th>
+                                          <SortTh col="taskId" sort={sort} onToggle={toggle} className="px-4 py-4">Task ID</SortTh>
+                                          <SortTh col="taskType" sort={sort} onToggle={toggle} className="px-4 py-4">Task Type</SortTh>
                                           <th className="px-4 py-4">Prompt</th>
-                                          <th className="px-4 py-4 text-right">Reward</th>
-                                          <th className="px-4 py-4 text-center">Subnet</th>
-                                          <th className="px-4 py-4">Requester</th>
-                                          <th className="px-4 py-4 text-right">Deadline</th>
-                                          <th className="px-4 py-4">Timestamp</th>
-                                          <th className="px-4 py-4 text-center">Status</th>
+                                          <SortTh col="reward" sort={sort} onToggle={toggle} className="px-4 py-4 text-right">Reward</SortTh>
+                                          <SortTh col="subnet" sort={sort} onToggle={toggle} className="px-4 py-4 text-center">Subnet</SortTh>
+                                          <SortTh col="requester" sort={sort} onToggle={toggle} className="px-4 py-4">Requester</SortTh>
+                                          <SortTh col="deadline" sort={sort} onToggle={toggle} className="px-4 py-4 text-right">Deadline</SortTh>
+                                          <SortTh col="timestamp" sort={sort} onToggle={toggle} className="px-4 py-4">Timestamp</SortTh>
+                                          <SortTh col="status" sort={sort} onToggle={toggle} className="px-4 py-4 text-center">Status</SortTh>
                                       </tr>
                                   </thead>
                                   <tbody className="text-sm divide-y divide-white/5 font-mono tracking-widest">
-                                      {filteredTasks.map((task: any) => (
+                                      {sortedTasks.map((task: any) => (
                                           <tr key={task.taskId} className="group hover:bg-neon-cyan/5 transition-colors cursor-pointer" onClick={() => onSelectTask(task.taskId)}>
                                               {/* Task ID */}
                                               <td className="px-4 py-4">
@@ -168,13 +190,16 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                                                       <div className="flex flex-col min-w-0">
                                                           <span className="font-bold text-white group-hover:text-neon-cyan transition-colors text-[10px] truncate max-w-[120px]">{task.taskId}</span>
                                                           {task.consensusTimestamp ? (
-                                                            <a href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
-                                                              target="_blank" rel="noopener noreferrer"
-                                                              className="text-[9px] text-neon-cyan hover:underline"
-                                                              onClick={e => e.stopPropagation()}>
-                                                              HashScan ↗
-                                                            </a>
-                                                          ) : <span className="text-[9px] text-slate-600">On HCS</span>}
+                                                            <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                                              Verify on{' '}
+                                                              <a href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
+                                                                target="_blank" rel="noopener noreferrer"
+                                                                className="text-neon-cyan hover:underline"
+                                                                onClick={e => e.stopPropagation()}>
+                                                                HashScan
+                                                              </a>
+                                                            </span>
+                                                          ) : <span className="text-[9px] text-slate-600 whitespace-nowrap">Recorded on HCS</span>}
                                                       </div>
                                                   </div>
                                               </td>

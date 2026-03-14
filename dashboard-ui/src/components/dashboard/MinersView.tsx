@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-
 import { useWallet } from '@/context/WalletContext';
+import { useSort } from '@/lib/hooks/useSort';
+import SortTh from '@/components/ui-custom/SortTh';
 
 interface MinersViewProps {
   onBack: () => void;
@@ -34,6 +35,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState(10000);
   const { accountId: myAccountId, isConnected } = useWallet();
+  const { sort, toggle, sortData } = useSort('hcs_sequence', 'desc');
 
   useEffect(() => {
     async function load() {
@@ -77,6 +79,16 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
     ? uniqueMiners.reduce((s, m) => s + Number(m.trust_score ?? 0.5), 0) / uniqueMiners.length
     : 0;
 
+  const sortedMiners = sortData(uniqueMiners, (m, col) => {
+    if (col === 'id') return m.miner_id || m.account_id || '';
+    if (col === 'stake') return toMDT(m.stake_amount);
+    if (col === 'tasks') return Number(m.tasks_completed ?? 0);
+    if (col === 'trust') return Number(m.trust_score ?? 0.5);
+    if (col === 'registered') return Number((m.consensusTimestamp || '0').split('.')[0]);
+    if (col === 'subnet') return (m.subnet_ids ?? [0]).join(',');
+    return m[col];
+  });
+
   return (
     <div className="flex justify-center py-8 px-4 lg:px-12 relative z-10 w-full animate-fade-in-up">
       <div className="w-full max-w-[1600px] flex flex-col gap-8">
@@ -95,9 +107,14 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
               Network Miners
             </h1>
             <p className="text-slate-400 text-base font-light max-w-2xl mt-2 tracking-wider">
-              AI compute providers registered on Hedera HCS · Topic 0.0.8198583
+              AI compute providers registered on Hedera HCS
             </p>
           </div>
+          <a href="https://hashscan.io/testnet/topic/0.0.8198583" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-xs font-bold hover:bg-neon-cyan hover:text-black transition-all uppercase tracking-widest">
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+            Verify on HashScan
+          </a>
         </div>
 
         {/* Stats */}
@@ -147,18 +164,18 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                     <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
                       <tr>
                         <th className="px-5 py-4 w-12 text-center">#</th>
-                        <th className="px-5 py-4">Miner ID</th>
+                        <SortTh col="id" sort={sort} onToggle={toggle} className="px-5 py-4">Miner ID</SortTh>
+                        <SortTh col="subnet" sort={sort} onToggle={toggle} className="px-5 py-4">Subnet</SortTh>
                         <th className="px-5 py-4">Capabilities</th>
-                        <th className="px-5 py-4">Registered (UTC+7)</th>
-                        <th className="px-5 py-4 text-right">Stake (MDT)</th>
-                        <th className="px-5 py-4 text-right">Tasks</th>
-                        <th className="px-5 py-4 text-right">Trust</th>
+                        <SortTh col="registered" sort={sort} onToggle={toggle} className="px-5 py-4">Registered (UTC+7)</SortTh>
+                        <SortTh col="stake" sort={sort} onToggle={toggle} className="px-5 py-4 text-right">Stake (MDT)</SortTh>
+                        <SortTh col="tasks" sort={sort} onToggle={toggle} className="px-5 py-4 text-right">Tasks</SortTh>
+                        <SortTh col="trust" sort={sort} onToggle={toggle} className="px-5 py-4 text-right">Trust</SortTh>
                         <th className="px-5 py-4 text-center">Status</th>
-                        <th className="px-5 py-4 text-right">HCS</th>
                       </tr>
                     </thead>
                     <tbody className="text-xs divide-y divide-white/5 font-mono">
-                      {uniqueMiners.map((m, idx) => {
+                      {sortedMiners.map((m, idx) => {
                         const id = m.miner_id || m.account_id || `miner-${idx}`;
                         const stake = toMDT(m.stake_amount);
                         const trust = Number(m.trust_score ?? 0.5);
@@ -187,12 +204,27 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                                       <span className="text-[9px] font-black bg-neon-cyan text-black px-1.5 py-0.5 rounded uppercase tracking-widest">YOU</span>
                                     )}
                                   </div>
-                                  <div className="flex gap-1 mt-0.5">
-                                    {subnets.map(s => (
-                                      <span key={s} className="text-[9px] text-neon-cyan/60 border border-neon-cyan/20 px-1.5 rounded-full">S-{s}</span>
-                                    ))}
-                                  </div>
+                                  <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                    {m.consensusTimestamp ? (
+                                      <>Verify on{' '}
+                                        <a href={`https://hashscan.io/testnet/transaction/${m.consensusTimestamp}`}
+                                          target="_blank" rel="noopener noreferrer"
+                                          className="text-neon-cyan hover:underline"
+                                          onClick={e => e.stopPropagation()}>
+                                          HashScan
+                                        </a>
+                                      </>
+                                    ) : 'Recorded on HCS'}
+                                  </span>
                                 </div>
+                              </div>
+                            </td>
+                            {/* Subnet */}
+                            <td className="px-5 py-4">
+                              <div className="flex flex-wrap gap-1">
+                                {subnets.map(s => (
+                                  <span key={s} className="px-2 py-0.5 rounded text-[9px] bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">{s}</span>
+                                ))}
                               </div>
                             </td>
                             <td className="px-5 py-4">
@@ -207,7 +239,6 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                             </td>
                             <td className="px-5 py-4">
                               <div className="text-white font-bold whitespace-nowrap">{toUTC7(regTime)}</div>
-                              <div className="text-[9px] text-slate-600 mt-0.5">seq #{m.hcs_sequence}</div>
                             </td>
                             <td className="px-5 py-4 text-right">
                               <div className="font-bold text-white">{stake.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -227,16 +258,6 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                               }`}>
                                 {tasks > 0 ? 'ACTIVE' : 'IDLE'}
                               </span>
-                            </td>
-                            <td className="px-5 py-4 text-right">
-                              {m.consensusTimestamp ? (
-                                <a href={`https://hashscan.io/testnet/transaction/${m.consensusTimestamp}`}
-                                  target="_blank" rel="noopener noreferrer"
-                                  className="text-neon-cyan/50 hover:text-neon-cyan transition-colors font-bold flex items-center justify-end gap-1"
-                                  onClick={e => e.stopPropagation()}>
-                                  <span className="material-symbols-outlined text-[11px]">open_in_new</span>
-                                </a>
-                              ) : <span className="text-slate-700">—</span>}
                             </td>
                           </tr>
                         );

@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useScores } from '@/hooks/useRealData';
+import { useSort } from '@/lib/hooks/useSort';
+import SortTh from '@/components/ui-custom/SortTh';
 
 interface ValidatorsViewProps {
   onBack: () => void;
@@ -11,6 +13,7 @@ interface ValidatorsViewProps {
 export default function ValidatorsView({ onBack, onSelectValidator }: ValidatorsViewProps) {
   const { data: scores, loading, error } = useScores();
   const [stakeAmount, setStakeAmount] = useState<number>(1000);
+  const { sort, toggle, sortData } = useSort('totalValidations', 'desc');
 
   // Extract unique validators from scores
   const validators = React.useMemo(() => {
@@ -44,6 +47,14 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
       .sort((a, b) => b.totalValidations - a.totalValidations);
   }, [scores]);
 
+  const sortedValidators = sortData(validators, (v, col) => {
+    if (col === 'id') return v.id;
+    if (col === 'validations') return v.totalValidations;
+    if (col === 'avgScore') return v.avgScore;
+    if (col === 'confidence') return v.avgConfidence;
+    return (v as any)[col];
+  });
+
   return (
     <div className="flex justify-center py-8 px-4 lg:px-12 relative z-10 w-full animate-fade-in-up">
         <div className="w-full max-w-[1600px] flex flex-col gap-8">
@@ -62,6 +73,11 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                         AI validators scoring miner submissions on Hedera HCS
                     </p>
                 </div>
+                <a href="https://hashscan.io/testnet/topic/0.0.8198584" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-xs font-bold hover:bg-neon-cyan hover:text-black transition-all uppercase tracking-widest">
+                  <span className="material-symbols-outlined text-sm">open_in_new</span>
+                  Verify on HashScan
+                </a>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -110,15 +126,15 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                                   <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
                                       <tr>
                                           <th className="px-6 py-5 w-16 text-center">Rank</th>
-                                          <th className="px-6 py-5">Validator ID</th>
-                                          <th className="px-6 py-5 text-right">Validations</th>
-                                          <th className="px-6 py-5 text-right">Avg Score</th>
-                                          <th className="px-6 py-5 text-right">Confidence</th>
+                                          <SortTh col="id" sort={sort} onToggle={toggle} className="px-6 py-5">Validator ID</SortTh>
+                                          <SortTh col="validations" sort={sort} onToggle={toggle} className="px-6 py-5 text-right">Validations</SortTh>
+                                          <SortTh col="avgScore" sort={sort} onToggle={toggle} className="px-6 py-5 text-right">Avg Score</SortTh>
+                                          <SortTh col="confidence" sort={sort} onToggle={toggle} className="px-6 py-5 text-right">Confidence</SortTh>
                                           <th className="px-6 py-5 text-center">Status</th>
                                       </tr>
                                   </thead>
                                   <tbody className="text-sm divide-y divide-white/5 font-mono tracking-widest">
-                                      {validators.map((val, idx) => (
+                                      {sortedValidators.map((val, idx) => (
                                           <tr key={val.id} className="group hover:bg-neon-cyan/5 transition-colors cursor-pointer" onClick={() => onSelectValidator(val.id)}>
                                               <td className="px-6 py-5 text-center text-slate-500 group-hover:text-neon-cyan font-bold">{idx + 1}</td>
                                               <td className="px-6 py-5">
@@ -130,7 +146,7 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                                                       </div>
                                                       <div className="flex flex-col">
                                                           <span className="font-bold text-white group-hover:text-neon-cyan transition-colors">{val.id}</span>
-                                                          <span className="text-[10px] text-slate-500">
+                                                          <span className="text-[10px] text-slate-500 whitespace-nowrap">
                                                             {val.consensusTimestamp ? (
                                                               <>
                                                                 Verify on{' '}
