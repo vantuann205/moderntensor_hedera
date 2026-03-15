@@ -3,17 +3,9 @@
  * Validator submits score for an HCS-only task (no on-chain taskId)
  */
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
-
-const execAsync = promisify(exec);
+import { submitHcsMessage } from '@/lib/hcs-submit';
 
 const SCORING_TOPIC_ID = process.env.NEXT_PUBLIC_SCORING_TOPIC_ID || '0.0.8198584';
-const PYTHON = process.env.PYTHON_PATH
-  || 'C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe';
 
 export async function POST(req: Request) {
   try {
@@ -31,52 +23,18 @@ export async function POST(req: Request) {
       task_id: taskId,
       score: Number(score),
       confidence: confidence ?? 1,
-      metrics: metrics || {
-        relevance: 0,
-        quality: 0,
-        completeness: 0,
-        creativity: 0
-      },
+      metrics: metrics || { relevance: 0, quality: 0, completeness: 0, creativity: 0 },
       timestamp: new Date().toISOString(),
     };
 
-    const tmpFile = path.join(os.tmpdir(), `hcs_score_${Date.now()}.json`);
-    fs.writeFileSync(tmpFile, JSON.stringify({ topic_id: SCORING_TOPIC_ID, message: hcsMessage }), 'utf-8');
-
-    const projectRoot = path.join(process.cwd(), '..');
-    const scriptPath = path.join(projectRoot, 'scripts', 'hcs_submit.py');
-
-    let hcsResult: any = {};
-    try {
-      const { stdout } = await execAsync(
-        `"${PYTHON}" "${scriptPath}" "${tmpFile}"`,
-        { cwd: projectRoot, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, timeout: 60000 }
-      );
-      const lines = stdout.trim().split('\n').filter(Boolean);
-      hcsResult = JSON.parse(lines[lines.length - 1]);
-      if (hcsResult.error) throw new Error(hcsResult.error);
-    } finally {
-      try { fs.unlinkSync(tmpFile); } catch {}
-    }
+    const hcsResult = await submitHcsMessage(SCORING_TOPIC_ID, hcsMessage);
 
     return NextResponse.json({
       success: true,
       taskId,
       sequence: hcsResult.sequence,
       transactionId: hcsResult.transaction_id,
-      // consensus_timestamp for direct HashScan link: hashscan.io/testnet/transaction/{timestamp}
-      consensusTimestamp: await (async () => {
-        try {
-          const seq = hcsResult.sequence;
-          if (!seq || seq === '0') return '';
-          const r = await fetch(
-            `https://testnet.mirrornode.hedera.com/api/v1/topics/${SCORING_TOPIC_ID}/messages/${seq}`,
-            { cache: 'no-store' }
-          );
-          if (r.ok) { const d = await r.json(); return d.consensus_timestamp || ''; }
-        } catch (_) {}
-        return '';
-      })(),
+      consensusTimestamp: hcsResult.consensus_timestamp || '',
     });
   } catch (err: any) {
     console.error('[hcs/scores/submit]', err);
