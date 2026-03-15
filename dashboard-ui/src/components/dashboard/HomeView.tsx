@@ -45,13 +45,13 @@ const MorphingText = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % words.length);
-    }, 4000); // Matches the 4s animation in CSS
+    }, 5000); // More relaxed timing
     return () => clearInterval(timer);
   }, [words.length]);
 
   return (
     <span className="relative inline-block min-w-[300px]">
-      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text">
+      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text" style={{ animationDuration: '5s, 6s' }}>
         {words[index]}
       </span>
     </span>

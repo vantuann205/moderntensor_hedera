@@ -235,14 +235,15 @@ body {
   appearance: textfield;
 }
 
-/* Gradient flow animation for headlines */
+/* Gradient flow animation for headlines - Slower & more premium */
 .animate-gradient-flow {
-  background: linear-gradient(-45deg, #00f3ff, #bc13fe, #00ffa3, #ff00ff);
-  background-size: 300% 300%;
-  animation: gradient-flow 5s ease infinite;
+  background: linear-gradient(-45deg, #00f3ff, #7000ff, #00ffa3, #ff007a, #00f3ff);
+  background-size: 400% 400%;
+  animation: gradient-flow 6s ease-in-out infinite;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 0 8px rgba(0, 243, 255, 0.2));
 }
 
 @keyframes gradient-flow {
