@@ -27,24 +27,34 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
         validatorMap.set(validatorId, {
           id: validatorId,
           totalValidations: 0,
-          avgScore: 0,
           totalScore: 0,
-          avgConfidence: 0,
           totalConfidence: 0,
-          consensusTimestamp: score.consensusTimestamp // first score's tx
+          totalRelevance: 0,
+          totalQuality: 0,
+          totalCompleteness: 0,
+          totalCreativity: 0,
+          consensusTimestamp: score.consensusTimestamp,
         });
       }
-      
-      const validator = validatorMap.get(validatorId);
-      validator.totalValidations++;
-      validator.totalScore += score.score;
-      validator.totalConfidence += score.confidence || 0;
-      validator.avgScore = validator.totalScore / validator.totalValidations;
-      validator.avgConfidence = validator.totalConfidence / validator.totalValidations;
+      const v = validatorMap.get(validatorId);
+      v.totalValidations++;
+      v.totalScore      += score.score ?? 0;
+      v.totalConfidence += score.confidence ?? 0;
+      v.totalRelevance  += score.metrics?.relevance ?? 0;
+      v.totalQuality    += score.metrics?.quality ?? 0;
+      v.totalCompleteness += score.metrics?.completeness ?? 0;
+      v.totalCreativity += score.metrics?.creativity ?? 0;
     });
 
-    return Array.from(validatorMap.values())
-      .sort((a, b) => b.totalValidations - a.totalValidations);
+    return Array.from(validatorMap.values()).map(v => ({
+      ...v,
+      avgScore:       v.totalScore / v.totalValidations,
+      avgConfidence:  v.totalConfidence / v.totalValidations,
+      avgRelevance:   v.totalRelevance / v.totalValidations,
+      avgQuality:     v.totalQuality / v.totalValidations,
+      avgCompleteness: v.totalCompleteness / v.totalValidations,
+      avgCreativity:  v.totalCreativity / v.totalValidations,
+    }));
   }, [scores]);
 
   const sortedValidators = sortData(validators, (v, col) => {
