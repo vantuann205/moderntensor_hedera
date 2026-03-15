@@ -54,18 +54,18 @@ export async function POST(req: Request) {
 
     const minStake = role === 'validator' ? MIN_VALIDATOR_STAKE : MIN_MINER_STAKE;
 
-    // ── Step 1: Check MDT balance ──────────────────────────────────────────
+    // ── Step 1: Check MDT balance or on-chain stake ────────────────────────
     let mdtBalance = 0;
     let evmAddress = '';
     try {
       mdtBalance = await getMDTBalance(accountId);
       evmAddress = await getEVMAddress(accountId);
     } catch (e) {
-      // Mirror node unavailable — proceed with warning
       console.warn('[hcs/register] Mirror node check failed:', e);
     }
 
-    if (mdtBalance < minStake) {
+    // If skipOnChainStake=true, the client already staked — verify on-chain instead of wallet balance
+    if (!skipOnChainStake && mdtBalance < minStake) {
       return NextResponse.json({
         error: `Insufficient MDT balance`,
         code: 'INSUFFICIENT_MDT',
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         required: minStake,
         role,
         needFaucet: true,
-        faucetAmount: minStake - mdtBalance + 100, // request a bit extra
+        faucetAmount: minStake - mdtBalance + 100,
         message: `You have ${mdtBalance.toFixed(2)} MDT but need ${minStake} MDT to register as ${role}. Use the faucet to get testnet MDT.`,
       }, { status: 402 });
     }

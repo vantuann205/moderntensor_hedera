@@ -1,14 +1,69 @@
 import { NextResponse } from 'next/server';
 import { hcsMirrorClient } from '@/lib/hcs-mirror-client';
+import { ethers } from 'ethers';
+
+const HEDERA_RPC = process.env.NEXT_PUBLIC_HEDERA_RPC || 'https://testnet.hashio.io/api';
+const SUBNET_REGISTRY = process.env.NEXT_PUBLIC_SUBNET_REGISTRY || '0xbdbd7a138c7f815b1A7f432C1d06b2B95E46Ba1F';
+const SCORING_TOPIC_ID = process.env.NEXT_PUBLIC_SCORING_TOPIC_ID || '0.0.8198584';
+
+const GET_TASK_ABI = [
+  'function getTask(uint256 id) view returns (uint256 id, uint256 subnetId, address requester, string taskHash, uint256 totalDeposit, uint256 rewardAmount, uint256 protocolFee, uint256 validatorReward, uint256 stakingPoolFee, uint256 subnetFee, uint256 deadline, uint8 status, address winningMiner, uint256 winningScore, uint256 createdAt)',
+];
 
 export async function GET() {
   try {
-    const tasks = await hcsMirrorClient.getTaskSubmissions();
-    
+    // Fetch tasks + scoring topic messages in parallel
+    const [tasks, scoringMessages] = await Promise.all([
+      hcsMirrorClient.getTaskSubmissions(),
+      hcsMirrorClient.getTopicMessages(SCORING_TOPIC_ID, 200),
+    ]);
+
+    // Build sets of "done" taskIds from HCS scoring topic
+    // result_submit → miner submitted result (task no longer needs action from miner)
+    // score_submit  → validator scored (HCS-only task fully done)
+    const resultSubmittedIds = new Set<string>();
+    const scoredIds = new Set<string>();
+    for (const msg of scoringMessages) {
+      const tid = String(msg.task_id || '');
+      if (!tid) continue;
+      if (msg.type === 'result_submit') resultSubmittedIds.add(tid);
+      if (msg.type === 'score_submit') scoredIds.add(tid);
+    }
+
+    // Check on-chain status for tasks with onChainTaskId
+    const provider = new ethers.JsonRpcProvider(HEDERA_RPC);
+    const registry = new ethers.Contract(SUBNET_REGISTRY, GET_TASK_ABI, provider);
+
+    const filtered = await Promise.all(
+      tasks.map(async (t) => {
+        const tid = String(t.taskId || '');
+        const onChainId = t.onChainTaskId;
+
+        if (onChainId) {
+          // On-chain task:
+          // 1. Hide if miner already submitted result (result_submit on HCS)
+          if (resultSubmittedIds.has(tid)) return null;
+          // 2. Hide if on-chain status >= 3 (Completed/Cancelled/Expired)
+          try {
+            const task = await registry.getTask(onChainId);
+            if (Number(task.status) >= 3) return null;
+          } catch (_) {}
+          return t;
+        } else {
+          // HCS-only task:
+          // Hide if result submitted OR already scored
+          if (resultSubmittedIds.has(tid) || scoredIds.has(tid)) return null;
+          return t;
+        }
+      })
+    );
+
+    const active = filtered.filter(Boolean);
+
     return NextResponse.json({
       success: true,
-      data: tasks,
-      count: tasks.length
+      data: active,
+      count: active.length,
     });
   } catch (error: any) {
     console.error('Error fetching tasks from HCS:', error);

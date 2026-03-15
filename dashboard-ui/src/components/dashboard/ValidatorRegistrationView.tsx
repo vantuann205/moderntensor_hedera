@@ -4,9 +4,115 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { AccountId, ContractExecuteTransaction, ContractId, ContractFunctionParameters, TransferTransaction, TokenId } from '@hashgraph/sdk';
 import { useWallet } from '@/context/WalletContext';
-import { CONTRACTS, STAKING_VAULT_VALIDATOR_ABI, StakeRole } from '@/lib/contracts';
+import { CONTRACTS, STAKING_VAULT_VALIDATOR_ABI, HTS_ABI, HTS_PRECOMPILE, StakeRole } from '@/lib/contracts';
 import { ViewState } from '@/types';
 import { Shield, ExternalLink, AlertCircle, CheckCircle, Lock, RefreshCw } from 'lucide-react';
+
+// ── Shared Faucet Panel ───────────────────────────────────────────────────────
+function FaucetPanel({ accountId, needed, stake, regFee, onSuccess }: {
+  accountId: string; needed: number; stake: number; regFee: number; onSuccess: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const request = async () => {
+    if (!accountId) return;
+    setLoading(true); setErr(null); setResult(null);
+    try {
+      const res = await fetch('/api/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Faucet failed');
+      setResult(data);
+      // Countdown 5s then re-check balance
+      let secs = 5;
+      setCountdown(secs);
+      const t = setInterval(() => {
+        secs -= 1;
+        setCountdown(secs);
+        if (secs <= 0) { clearInterval(t); setCountdown(null); onSuccess(); }
+      }, 1000);
+    } catch (e: any) { setErr(e.message); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="glass-panel border border-yellow-400/30 overflow-hidden">
+      <div className="px-5 py-4 border-b border-yellow-400/10 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-yellow-400/10 border border-yellow-400/20 flex items-center justify-center">
+          <span className="material-symbols-outlined text-yellow-400 text-lg">water_drop</span>
+        </div>
+        <div>
+          <div className="text-sm font-black text-yellow-400 uppercase tracking-wider">Testnet MDT Faucet</div>
+          <div className="text-[9px] text-slate-500 font-mono">MDT · 0.0.8198586 · Hedera Testnet</div>
+        </div>
+      </div>
+      <div className="p-5 space-y-4">
+        {/* Wallet address */}
+        <div>
+          <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1.5">Wallet Address</div>
+          <div className="px-3 py-2.5 bg-black/40 border border-white/10 rounded-xl font-mono text-sm text-white break-all select-all">
+            {accountId || '—'}
+          </div>
+        </div>
+        {/* Amount */}
+        <div className="flex items-center justify-between p-3 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
+          <div>
+            <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Amount</div>
+            <div className="text-xl font-black text-yellow-400 mt-0.5">500 MDT</div>
+          </div>
+          <div className="text-right text-[9px] text-slate-500 font-mono">
+            <div>Need: {needed} MDT</div>
+            <div>({stake} stake + ~{regFee} fee)</div>
+          </div>
+        </div>
+
+        {/* Result */}
+        {result && (
+          <div className="p-4 bg-neon-green/5 border border-neon-green/20 rounded-xl space-y-2">
+            <div className="flex items-center gap-2 text-neon-green text-[11px] font-black">
+              <CheckCircle size={14} /> {result.amount} MDT sent successfully
+            </div>
+            {result.txId && (
+              <div className="text-[9px] text-slate-500 font-mono break-all">
+                TX: {result.txId}
+              </div>
+            )}
+            {result.txUrl && (
+              <a href={result.txUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+                <ExternalLink size={10} /> View on HashScan
+              </a>
+            )}
+            {countdown !== null
+              ? <div className="text-[9px] text-yellow-400 font-mono animate-pulse">Checking balance in {countdown}s...</div>
+              : <div className="text-[9px] text-slate-500 font-mono">Refreshing balance...</div>
+            }
+          </div>
+        )}
+
+        {err && (
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-mono text-red-400 flex items-start gap-2">
+            <AlertCircle size={10} className="mt-0.5 flex-shrink-0" /> {err}
+          </div>
+        )}
+
+        {!result && (
+          <button onClick={request} disabled={loading || !accountId}
+            className="w-full py-3 bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/40 text-yellow-400 font-black text-xs uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-sm">water_drop</span>
+            {loading ? 'Requesting 500 MDT...' : 'Request 500 MDT from Faucet'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   onBack: () => void;
@@ -59,7 +165,7 @@ export default function ValidatorRegistrationView({ onBack, onViewChange, onRegi
 
   const checkBalance = useCallback(async () => {
     if (!accountId) return;
-    setStep('checking'); setError(null);
+    setStep('checking'); setError(null); setLogs([]);
     log(`Checking MDT balance for ${accountId}...`);
     try {
       const res = await fetch(`/api/mdt-balance?accountId=${accountId}`);
@@ -88,7 +194,7 @@ export default function ValidatorRegistrationView({ onBack, onViewChange, onRegi
 
   const requestFaucet = async () => {
     if (!accountId) return;
-    setStep('faucet_pending'); setError(null);
+    setStep('faucet_pending'); setError(null); setLogs([]);
     try {
       const res = await fetch('/api/faucet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountId }) });
       const data = await res.json();
@@ -108,26 +214,63 @@ export default function ValidatorRegistrationView({ onBack, onViewChange, onRegi
         const ethereum = (window as any).ethereum;
         if (!ethereum) throw new Error('MetaMask not found');
         const provider = new ethers.BrowserProvider(ethereum);
+        try { await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x128' }] }); } catch (_) {}
         const signer = await provider.getSigner();
-        const vault = new ethers.Contract(CONTRACTS.STAKING_VAULT, STAKING_VAULT_VALIDATOR_ABI, signer);
+        const signerAddr = await signer.getAddress();
 
-        const existing = await vault.getStakeInfo(evmAddress);
-        if (existing.isActive) { log(`✓ Already staked`); return { txHash: 'already_staked' }; }
+        const vaultRead = new ethers.Contract(CONTRACTS.STAKING_VAULT, STAKING_VAULT_VALIDATOR_ABI, provider);
+        const existing = await vaultRead.getStakeInfo(signerAddr);
+        if (existing.isActive && Number(existing.role) === StakeRole.Validator) {
+          log(`✓ Already staked as Validator (${Number(existing.amount) / 1e8} MDT)`);
+          return { txHash: 'already_staked' };
+        }
+        if (existing.isActive && Number(existing.role) !== StakeRole.Validator) {
+          throw new Error(`Already staked as role ${Number(existing.role) === 1 ? 'Miner' : 'Holder'} — cannot stake as Validator while active. Request unstake first.`);
+        }
 
-        // recordDeposit first
+        let regFeeRaw = BigInt(1 * 1e8);
+        try { const f = await vaultRead.getCurrentRegFee(); regFeeRaw = BigInt(f.toString()); } catch (_) {}
+        const totalRaw = regFeeRaw + amountRaw;
+        const totalMDT = Number(totalRaw) / 1e8;
+
+        // Step 1: Transfer MDT to vault via HTS precompile
         setStep('deposit');
-        log(`Recording deposit...`);
-        await fetch('/api/staking/deposit', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accountId, evmAddress, amount: totalNeeded }),
-        });
+        log(`Step 1/3: Transferring ${totalMDT} MDT to vault via HTS (MetaMask)...`);
+        const hts = new ethers.Contract(HTS_PRECOMPILE, HTS_ABI, signer);
+        const transferTx = await hts.cryptoTransfer(
+          [],
+          [{
+            token: CONTRACTS.MDT_EVM,
+            transfers: [
+              { amount: -BigInt(totalRaw), accountID: signerAddr, isApproval: false },
+              { amount: BigInt(totalRaw), accountID: CONTRACTS.STAKING_VAULT, isApproval: false },
+            ],
+            deleteSpenderAllowance: false,
+          }],
+          { gasLimit: 300000 }
+        );
+        const transferReceipt = await transferTx.wait();
+        log(`✓ Step 1/3: MDT transferred · ${transferReceipt.hash}`);
 
+        // Step 2: recordDeposit (backend/owner)
+        setStep('deposit');
+        log(`Step 2/3: Recording deposit on-chain...`);
+        const depositRes = await fetch('/api/staking/deposit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId, evmAddress: signerAddr, amount: totalMDT }),
+        });
+        const depositData = await depositRes.json();
+        if (!depositRes.ok) throw new Error(depositData.error || 'recordDeposit failed');
+        log(`✓ Step 2/3: pendingDeposit credited`);
+
+        // Step 3: stake()
         setStep('staking');
-        log(`Staking ${stake} MDT as Validator via MetaMask...`);
-        const tx = await vault['stake(uint256,uint8)'](amountRaw, stakeRole, { gasLimit: 300000 });
-        const receipt = await tx.wait();
-        log(`✓ Staked · tx: ${receipt.hash}`);
-        return { txHash: receipt.hash };
+        log(`Step 3/3: Calling vault.stake(${stake} MDT, Validator) — approve in MetaMask...`);
+        const vault = new ethers.Contract(CONTRACTS.STAKING_VAULT, STAKING_VAULT_VALIDATOR_ABI, signer);
+        const stakeTx = await vault['stake(uint256,uint8)'](amountRaw, stakeRole, { gasLimit: 300000 });
+        const stakeReceipt = await stakeTx.wait();
+        log(`✓ Step 3/3: Staked · ${stakeReceipt.hash}`);
+        return { txHash: stakeReceipt.hash, txHashTransfer: transferReceipt.hash, txHashContract: stakeReceipt.hash };
 
       } else if (walletType === 'hashpack') {
         if (!hashConnect || !accountId) throw new Error('HashConnect not initialized');
@@ -171,7 +314,7 @@ export default function ValidatorRegistrationView({ onBack, onViewChange, onRegi
 
         log(`Step 3/3: Calling vault.stake(${stake} MDT, Validator) — approve in HashPack...`);
         const params = new ContractFunctionParameters().addUint256(amountRaw.toString()).addUint8(stakeRole);
-        const contractId = ContractId.fromEvmAddress(0, 0, CONTRACTS.STAKING_VAULT);
+        const contractId = ContractId.fromString(CONTRACTS.STAKING_VAULT_ID);
         const contractTx = new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('stake', params);
         const stakeReceipt = await hashConnect.sendTransaction(hederaId, contractTx);
         const contractTs = await resolveHederaTxId(stakeReceipt.transactionId);
@@ -279,14 +422,13 @@ export default function ValidatorRegistrationView({ onBack, onViewChange, onRegi
 
       {/* Faucet */}
       {(step === 'need_faucet' || step === 'faucet_pending') && (
-        <div className="glass-panel p-5 border border-yellow-400/30 space-y-3">
-          <div className="text-sm font-black text-yellow-400 uppercase tracking-wider">Need MDT</div>
-          <div className="text-[11px] text-slate-400">You need <span className="text-white font-bold">{totalNeeded} MDT</span> ({stake} stake + ~{REG_FEE_BUFFER} regFee).</div>
-          <button onClick={requestFaucet} disabled={step === 'faucet_pending'}
-            className="w-full py-3 bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/40 text-yellow-400 font-black text-xs uppercase tracking-widest rounded-xl transition-all disabled:opacity-40">
-            {step === 'faucet_pending' ? 'Requesting...' : 'Request 100 MDT from Faucet'}
-          </button>
-        </div>
+        <FaucetPanel
+          accountId={accountId || ''}
+          needed={totalNeeded}
+          stake={stake}
+          regFee={REG_FEE_BUFFER}
+          onSuccess={() => checkBalance()}
+        />
       )}
 
       {/* Form */}
@@ -317,8 +459,9 @@ export default function ValidatorRegistrationView({ onBack, onViewChange, onRegi
               <div>2. Backend: <code className="text-neon-cyan">recordDeposit(userEVM, {totalNeeded} MDT)</code></div>
               <div>3. HashPack: <code className="text-neon-cyan">vault.stake({stake * 1e8}, 2 /* Validator */)</code></div>
             </>) : (<>
-              <div>1. Backend: <code className="text-neon-cyan">recordDeposit(userEVM, {totalNeeded} MDT)</code></div>
-              <div>2. MetaMask: <code className="text-neon-cyan">vault.stake({stake * 1e8}, 2 /* Validator */)</code></div>
+              <div>1. MetaMask: <code className="text-neon-cyan">HTS cryptoTransfer — {totalNeeded} MDT → vault</code></div>
+              <div>2. Backend: <code className="text-neon-cyan">recordDeposit(userEVM, {totalNeeded} MDT)</code></div>
+              <div>3. MetaMask: <code className="text-neon-cyan">vault.stake({stake * 1e8}, 2 /* Validator */)</code></div>
             </>)}
             <div>4. HCS: <code className="text-neon-cyan">validator_register → topic 0.0.8198583</code></div>
           </div>

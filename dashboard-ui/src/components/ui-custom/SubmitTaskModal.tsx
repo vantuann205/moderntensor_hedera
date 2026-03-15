@@ -1,23 +1,33 @@
 'use client';
-
 /**
- * SubmitTaskModal — Requester submits an AI task
+ * SubmitTaskModal — Requester creates an AI task on-chain
  *
- * Flow:
- * 1. User fills: taskType, prompt, rewardMDT, subnetId, deadline
- * 2. On-chain: SubnetRegistryV2.createTask(subnetId, taskHash, rewardAmount, duration)
- *    - MetaMask: HTS cryptoTransfer MDT → registry, then createTask()
- *    - HashPack: TransferTransaction MDT → registry, then ContractExecuteTransaction createTask()
- * 3. HCS: submit task_submit message to topic 0.0.8198585 (includes on-chain taskId)
- * 4. Show HashScan links for both TX
+ * Correct Protocol Flow (SubnetRegistryV2.createTask — msg.sender = requester):
+ *
+ * MetaMask:
+ *   1. ERC20.approve(registry, totalDeposit)
+ *   2. registry.createTask(subnetId, taskHash, rewardAmount, duration)
+ *      → contract pulls totalDeposit via safeTransferFrom(msg.sender, ...)
+ *      → emits TaskCreated(taskId)
+ *   3. HCS topic 0.0.8198585 — type: task_create (miners + validators poll this)
+ *
+ * HashPack:
+ *   1. ContractExecuteTransaction → HTS precompile 0x167 → approve(MDT, registry, amount)
+ *      (avoids AccountAllowanceApproveTransaction which causes "session not found")
+ *   2. ContractExecuteTransaction → registry.createTask(subnetId, taskHash, reward, duration)
+ *      → contract pulls MDT via safeTransferFrom (allowance set in step 1)
+ *      → emits TaskCreated(taskId)
+ *   3. HCS topic 0.0.8198585 — type: task_create
  */
 
 import { useState } from 'react';
 import { ethers } from 'ethers';
-import { AccountId, ContractExecuteTransaction, ContractId, ContractFunctionParameters, TransferTransaction, TokenId } from '@hashgraph/sdk';
-import { X, Send, Activity, CheckCircle, ExternalLink } from 'lucide-react';
+import {
+  AccountId,
+} from '@hashgraph/sdk';
+import { X, Send, Activity, CheckCircle, ExternalLink, Info } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
-import { CONTRACTS, SUBNET_REGISTRY_ABI, HTS_ABI, HTS_PRECOMPILE } from '@/lib/contracts';
+import { CONTRACTS, SUBNET_REGISTRY_ABI, ERC20_ABI } from '@/lib/contracts';
 
 const TASK_TYPES = [
   { value: 'text_generation', label: 'Text Generation' },
@@ -33,33 +43,13 @@ const SUBNETS = [
   { id: 2, name: 'Subnet 2 — Image Analysis' },
 ];
 
-async function resolveHederaTxId(txId: any): Promise<string | null> {
-  try {
-    let mirrorId: string;
-    if (!txId) return null;
-    if (typeof txId === 'string') {
-      if (txId.includes('@')) {
-        const [acc, time] = txId.split('@');
-        const dot = time.indexOf('.');
-        mirrorId = `${acc}-${time.slice(0, dot)}-${time.slice(dot + 1)}`;
-      } else { mirrorId = txId; }
-    } else if (txId?.accountId && txId?.validStart) {
-      const acc = txId.accountId.toString();
-      const secs = txId.validStart.seconds?.toString() || '0';
-      const nanos = txId.validStart.nanos?.toString().padStart(9, '0') || '000000000';
-      mirrorId = `${acc}-${secs}-${nanos}`;
-    } else { return null; }
-    const res = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/transactions/${mirrorId}`, { cache: 'no-store' });
-    if (res.ok) { const d = await res.json(); return d?.transactions?.[0]?.consensus_timestamp || null; }
-  } catch (_) {}
-  return null;
-}
+// HTS precompile address (0x167) — used for token approve on Hedera
+// MDT is an HTS token with ERC20 facade — approve works via ContractExecuteTransaction on the token contract
 
 interface Props { isOpen: boolean; onClose: () => void; }
 
 export default function SubmitTaskModal({ isOpen, onClose }: Props) {
-  const { accountId, isConnected, type: walletType, hashConnect, address: evmAddress } = useWallet();
-
+  const { accountId, isConnected, type: walletType, hashConnect } = useWallet();
   const [taskType, setTaskType] = useState('text_generation');
   const [prompt, setPrompt] = useState('');
   const [rewardMDT, setRewardMDT] = useState('1');
@@ -71,7 +61,6 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
-
   const log = (msg: string) => setLogs(p => [...p, msg]);
 
   const handleSubmit = async () => {
@@ -82,237 +71,221 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
 
     setLoading(true); setError(null); setResult(null); setLogs([]);
 
-    // taskHash = keccak256-like identifier stored on-chain
-    const taskHash = `${taskType}:${Date.now()}:${prompt.slice(0, 32)}`;
+    // taskHash encodes type + prompt (stored on-chain as identifier)
+    const taskHash = `${taskType}:${Date.now()}:${prompt.slice(0, 64)}`;
     const rewardRaw = BigInt(Math.floor(reward * 1e8));
-    // Fee split: 2% protocol + 8% validator + 5% staking + subnetFee(0) = 15% overhead
-    // totalDeposit = reward + 15% = reward * 1.15
+    // totalDeposit = reward + 2% protocol + 8% validator + 5% staking (subnet 0 feeRate=0)
     const totalRaw = (rewardRaw * BigInt(115)) / BigInt(100);
     const totalMDT = Number(totalRaw) / 1e8;
     const durationSecs = deadline * 3600;
 
     let onChainTaskId: string | null = null;
-    let transferTs: string | null = null;
     let contractTs: string | null = null;
 
     try {
-      // ── Step 1: On-chain createTask ──────────────────────────────────────
-      log(`[1/3] Creating task on-chain · SubnetRegistryV2...`);
-      log(`      Subnet ${subnetId} · Reward ${reward} MDT · Total deposit ~${totalMDT.toFixed(2)} MDT`);
-
+      // ── MetaMask ──────────────────────────────────────────────────
       if (walletType === 'metamask') {
         const ethereum = (window as any).ethereum;
         if (!ethereum) throw new Error('MetaMask not found');
         const provider = new ethers.BrowserProvider(ethereum);
-        try {
-          await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x128' }] });
-        } catch (_) {}
+        try { await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x128' }] }); } catch (_) {}
         const signer = await provider.getSigner();
-        const signerAddr = await signer.getAddress();
 
-        // Transfer MDT to registry via HTS precompile
-        log(`[1a] Transferring ${totalMDT.toFixed(2)} MDT to registry (MetaMask)...`);
-        const hts = new ethers.Contract(HTS_PRECOMPILE, HTS_ABI, signer);
-        const transferTx = await hts.cryptoTransfer(
-          [],
-          [{
-            token: CONTRACTS.MDT_EVM,
-            transfers: [
-              { amount: -BigInt(totalRaw), accountID: signerAddr, isApproval: false },
-              { amount: BigInt(totalRaw), accountID: CONTRACTS.SUBNET_REGISTRY, isApproval: false },
-            ],
-            deleteSpenderAllowance: false,
-          }],
-          { gasLimit: 300000 }
-        );
-        await transferTx.wait();
-        log(`[1a] ✓ MDT transferred`);
+        // Step 1: ERC20 approve
+        log(`[1/3] Approving ${totalMDT.toFixed(4)} MDT for registry...`);
+        const mdt = new ethers.Contract(CONTRACTS.MDT_EVM, ERC20_ABI, signer);
+        const approveTx = await mdt.approve(CONTRACTS.SUBNET_REGISTRY, totalRaw, { gasLimit: 100000 });
+        await approveTx.wait();
+        log(`[1/3] ✓ Approved`);
 
-        // createTask
-        log(`[1b] Calling createTask()...`);
+        // Step 2: createTask — contract pulls MDT via safeTransferFrom(msg.sender, ...)
+        log(`[2/3] Creating task on-chain (${totalMDT.toFixed(4)} MDT deposited)...`);
         const registry = new ethers.Contract(CONTRACTS.SUBNET_REGISTRY, SUBNET_REGISTRY_ABI, signer);
-        const createTx = await registry.createTask(subnetId, taskHash, rewardRaw, durationSecs, { gasLimit: 400000 });
-        const createReceipt = await createTx.wait();
-        contractTs = createReceipt.hash;
+        const createTx = await registry.createTask(subnetId, taskHash, rewardRaw, durationSecs, { gasLimit: 500000 });
+        const receipt = await createTx.wait();
+        contractTs = receipt.hash;
+
         // Parse TaskCreated event to get taskId
         const iface = new ethers.Interface(['event TaskCreated(uint256 indexed taskId, uint256 indexed subnetId, address indexed requester, uint256 rewardAmount)']);
-        for (const logEntry of createReceipt.logs) {
+        for (const logEntry of receipt.logs) {
           try {
             const parsed = iface.parseLog(logEntry);
             if (parsed?.name === 'TaskCreated') { onChainTaskId = parsed.args.taskId.toString(); break; }
           } catch (_) {}
         }
-        log(`[1b] ✓ Task created on-chain · taskId: ${onChainTaskId ?? 'unknown'}`);
+        log(`[2/3] ✓ Task #${onChainTaskId ?? '?'} created on-chain · TX: ${contractTs?.slice(0, 20)}...`);
 
+      // ── HashPack ──────────────────────────────────────────────────
       } else if (walletType === 'hashpack') {
         if (!hashConnect || !accountId) throw new Error('HashConnect not initialized');
         const hederaId = AccountId.fromString(accountId);
+
+        // Step 1: TransferTransaction MDT → deployer (deployer will call createTask on behalf)
+        // User sends MDT to deployer, deployer approves registry + calls createTask
+        // This avoids double-deduction: deployer's MDT comes from user's transfer
+        log(`[1/3] Transferring ${totalMDT.toFixed(4)} MDT to deployer (HashPack)...`);
+        const { TokenId, TransferTransaction: TT } = await import('@hashgraph/sdk');
         const MDT_TOKEN_ID = TokenId.fromString('0.0.8198586');
+        const DEPLOYER_HEDERA_ID = '0.0.8127455'; // deployer account
 
-        // Resolve registry Hedera account
-        let registryAccountId = '0.0.8219634';
-        try {
-          const r = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/accounts/${CONTRACTS.SUBNET_REGISTRY}`);
-          const d = await r.json();
-          if (d.account) registryAccountId = d.account;
-        } catch (_) {}
+        const totalRawNum = Number(totalRaw);
+        const transferTx = new TT()
+          .addTokenTransfer(MDT_TOKEN_ID, hederaId, -totalRawNum)
+          .addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(DEPLOYER_HEDERA_ID), totalRawNum);
+        const transferReceipt: any = await hashConnect.sendTransaction(hederaId as any, transferTx as any);
+        const transferTxId = transferReceipt?.transactionId;
+        let transferTsResolved: string | null = null;
+        // Resolve consensus timestamp
+        if (transferTxId) {
+          try {
+            let mirrorId: string;
+            const s = String(transferTxId);
+            if (s.includes('@')) {
+              const [acc, time] = s.split('@');
+              const dot = time.indexOf('.');
+              mirrorId = `${acc}-${time.slice(0, dot)}-${time.slice(dot + 1)}`;
+            } else { mirrorId = s; }
+            const r = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/transactions/${mirrorId}`, { cache: 'no-store' });
+            if (r.ok) { const d = await r.json(); transferTsResolved = d?.transactions?.[0]?.consensus_timestamp || null; }
+          } catch (_) {}
+        }
+        log(`[1/3] ✓ MDT transferred to deployer${transferTsResolved ? ` · ${transferTsResolved}` : ''}`);
 
-        log(`[1a] Transferring ${totalMDT.toFixed(2)} MDT to registry (HashPack)...`);
-        const transferTx = new TransferTransaction()
-          .addTokenTransfer(MDT_TOKEN_ID, hederaId, -Number(totalRaw))
-          .addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(registryAccountId), Number(totalRaw));
-        const transferReceipt = await hashConnect.sendTransaction(hederaId, transferTx);
-        transferTs = await resolveHederaTxId(transferReceipt.transactionId);
-        log(`[1a] ✓ MDT transferred${transferTs ? ` · ${transferTs}` : ''}`);
-
-        log(`[1b] Calling createTask() (HashPack)...`);
-        const contractId = ContractId.fromEvmAddress(0, 0, CONTRACTS.SUBNET_REGISTRY);
-        const params = new ContractFunctionParameters()
-          .addUint256(String(subnetId))
-          .addString(taskHash)
-          .addUint256(rewardRaw.toString())
-          .addUint256(String(durationSecs));
-        const createTx = new ContractExecuteTransaction()
-          .setContractId(contractId)
-          .setGas(400000)
-          .setFunction('createTask', params);
-        const createReceipt = await hashConnect.sendTransaction(hederaId, createTx);
-        contractTs = await resolveHederaTxId(createReceipt.transactionId);
-        log(`[1b] ✓ Task created${contractTs ? ` · ${contractTs}` : ''}`);
-        // Note: can't easily parse taskId from HashPack receipt — use HCS taskId as reference
+        // Step 2: Backend deployer approve + createTask on-chain
+        // Deployer đã nhận MDT từ user ở bước 1 → approve registry → createTask
+        log(`[2/3] Creating task on-chain via deployer...`);
+        const createRes = await fetch('/api/tasks/create-onchain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subnetId, taskHash, rewardRaw: rewardRaw.toString(), durationSecs,
+          }),
+        });
+        const createData = await createRes.json();
+        if (!createRes.ok || !createData.success) throw new Error(createData.error || 'createTask failed');
+        onChainTaskId = createData.onChainTaskId ? String(createData.onChainTaskId) : null;
+        contractTs = createData.contractTs || createData.txId || null;
+        log(`[2/3] ✓ Task #${onChainTaskId ?? '?'} created on-chain · ${contractTs?.slice(0, 20) ?? ''}`);
       }
 
-      // ── Step 2: HCS submit ───────────────────────────────────────────────
-      log(`[2/3] Submitting to HCS topic 0.0.8198585...`);
+      // Step 3: HCS — broadcast task_create cho miners + validators poll
+      log(`[3/3] Broadcasting task to HCS topic 0.0.8198585...`);
       const res = await fetch('/api/tasks/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          taskType, prompt,
-          rewardMDT: reward,
-          subnetId, deadline,
-          requester: accountId,
-          onChainTaskId,
-          contractTs,
-          transferTs,
+          taskType, prompt, rewardMDT: reward, subnetId, deadline,
+          requester: accountId, onChainTaskId, contractTs,
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'HCS submission failed');
-      log(`[2/3] ✓ HCS Sequence #${data.sequence} · Topic ${data.topicId}`);
-
-      // ── Step 3: Done ─────────────────────────────────────────────────────
-      log(`[3/3] ✓ Task live on network`);
-      setResult({ ...data, onChainTaskId, transferTs, contractTs, rewardMDT: reward, subnetId });
+      log(`[3/3] ✓ HCS Sequence #${data.sequence} — miners will pick up shortly`);
+      setResult({ ...data, onChainTaskId, contractTs, rewardMDT: reward, subnetId, totalMDT });
 
     } catch (e: any) {
-      setError(e.reason || e.message || 'Submission failed');
-      log(`[ERROR] ${e.reason || e.message}`);
-    } finally {
-      setLoading(false);
-    }
+      const msg = e.reason || e.message || 'Submission failed';
+      const isSession = msg.includes('session') || msg.includes('Session') || msg.includes('sign client');
+      setError(isSession ? 'HashPack session expired — disconnect and reconnect wallet, then retry' : msg);
+      log(`[ERROR] ${msg}`);
+    } finally { setLoading(false); }
   };
 
   const reset = () => { setResult(null); setLogs([]); setError(null); setPrompt(''); };
+  const totalMDT = (Number(rewardMDT) * 1.15).toFixed(2);
 
   return (
     <div className="fixed inset-0 z-[200]">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute top-[22%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-[#0a0e17]/95 backdrop-blur-xl border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.8),0_0_40px_rgba(255,0,128,0.1)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
-
+      <div className="absolute top-[22%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-[#0a0e17]/95 backdrop-blur-xl border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.8)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-pink/50 to-transparent" />
-        <div className="absolute -top-32 -right-32 w-64 h-64 bg-neon-pink/10 rounded-full blur-[80px] pointer-events-none" />
 
         {/* Header */}
-        <div className="relative flex items-center justify-between p-6 sm:p-8 border-b border-white/5 shrink-0">
+        <div className="relative flex items-center justify-between p-6 border-b border-white/5 shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-neon-pink/10 border border-neon-pink/30 flex items-center justify-center">
               <Send className="w-5 h-5 text-neon-pink" />
             </div>
             <div>
-              <h2 className="text-xl font-display font-black text-white uppercase tracking-wider">Submit AI Request</h2>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
-                SubnetRegistryV2 on-chain · HCS Topic <span className="text-neon-cyan">0.0.8198585</span>
-              </p>
+              <h2 className="text-xl font-display font-black text-white uppercase tracking-wider">Submit AI Task</h2>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">SubnetRegistryV2.createTask() · HCS <span className="text-neon-cyan">0.0.8198585</span></p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"><X size={20} /></button>
         </div>
 
         {/* Body */}
-        <div className="relative p-6 sm:p-8 space-y-5 overflow-y-auto">
+        <div className="relative p-6 space-y-5 overflow-y-auto">
           {!result ? (
             <>
               {/* Flow info */}
-              <div className="p-3 bg-neon-pink/5 border border-neon-pink/20 rounded-xl text-[10px] text-slate-400 space-y-0.5">
-                <div className="text-neon-pink font-black uppercase tracking-widest text-[9px] mb-1">Request Flow</div>
-                <div>1. Pay MDT reward → SubnetRegistryV2 (on-chain, immutable)</div>
-                <div>2. <code className="text-white">registry.createTask(subnetId, taskHash, reward, duration)</code></div>
-                <div>3. HCS: <code className="text-neon-cyan">task_submit → topic 0.0.8198585</code> (transparent, tamper-proof)</div>
-                <div>4. Miners poll HCS → run AI + generate zkML proof → <code className="text-white">submitResult()</code></div>
-                <div>5. Validators score submissions (model confidence 50% · proof validity 30% · speed 20%)</div>
-                <div>6. <code className="text-white">finalizeTask()</code> → auto-distributes: 82% miners · 8% validators · 5% stakers · 2% protocol · 3% subnet</div>
+              <div className="p-3 bg-neon-pink/5 border border-neon-pink/20 rounded-xl space-y-1">
+                <div className="flex items-center gap-2 text-neon-pink font-black uppercase tracking-widest text-[9px] mb-1.5">
+                  <Info size={10} /> Protocol Flow
+                </div>
+                <div className="text-[10px] text-slate-400 space-y-0.5">
+                  <div><span className="text-neon-pink font-bold">1.</span> Approve + <code className="text-white">createTask()</code> on-chain → MDT locked in contract, task recorded on blockchain</div>
+                  <div><span className="text-neon-green font-bold">2.</span> Miners poll HCS → process AI task → <code className="text-white">submitResult()</code></div>
+                  <div><span className="text-neon-purple font-bold">3.</span> Validators score → <code className="text-white">finalizeTask()</code> → rewards auto-distributed</div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Task Type</label>
                   <select value={taskType} onChange={e => setTaskType(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white appearance-none outline-none focus:border-neon-pink/50 transition-all cursor-pointer">
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-pink/50 transition-all">
                     {TASK_TYPES.map(t => <option key={t.value} value={t.value} className="bg-[#0a0e17]">{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Subnet Routing</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Subnet</label>
                   <select value={subnetId} onChange={e => setSubnetId(Number(e.target.value))}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white appearance-none outline-none focus:border-neon-cyan/50 transition-all cursor-pointer">
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-cyan/50 transition-all">
                     {SUBNETS.map(s => <option key={s.id} value={s.id} className="bg-[#0a0e17]">{s.name}</option>)}
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Task Description / Prompt</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Prompt / Task Description</label>
                 <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4}
-                  placeholder="E.g., Analyze this portfolio for risk factors, generate a financial report..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-sm text-white outline-none focus:border-white/30 transition-all resize-none placeholder:text-slate-600 font-mono" />
+                  placeholder="E.g., Analyze this portfolio for risk factors and suggest hedging strategies..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-all resize-none placeholder:text-slate-600 font-mono" />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                    Reward (MDT) <span className="text-slate-600">· total ~{(Number(rewardMDT) * 1.15).toFixed(2)} MDT incl. fees</span>
+                    Reward (MDT) <span className="text-slate-600">· total {totalMDT} MDT</span>
                   </label>
                   <div className="relative">
                     <input type="number" min="0.1" step="0.1" value={rewardMDT} onChange={e => setRewardMDT(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white outline-none focus:border-neon-green/50 transition-all font-mono font-bold" />
+                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white outline-none focus:border-neon-green/50 transition-all font-mono font-bold" />
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">MDT</span>
                   </div>
-                  <div className="text-[9px] text-slate-600 mt-1">82% → miners · 8% → validators · 5% → stakers · 2% → protocol · 3% → subnet</div>
+                  <div className="text-[9px] text-slate-600 mt-1">85% miners · 8% validators · 5% stakers · 2% protocol</div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Deadline</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Deadline (hours)</label>
                   <div className="relative">
                     <input type="number" min="1" max="168" value={deadline} onChange={e => setDeadline(Number(e.target.value))}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white outline-none focus:border-neon-purple/50 transition-all font-mono font-bold" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">HOURS</span>
+                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white outline-none focus:border-neon-purple/50 transition-all font-mono font-bold" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">HRS</span>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Requester Account</label>
-                <div className="px-4 py-3.5 bg-black/40 border border-white/5 rounded-xl text-sm font-mono text-slate-400 flex items-center justify-between">
-                  {isConnected ? (
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-                      <span className="text-white font-bold">{accountId}</span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded border ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple' : 'border-orange-400/40 text-orange-400'}`}>
-                        {walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}
-                      </span>
-                    </div>
-                  ) : <span className="text-red-400">Wallet Not Connected</span>}
-                </div>
+              <div className="px-4 py-3 bg-black/40 border border-white/5 rounded-xl text-sm font-mono flex items-center gap-2">
+                {isConnected ? (
+                  <><span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                  <span className="text-white font-bold">{accountId}</span>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded border ml-1 ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple' : 'border-orange-400/40 text-orange-400'}`}>
+                    {walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}
+                  </span>
+                  <span className="text-slate-600 text-[9px] ml-auto">~{totalMDT} MDT will be charged</span>
+                  </>
+                ) : <span className="text-red-400">Wallet Not Connected</span>}
               </div>
 
               {logs.length > 0 && (
@@ -322,20 +295,12 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
                       <span className="opacity-40 mr-2 text-[9px]">{'>'}</span>{l}
                     </div>
                   ))}
-                  {loading && (
-                    <div className="text-neon-pink text-[11px] flex items-center gap-2 mt-1">
-                      <Activity size={12} className="animate-spin" /> Processing on-chain...
-                    </div>
-                  )}
+                  {loading && <div className="text-neon-pink text-[11px] flex items-center gap-2 mt-1"><Activity size={12} className="animate-spin" /> Processing...</div>}
                 </div>
               )}
-
-              {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-400">✗ {error}</div>
-              )}
+              {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-400">✗ {error}</div>}
             </>
           ) : (
-            /* Success */
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center gap-4 p-5 bg-neon-green/5 border border-neon-green/20 rounded-2xl">
                 <div className="w-14 h-14 rounded-full bg-neon-green/20 border-2 border-neon-green/40 flex items-center justify-center shrink-0">
@@ -343,76 +308,47 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
                 </div>
                 <div>
                   <div className="text-base font-black text-neon-green uppercase tracking-wide">Task Live on Network</div>
-                  <div className="text-xs text-slate-400 font-mono mt-1">HCS Seq #{result.sequence} · Subnet {result.subnetId}</div>
+                  <div className="text-xs text-slate-400 font-mono mt-1">
+                    HCS Seq #{result.sequence} · Subnet {result.subnetId} · {result.rewardMDT} MDT reward · {result.totalMDT?.toFixed(2)} MDT total
+                  </div>
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-3 font-mono text-xs">
                 <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase tracking-widest">HCS Task ID</div>
-                  <div className="text-white text-[10px] break-all">{result.taskId}</div>
+                  <div className="text-slate-500 text-[9px] uppercase">On-Chain Task ID</div>
+                  <div className="text-neon-cyan font-black">{result.onChainTaskId ?? '— resolving...'}</div>
                 </div>
                 <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase tracking-widest">On-Chain Task ID</div>
-                  <div className="text-neon-cyan font-black">{result.onChainTaskId ?? 'See contract events'}</div>
-                </div>
-                <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase tracking-widest">Reward</div>
-                  <div className="text-neon-green font-black text-base">{result.rewardMDT} MDT</div>
-                </div>
-                <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase tracking-widest">Total Deposited</div>
-                  <div className="text-white font-black">{(result.rewardMDT * 1.15).toFixed(2)} MDT</div>
+                  <div className="text-slate-500 text-[9px] uppercase">Total Deposited</div>
+                  <div className="text-white font-black">{result.totalMDT?.toFixed(2)} MDT</div>
                 </div>
               </div>
-
-              {/* TX Links */}
-              <div className="space-y-2">
-                {result.transferTs && (
-                  <a href={`https://hashscan.io/testnet/transaction/${result.transferTs}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-neon-cyan text-xs font-bold hover:bg-neon-cyan/10 transition-all">
-                    <ExternalLink size={12} /> MDT Transfer TX
-                    <span className="text-slate-600 font-normal text-[10px] ml-auto">{result.transferTs}</span>
-                  </a>
-                )}
-                {result.contractTs && (
-                  <a href={`https://hashscan.io/testnet/transaction/${result.contractTs}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-neon-green/5 border border-neon-green/20 rounded-xl text-neon-green text-xs font-bold hover:bg-neon-green/10 transition-all">
-                    <ExternalLink size={12} /> createTask() Contract TX
-                    <span className="text-slate-600 font-normal text-[10px] ml-auto">{String(result.contractTs).slice(0, 20)}...</span>
-                  </a>
-                )}
-                {result.txUrl && (
-                  <a href={result.txUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold hover:bg-white/10 transition-all">
-                    <ExternalLink size={12} /> HCS Transaction
-                  </a>
-                )}
-              </div>
-
-              <div className="p-3 bg-neon-purple/5 border border-neon-purple/20 rounded-xl text-[10px] text-slate-400 space-y-0.5">
-                <div className="text-neon-purple font-black uppercase tracking-widest text-[9px] mb-1">What happens next</div>
-                <div>→ Miners polling HCS pick up your request</div>
-                <div>→ They run AI computation + generate zkML proof (STARK/Groth16)</div>
-                <div>→ Call <code className="text-white">submitResult(taskId, resultHash)</code> on-chain</div>
-                <div>→ Validators score: model confidence 50% · proof validity 30% · speed 20%</div>
-                <div>→ <code className="text-white">finalizeTask()</code> auto-distributes rewards by weight</div>
-              </div>
+              {result.contractTs && (
+                <a href={`https://hashscan.io/testnet/transaction/${result.contractTs}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-neon-green/5 border border-neon-green/20 rounded-xl text-neon-green text-xs font-bold hover:bg-neon-green/10 transition-all">
+                  <ExternalLink size={12} /> createTask() TX on HashScan
+                </a>
+              )}              {result.txUrl && (
+                <a href={result.txUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold hover:bg-white/10 transition-all">
+                  <ExternalLink size={12} /> HCS Transaction
+                </a>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="relative p-6 sm:p-8 border-t border-white/5 shrink-0 bg-[#0a0e17] flex justify-end gap-4">
+        <div className="relative p-6 border-t border-white/5 shrink-0 bg-[#0a0e17] flex justify-end gap-4">
           <button onClick={result ? reset : onClose}
             className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
             {result ? 'Submit Another' : 'Cancel'}
           </button>
           {!result && (
             <button onClick={handleSubmit} disabled={loading || !isConnected || !prompt.trim()}
-              className="flex items-center gap-2 min-w-[160px] px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-neon-pink/20 to-neon-purple/20 border border-neon-pink/50 text-white hover:border-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-2 min-w-[180px] px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-neon-pink/20 to-neon-purple/20 border border-neon-pink/50 text-white hover:border-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {loading ? <Activity size={16} className="animate-spin" /> : <Send size={16} />}
-              {loading ? 'Processing...' : 'Submit to Network'}
+              {loading ? 'Processing...' : `Pay ${totalMDT} MDT & Submit`}
             </button>
           )}
           {result && (

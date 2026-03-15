@@ -1,7 +1,10 @@
 /**
- * POST /api/tasks/create
- * Submit a real AI task to Hedera HCS topic 0.0.8198585
- * Message format matches sdk/hedera/hcs.py TaskSubmission
+ * POST /api/tasks/request
+ * Requester submits an AI request to HCS (type: 'task_request')
+ * No MDT transfer, no contract call — just a request for validators to review.
+ *
+ * Validators see this in their dashboard and dispatch it as a real task
+ * (createTask on-chain + HCS type:'task_create') after review.
  */
 import { NextResponse } from 'next/server';
 import { exec } from 'child_process';
@@ -19,33 +22,29 @@ const PYTHON = process.env.PYTHON_PATH
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { taskType, prompt, rewardMDT, subnetId, deadline, requester, onChainTaskId, contractTs, transferTs } = body;
+    const { taskType, prompt, rewardMDT, subnetId, deadline, requester } = body;
 
     if (!taskType || !prompt || !rewardMDT || !requester) {
       return NextResponse.json({ error: 'taskType, prompt, rewardMDT, requester required' }, { status: 400 });
     }
 
-    const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const rewardFloat = Number(rewardMDT); // MDT float — store as-is, no raw conversion
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const rewardRaw = Math.floor(Number(rewardMDT) * 1e8);
 
-    const hcsMessage: Record<string, any> = {
-      type: 'task_create',  // matches HCSMessageType.TASK_CREATE in sdk/hedera/hcs.py
-      task_id: taskId,
+    const hcsMessage = {
+      type: 'task_request',
+      request_id: requestId,
       task_type: taskType,
       prompt,
-      reward_amount: rewardFloat,  // MDT float (e.g. 1.5), NOT raw 8-decimal int
+      reward_amount: rewardRaw,
       subnet_id: subnetId ?? 0,
       requester_id: requester,
       deadline_hours: deadline ?? 24,
+      status: 'pending',
       timestamp: new Date().toISOString(),
     };
 
-    // Include on-chain references if provided
-    if (onChainTaskId != null) hcsMessage.on_chain_task_id = String(onChainTaskId);
-    if (contractTs) hcsMessage.contract_ts = contractTs;
-    if (transferTs) hcsMessage.transfer_ts = transferTs;
-
-    const tmpFile = path.join(os.tmpdir(), `hcs_task_${Date.now()}.json`);
+    const tmpFile = path.join(os.tmpdir(), `hcs_req_${Date.now()}.json`);
     fs.writeFileSync(tmpFile, JSON.stringify({ topic_id: TASK_TOPIC_ID, message: hcsMessage }), 'utf-8');
 
     const projectRoot = path.join(process.cwd(), '..');
@@ -64,10 +63,7 @@ export async function POST(req: Request) {
       try { fs.unlinkSync(tmpFile); } catch {}
     }
 
-    const rawTxId: string = hcsResult.transaction_id || '';
-
-    // Query mirror node to get the real consensus_timestamp for this sequence
-    // The transaction_id timestamp is the submit time, NOT the consensus time
+    // Get consensus timestamp from mirror node
     let txTimestamp = '';
     try {
       const seq = hcsResult.sequence;
@@ -76,31 +72,23 @@ export async function POST(req: Request) {
         { cache: 'no-store' }
       );
       if (mirrorRes.ok) {
-        const mirrorData = await mirrorRes.json();
-        txTimestamp = mirrorData.consensus_timestamp || '';
+        const d = await mirrorRes.json();
+        txTimestamp = d.consensus_timestamp || '';
       }
     } catch (_) {}
 
-    // Fallback: parse from transaction_id if mirror query failed
-    if (!txTimestamp && rawTxId.includes('@')) {
-      txTimestamp = rawTxId.split('@')[1];
-    }
-
     return NextResponse.json({
       success: true,
-      taskId,
-      onChainTaskId: onChainTaskId ?? null,
+      requestId,
       topicId: TASK_TOPIC_ID,
       sequence: hcsResult.sequence,
-      transactionId: rawTxId,
+      transactionId: hcsResult.transaction_id,
       txUrl: txTimestamp
         ? `https://hashscan.io/testnet/transaction/${txTimestamp}`
         : `https://hashscan.io/testnet/topic/${TASK_TOPIC_ID}`,
-      topicUrl: `https://hashscan.io/testnet/topic/${TASK_TOPIC_ID}`,
-      message: hcsMessage,
     });
   } catch (err: any) {
-    console.error('[tasks/create]', err);
-    return NextResponse.json({ error: err.message || 'Task submission failed' }, { status: 500 });
+    console.error('[tasks/request]', err);
+    return NextResponse.json({ error: err.message || 'Request submission failed' }, { status: 500 });
   }
 }

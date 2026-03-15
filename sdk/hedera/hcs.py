@@ -65,6 +65,8 @@ class ScoreSubmission:
     metrics: Dict[str, float] = field(default_factory=dict)
 
     def to_json(self) -> str:
+        # User requested specific JSON format:
+        # { "type": "score_submit", "validator_id": "...", "miner_id": "...", "task_id": "...", "score": 91.0, "confidence": 0.93, "metrics": { "relevance": ..., "quality": ..., "completeness": ..., "creativity": ... }, "timestamp": "..." }
         return json.dumps({
             "type": HCSMessageType.SCORE_SUBMIT.value,
             "validator_id": self.validator_id,
@@ -73,8 +75,8 @@ class ScoreSubmission:
             "score": self.score,
             "confidence": self.confidence,
             "metrics": self.metrics,
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+            "timestamp": datetime.utcnow().isoformat()
+        }, ensure_ascii=False)
 
 
 @dataclass

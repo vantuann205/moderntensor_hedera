@@ -78,8 +78,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'accountId required' }, { status: 400 });
     }
 
-    // Fixed 100 MDT per request
-    const fixedAmount = 100;
+    // Fixed 500 MDT per request
+    const fixedAmount = 500;
 
     // Write params to temp file (same pattern as hcs_submit.py)
     const tmpFile = path.join(os.tmpdir(), `faucet_drip_${Date.now()}.json`);

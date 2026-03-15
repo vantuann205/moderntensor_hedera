@@ -60,8 +60,8 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             try {
                 const STAKING_VAULT = '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f'; // 0.0.8219632
                 const HEDERA_RPC = 'https://testnet.hashio.io/api';
-                // eth_call: isMiner(address) → selector 0x6d70f7ae
-                const callData = '0x6d70f7ae' + evmAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+                // eth_call: isMiner(address) → selector 0x701b70ac
+                const callData = '0x701b70ac' + evmAddress.toLowerCase().replace('0x', '').padStart(64, '0');
                 const rpcRes = await fetch(HEDERA_RPC, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -75,23 +75,24 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 isM = rpcData.result !== '0x' && BigInt(rpcData.result || '0x0') === BigInt(1);
             } catch (_) {}
 
-            // Fallback: check HCS registration topic
-            if (!isM) {
-                try {
-                    const hcsRes = await fetch('/api/hcs/miners');
-                    const hcsData = await hcsRes.json();
-                    const hcsMiners: any[] = hcsData.success ? hcsData.data : [];
-                    isM = hcsMiners.some((m: any) =>
-                        m.miner_id === accountId || m.account_id === accountId
-                    );
-                } catch (_) {}
-            }
-
-            const validatorRes = await fetch('/api/validators');
-            const validatorData = await validatorRes.json();
-            const validators = validatorData.validators || [];
-
-            const isV = !!validators.find((v: any) => v.account_id === accountId || v.id === accountId);
+            // Primary: check on-chain StakingVaultV2.isValidator(evmAddress)
+            let isV = false;
+            try {
+                const STAKING_VAULT = '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f';
+                const HEDERA_RPC = 'https://testnet.hashio.io/api';
+                // eth_call: isValidator(address) → selector 0xfacd743b
+                const callData = '0xfacd743b' + evmAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+                const rpcRes = await fetch(HEDERA_RPC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0', id: 2, method: 'eth_call',
+                        params: [{ to: STAKING_VAULT, data: callData }, 'latest'],
+                    }),
+                });
+                const rpcData = await rpcRes.json();
+                isV = rpcData.result !== '0x' && BigInt(rpcData.result || '0x0') === BigInt(1);
+            } catch (_) {}
 
             setState({
                 address: evmAddress,
@@ -99,7 +100,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 balance,
                 type,
                 isConnected: true,
-                isMiner: isM,
+                isMiner: isM && !isV,  // mutually exclusive: validator cannot also be miner
                 isValidator: isV,
             });
             
