@@ -1,8 +1,34 @@
 'use client';
+/**
+ * SubmitTaskModal — Requester creates an AI task on-chain
+ *
+ * Correct Protocol Flow (SubnetRegistryV2.createTask — msg.sender = requester):
+ *
+ * MetaMask:
+ *   1. ERC20.approve(registry, totalDeposit)
+ *   2. registry.createTask(subnetId, taskHash, rewardAmount, duration)
+ *      → contract pulls totalDeposit via safeTransferFrom(msg.sender, ...)
+ *      → emits TaskCreated(taskId)
+ *   3. HCS topic 0.0.8198585 — type: task_create (miners + validators poll this)
+ *
+ * HashPack:
+ *   1. ContractExecuteTransaction → HTS precompile 0x167 → approve(MDT, registry, amount)
+ *      (avoids AccountAllowanceApproveTransaction which causes "session not found")
+ *   2. ContractExecuteTransaction → registry.createTask(subnetId, taskHash, reward, duration)
+ *      → contract pulls MDT via safeTransferFrom (allowance set in step 1)
+ *      → emits TaskCreated(taskId)
+ *   3. HCS topic 0.0.8198585 — type: task_create
+ */
 
-import { useState } from 'react';
-import { X, Send, Activity, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { ethers } from 'ethers';
+import {
+  AccountId,
+} from '@hashgraph/sdk';
+import { X, Send, Activity, CheckCircle, ExternalLink, Info } from 'lucide-react';
 import { useWallet } from '@/context/WalletContext';
+import { CONTRACTS, SUBNET_REGISTRY_ABI, ERC20_ABI } from '@/lib/contracts';
 
 const TASK_TYPES = [
   { value: 'text_generation', label: 'Text Generation' },
@@ -18,251 +44,326 @@ const SUBNETS = [
   { id: 2, name: 'Subnet 2 — Image Analysis' },
 ];
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-}
+// HTS precompile address (0x167) — used for token approve on Hedera
+// MDT is an HTS token with ERC20 facade — approve works via ContractExecuteTransaction on the token contract
+
+interface Props { isOpen: boolean; onClose: () => void; }
 
 export default function SubmitTaskModal({ isOpen, onClose }: Props) {
-  const { accountId, isConnected } = useWallet();
-
+  const { accountId, isConnected, type: walletType, hashConnect } = useWallet();
   const [taskType, setTaskType] = useState('text_generation');
   const [prompt, setPrompt] = useState('');
   const [rewardMDT, setRewardMDT] = useState('1');
   const [subnetId, setSubnetId] = useState(0);
   const [deadline, setDeadline] = useState(24);
-
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => { setMounted(true); }, []);
 
+  if (!isOpen || !mounted) return null;
   const log = (msg: string) => setLogs(p => [...p, msg]);
 
   const handleSubmit = async () => {
     if (!isConnected || !accountId) { setError('Connect wallet first'); return; }
     if (!prompt.trim()) { setError('Prompt is required'); return; }
-    if (Number(rewardMDT) <= 0) { setError('Reward must be > 0'); return; }
+    const reward = Number(rewardMDT);
+    if (reward <= 0) { setError('Reward must be > 0'); return; }
 
     setLoading(true); setError(null); setResult(null); setLogs([]);
-    log(`[HCS] Submitting task to topic 0.0.8198585...`);
-    log(`[HCS] Type: ${taskType} · Reward: ${rewardMDT} MDT · Subnet: ${subnetId}`);
+
+    // taskHash encodes type + prompt (stored on-chain as identifier)
+    const taskHash = `${taskType}:${Date.now()}:${prompt.slice(0, 64)}`;
+    const rewardRaw = BigInt(Math.floor(reward * 1e8));
+    // totalDeposit = reward + 2% protocol + 8% validator + 5% staking (subnet 0 feeRate=0)
+    const totalRaw = (rewardRaw * BigInt(115)) / BigInt(100);
+    const totalMDT = Number(totalRaw) / 1e8;
+    const durationSecs = Number(deadline) * 3600;
+
+    let onChainTaskId: string | null = null;
+    let contractTs: string | null = null;
 
     try {
+      // ── MetaMask ──────────────────────────────────────────────────
+      if (walletType === 'metamask') {
+        const ethereum = (window as any).ethereum;
+        if (!ethereum) throw new Error('MetaMask not found');
+        const provider = new ethers.BrowserProvider(ethereum);
+        try { await ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x128' }] }); } catch (_) {}
+        const signer = await provider.getSigner();
+
+        // Step 1: ERC20 approve
+        log(`[1/3] Approving ${totalMDT.toFixed(4)} MDT for registry...`);
+        const mdt = new ethers.Contract(CONTRACTS.MDT_EVM, ERC20_ABI, signer);
+        const approveTx = await mdt.approve(CONTRACTS.SUBNET_REGISTRY, totalRaw, { gasLimit: 100000 });
+        await approveTx.wait();
+        log(`[1/3] ✓ Approved`);
+
+        // Step 2: createTask — contract pulls MDT via safeTransferFrom(msg.sender, ...)
+        log(`[2/3] Creating task on-chain (${totalMDT.toFixed(4)} MDT deposited)...`);
+        const registry = new ethers.Contract(CONTRACTS.SUBNET_REGISTRY, SUBNET_REGISTRY_ABI, signer);
+        const createTx = await registry.createTask(subnetId, taskHash, rewardRaw, durationSecs, { gasLimit: 500000 });
+        const receipt = await createTx.wait();
+        contractTs = receipt.hash;
+
+        // Parse TaskCreated event to get taskId
+        const iface = new ethers.Interface(['event TaskCreated(uint256 indexed taskId, uint256 indexed subnetId, address indexed requester, uint256 rewardAmount)']);
+        for (const logEntry of receipt.logs) {
+          try {
+            const parsed = iface.parseLog(logEntry);
+            if (parsed?.name === 'TaskCreated') { onChainTaskId = parsed.args.taskId.toString(); break; }
+          } catch (_) {}
+        }
+        log(`[2/3] ✓ Task #${onChainTaskId ?? '?'} created on-chain · TX: ${contractTs?.slice(0, 20)}...`);
+
+      // ── HashPack ──────────────────────────────────────────────────
+      } else if (walletType === 'hashpack') {
+        if (!hashConnect || !accountId) throw new Error('HashConnect not initialized');
+        const hederaId = AccountId.fromString(accountId);
+
+        // Step 1: TransferTransaction MDT → deployer (deployer will call createTask on behalf)
+        // User sends MDT to deployer, deployer approves registry + calls createTask
+        // This avoids double-deduction: deployer's MDT comes from user's transfer
+        log(`[1/3] Transferring ${totalMDT.toFixed(4)} MDT to deployer (HashPack)...`);
+        const { TokenId, TransferTransaction: TT } = await import('@hashgraph/sdk');
+        const MDT_TOKEN_ID = TokenId.fromString('0.0.8198586');
+        const DEPLOYER_HEDERA_ID = '0.0.8127455'; // deployer account
+
+        const totalRawNum = Number(totalRaw);
+        const transferTx = new TT()
+          .addTokenTransfer(MDT_TOKEN_ID, hederaId, -totalRawNum)
+          .addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(DEPLOYER_HEDERA_ID), totalRawNum);
+        const transferReceipt: any = await hashConnect.sendTransaction(hederaId as any, transferTx as any);
+        const transferTxId = transferReceipt?.transactionId;
+        let transferTsResolved: string | null = null;
+        // Resolve consensus timestamp
+        if (transferTxId) {
+          try {
+            let mirrorId: string;
+            const s = String(transferTxId);
+            if (s.includes('@')) {
+              const [acc, time] = s.split('@');
+              const dot = time.indexOf('.');
+              mirrorId = `${acc}-${time.slice(0, dot)}-${time.slice(dot + 1)}`;
+            } else { mirrorId = s; }
+            const r = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/transactions/${mirrorId}`, { cache: 'no-store' });
+            if (r.ok) { const d = await r.json(); transferTsResolved = d?.transactions?.[0]?.consensus_timestamp || null; }
+          } catch (_) {}
+        }
+        log(`[1/3] ✓ MDT transferred to deployer${transferTsResolved ? ` · ${transferTsResolved}` : ''}`);
+
+        // Step 2: Backend deployer approve + createTask on-chain
+        // Deployer đã nhận MDT từ user ở bước 1 → approve registry → createTask
+        log(`[2/3] Creating task on-chain via deployer...`);
+        const createRes = await fetch('/api/tasks/create-onchain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subnetId, taskHash, rewardRaw: rewardRaw.toString(), durationSecs,
+          }),
+        });
+        const createData = await createRes.json();
+        if (!createRes.ok || !createData.success) throw new Error(createData.error || 'createTask failed');
+        onChainTaskId = createData.onChainTaskId ? String(createData.onChainTaskId) : null;
+        contractTs = createData.contractTs || createData.txId || null;
+        log(`[2/3] ✓ Task #${onChainTaskId ?? '?'} created on-chain · ${contractTs?.slice(0, 20) ?? ''}`);
+      }
+
+      // Step 3: HCS — broadcast task_create cho miners + validators poll
+      log(`[3/3] Broadcasting task to HCS topic 0.0.8198585...`);
       const res = await fetch('/api/tasks/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskType, prompt, rewardMDT: Number(rewardMDT), subnetId, deadline, requester: accountId }),
+        body: JSON.stringify({
+          taskType, prompt, rewardMDT: reward, subnetId, deadline,
+          requester: accountId, onChainTaskId, contractTs,
+        }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Submission failed');
+      if (!res.ok || !data.success) throw new Error(data.error || 'HCS submission failed');
+      log(`[3/3] ✓ HCS Sequence #${data.sequence} — miners will pick up shortly`);
+      setResult({ ...data, onChainTaskId, contractTs, rewardMDT: reward, subnetId, totalMDT });
 
-      log(`[HCS] ✓ Sequence #${data.sequence} · Topic ${data.topicId}`);
-      log(`[HCS] Task ID: ${data.taskId}`);
-      setResult(data);
     } catch (e: any) {
-      setError(e.message);
-      log(`[ERROR] ${e.message}`);
-    } finally {
-      setLoading(false);
-    }
+      const msg = e.reason || e.message || 'Submission failed';
+      const isSession = msg.includes('session') || msg.includes('Session') || msg.includes('sign client');
+      setError(isSession ? 'HashPack session expired — disconnect and reconnect wallet, then retry' : msg);
+      log(`[ERROR] ${msg}`);
+    } finally { setLoading(false); }
   };
 
-  const reset = () => {
-    setResult(null); setLogs([]); setError(null); setPrompt('');
-  };
+  const reset = () => { setResult(null); setLogs([]); setError(null); setPrompt(''); };
+  const totalMDT = (Number(rewardMDT) * 1.15).toFixed(2);
 
-  return (
-    <div className="fixed inset-0 z-[200]">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      
-      <div className="absolute top-[22%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-[#0a0e17]/95 backdrop-blur-xl border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.8),0_0_40px_rgba(255,0,128,0.1)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
-
-        {/* Glow Effects */}
+  return createPortal(
+    <div className="fixed inset-0 z-[10001]">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute top-[22%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-[#0a0e17]/95 backdrop-blur-xl border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.8)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-pink/50 to-transparent" />
-        <div className="absolute -top-32 -right-32 w-64 h-64 bg-neon-pink/10 rounded-full blur-[80px] pointer-events-none" />
-        <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-neon-cyan/10 rounded-full blur-[80px] pointer-events-none" />
 
         {/* Header */}
-        <div className="relative flex items-center justify-between p-6 sm:p-8 border-b border-white/5 shrink-0 bg-gradient-to-b from-white/[0.02] to-transparent">
+        <div className="relative flex items-center justify-between p-6 border-b border-white/5 shrink-0">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-neon-pink/10 border border-neon-pink/30 flex items-center justify-center shadow-[0_0_15px_rgba(255,0,128,0.2)]">
+            <div className="w-12 h-12 rounded-2xl bg-neon-pink/10 border border-neon-pink/30 flex items-center justify-center">
               <Send className="w-5 h-5 text-neon-pink" />
             </div>
             <div>
               <h2 className="text-xl font-display font-black text-white uppercase tracking-wider">Submit AI Task</h2>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">Hedera HCS · Topic <span className="text-neon-cyan">0.0.8198585</span></p>
+              <p className="text-xs text-slate-400 font-mono mt-0.5">SubnetRegistryV2.createTask() · HCS <span className="text-neon-cyan">0.0.8198585</span></p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all">
-            <X size={20} />
-          </button>
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all"><X size={20} /></button>
         </div>
 
-        {/* Body - Scrollable */}
-        <div className="relative p-6 sm:p-8 space-y-6 overflow-y-auto custom-scrollbar">
+        {/* Body */}
+        <div className="relative p-6 space-y-5 overflow-y-auto">
           {!result ? (
             <>
-              {/* Task Type + Subnet */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="group">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-pink transition-colors">Task Type</label>
-                  <div className="relative">
-                    <select value={taskType} onChange={e => setTaskType(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white font-medium appearance-none outline-none focus:border-neon-pink/50 focus:bg-neon-pink/5 focus:ring-1 focus:ring-neon-pink/50 transition-all cursor-pointer">
-                      {TASK_TYPES.map(t => <option key={t.value} value={t.value} className="bg-[#0a0e17]">{t.label}</option>)}
-                    </select>
-                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-focus-within:text-neon-pink">expand_more</span>
-                  </div>
+              {/* Flow info */}
+              <div className="p-3 bg-neon-pink/5 border border-neon-pink/20 rounded-xl space-y-1">
+                <div className="flex items-center gap-2 text-neon-pink font-black uppercase tracking-widest text-[11px] mb-1.5">
+                  <Info size={10} /> Protocol Flow
                 </div>
-                <div className="group">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-cyan transition-colors">Subnet Routing</label>
-                  <div className="relative">
-                    <select value={subnetId} onChange={e => setSubnetId(Number(e.target.value))}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white font-medium appearance-none outline-none focus:border-neon-cyan/50 focus:bg-neon-cyan/5 focus:ring-1 focus:ring-neon-cyan/50 transition-all cursor-pointer">
-                      {SUBNETS.map(s => <option key={s.id} value={s.id} className="bg-[#0a0e17]">{s.name}</option>)}
-                    </select>
-                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-focus-within:text-neon-cyan">expand_more</span>
-                  </div>
+                <div className="text-[12px] text-slate-400 space-y-0.5">
+                  <div><span className="text-neon-pink font-bold">1.</span> Approve + <code className="text-white">createTask()</code> on-chain → MDT locked in contract, task recorded on blockchain</div>
+                  <div><span className="text-neon-green font-bold">2.</span> Miners poll HCS → process AI task → <code className="text-white">submitResult()</code></div>
+                  <div><span className="text-neon-purple font-bold">3.</span> Validators score → <code className="text-white">finalizeTask()</code> → rewards auto-distributed</div>
                 </div>
               </div>
 
-              {/* Prompt */}
-              <div className="group">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-white transition-colors">Task Description / Prompt</label>
-                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4}
-                  placeholder="E.g., Analyze this image for anomalies, or generate a detailed report..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-sm text-white outline-none focus:border-white/30 focus:bg-white/5 transition-all resize-none placeholder:text-slate-600 font-mono shadow-inner" />
-              </div>
-
-              {/* Reward + Deadline */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="group">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-green transition-colors">Reward (MDT)</label>
-                  <div className="relative">
-                    <input type="number" min="0.1" step="0.1" value={rewardMDT} onChange={e => setRewardMDT(e.target.value)}
-                      className="no-spinners w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white outline-none focus:border-neon-green/50 focus:bg-neon-green/5 focus:ring-1 focus:ring-neon-green/50 transition-all font-mono font-bold" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 pointer-events-none">MDT</span>
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Task Type</label>
+                  <select value={taskType} onChange={e => setTaskType(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-pink/50 transition-all">
+                    {TASK_TYPES.map(t => <option key={t.value} value={t.value} className="bg-[#0a0e17]">{t.label}</option>)}
+                  </select>
                 </div>
-                <div className="group">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2 group-focus-within:text-neon-purple transition-colors">Delivery Deadline</label>
-                  <div className="relative">
-                    <input type="number" min="1" max="168" value={deadline} onChange={e => setDeadline(Number(e.target.value))}
-                      className="no-spinners w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white outline-none focus:border-neon-purple/50 focus:bg-neon-purple/5 focus:ring-1 focus:ring-neon-purple/50 transition-all font-mono font-bold" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500 pointer-events-none">HOURS</span>
-                  </div>
+                <div>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Subnet</label>
+                  <select value={subnetId} onChange={e => setSubnetId(Number(e.target.value))}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-cyan/50 transition-all">
+                    {SUBNETS.map(s => <option key={s.id} value={s.id} className="bg-[#0a0e17]">{s.name}</option>)}
+                  </select>
                 </div>
               </div>
 
-              {/* Requester Profile */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Requester Account</label>
-                <div className="px-4 py-3.5 bg-black/40 border border-white/5 rounded-xl text-sm font-mono text-slate-400 flex items-center justify-between shadow-inner">
-                  {isConnected ? (
-                    <div className="flex items-center gap-2">
-                       <span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
-                       <span className="text-white font-bold">{accountId}</span>
-                    </div>
-                  ) : <span className="text-red-400 flex items-center gap-2"><span className="material-symbols-outlined text-sm">warning</span> Wallet Not Connected</span>}
+                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Prompt / Task Description</label>
+                <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4}
+                  placeholder="E.g., Analyze this portfolio for risk factors and suggest hedging strategies..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-all resize-none placeholder:text-slate-500 font-mono" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                    Reward (MDT) <span className="text-slate-500">· total {totalMDT} MDT</span>
+                  </label>
+                  <div className="relative">
+                    <input type="number" min="0.1" step="0.1" value={rewardMDT} onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setRewardMDT(e.target.value)}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white outline-none focus:border-neon-green/50 transition-all font-mono font-bold" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">MDT</span>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-1">85% miners · 8% validators · 5% stakers · 2% protocol</div>
+                </div>
+                <div>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Deadline (hours)</label>
+                  <div className="relative">
+                    <input type="number" min="1" max="168" value={deadline} onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setDeadline(Number(e.target.value))}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white outline-none focus:border-neon-purple/50 transition-all font-mono font-bold" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">HRS</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Log Stream */}
+              <div className="px-4 py-3 bg-black/40 border border-white/5 rounded-xl text-sm font-mono flex items-center gap-2">
+                {isConnected ? (
+                  <><span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
+                  <span className="text-white font-bold">{accountId}</span>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded border ml-1 ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple' : 'border-orange-400/40 text-orange-400'}`}>
+                    {walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}
+                  </span>
+                  <span className="text-slate-500 text-[11px] ml-auto">~{totalMDT} MDT will be charged</span>
+                  </>
+                ) : <span className="text-red-400">Wallet Not Connected</span>}
+              </div>
+
               {logs.length > 0 && (
-                <div className="bg-black/60 rounded-xl border border-white/5 p-4 space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar font-mono shadow-inner relative">
+                <div className="bg-black/60 rounded-xl border border-white/5 p-4 space-y-1.5 max-h-36 overflow-y-auto font-mono">
                   {logs.map((l, i) => (
-                    <div key={i} className={`text-[11px] ${l.includes('ERROR') ? 'text-red-400' : l.includes('✓') ? 'text-neon-green drop-shadow-[0_0_3px_rgba(0,255,163,0.5)]' : 'text-slate-400'}`}>
-                      <span className="opacity-50 mr-2 text-[9px]">{'>'}</span>{l}
+                    <div key={i} className={`text-[11px] ${l.includes('ERROR') ? 'text-red-400' : l.includes('✓') ? 'text-neon-green' : 'text-slate-400'}`}>
+                      <span className="opacity-40 mr-2 text-[11px]">{'>'}</span>{l}
                     </div>
                   ))}
-                  {loading && (
-                    <div className="text-neon-pink text-[11px] flex items-center gap-2 mt-2">
-                      <span className="opacity-50 mr-1 text-[9px]">{'>'}</span>
-                      <Activity size={12} className="animate-spin" />
-                      Broadcasting to Hedera Consensus Service...
-                    </div>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                  {loading && <div className="text-neon-pink text-[11px] flex items-center gap-2 mt-1"><Activity size={12} className="animate-spin" /> Processing...</div>}
                 </div>
               )}
-
-              {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-400 flex items-start gap-2 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-                <span className="material-symbols-outlined text-base shrink-0">error</span>
-                {error}
-              </div>}
+              {error && <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-400">✗ {error}</div>}
             </>
           ) : (
-            /* Success State */
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center gap-5 p-6 bg-neon-green/5 border border-neon-green/20 rounded-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-neon-green/10 to-transparent pointer-events-none" />
-                <div className="w-16 h-16 rounded-full bg-neon-green/20 border-2 border-neon-green/40 flex items-center justify-center shrink-0 shadow-[0_0_30px_rgba(0,255,163,0.3)]">
-                  <span className="material-symbols-outlined text-neon-green text-3xl">task_alt</span>
+            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-4 p-5 bg-neon-green/5 border border-neon-green/20 rounded-2xl">
+                <div className="w-14 h-14 rounded-full bg-neon-green/20 border-2 border-neon-green/40 flex items-center justify-center shrink-0">
+                  <CheckCircle size={28} className="text-neon-green" />
                 </div>
-                <div className="relative">
-                  <div className="text-lg font-black text-neon-green uppercase tracking-wide drop-shadow-[0_0_5px_rgba(0,255,163,0.5)]">Network Consensus Achieved</div>
-                  <div className="text-xs text-slate-400 font-mono mt-1 flex items-center gap-2">
-                    Sequence #{result.sequence}
-                    <span className="text-slate-600">•</span>
-                    Topic {result.topicId}
+                <div>
+                  <div className="text-base font-black text-neon-green uppercase tracking-wide">Task Live on Network</div>
+                  <div className="text-xs text-slate-400 font-mono mt-1">
+                    HCS Seq #{result.sequence} · Subnet {result.subnetId} · {result.rewardMDT} MDT reward · {result.totalMDT?.toFixed(2)} MDT total
                   </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-1 shadow-inner relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><span className="material-symbols-outlined text-4xl">fingerprint</span></div>
-                  <div className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Unique Task ID</div>
-                  <div className="text-white text-xs font-mono break-all font-medium pt-1">{result.taskId}</div>
+              <div className="grid grid-cols-2 gap-3 font-mono text-xs">
+                <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
+                  <div className="text-slate-400 text-[11px] uppercase">On-Chain Task ID</div>
+                  <div className="text-neon-cyan font-black">{result.onChainTaskId ?? '— resolving...'}</div>
                 </div>
-                <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-1 shadow-inner relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><span className="material-symbols-outlined text-4xl text-neon-green">payments</span></div>
-                  <div className="text-slate-500 text-[10px] uppercase tracking-widest font-bold">Allocated Reward</div>
-                  <div className="text-neon-green text-xl font-black font-mono pt-1">{rewardMDT} MDT</div>
-                  <div className="text-xs text-slate-400 font-medium">Routed to Subnet {subnetId}</div>
+                <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
+                  <div className="text-slate-400 text-[11px] uppercase">Total Deposited</div>
+                  <div className="text-white font-black">{result.totalMDT?.toFixed(2)} MDT</div>
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              {result.contractTs && (
+                <a href={`https://hashscan.io/testnet/transaction/${result.contractTs}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-neon-green/5 border border-neon-green/20 rounded-xl text-neon-green text-xs font-bold hover:bg-neon-green/10 transition-all">
+                  <ExternalLink size={12} /> createTask() TX on HashScan
+                </a>
+              )}              {result.txUrl && (
                 <a href={result.txUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-neon-cyan/10 border border-neon-cyan/30 rounded-xl text-neon-cyan text-xs font-bold uppercase tracking-widest hover:bg-neon-cyan/20 hover:shadow-[0_0_20px_rgba(0,243,255,0.2)] transition-all">
-                  <span className="material-symbols-outlined text-lg">public</span>
-                  View Transaction
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold hover:bg-white/10 transition-all">
+                  <ExternalLink size={12} /> HCS Transaction
                 </a>
-                <a href={result.topicUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-xs font-bold uppercase tracking-widest hover:bg-white/10 hover:border-white/20 transition-all">
-                  <span className="material-symbols-outlined text-lg opacity-50">forum</span>
-                  View Topic Log
-                </a>
-              </div>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="relative p-6 sm:p-8 border-t border-white/5 shrink-0 bg-[#0a0e17] flex justify-end gap-4">
+        <div className="relative p-6 border-t border-white/5 shrink-0 bg-[#0a0e17] flex justify-end gap-4">
           <button onClick={result ? reset : onClose}
             className="px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 transition-colors">
             {result ? 'Submit Another' : 'Cancel'}
           </button>
           {!result && (
             <button onClick={handleSubmit} disabled={loading || !isConnected || !prompt.trim()}
-              className="flex justify-center items-center gap-2 min-w-[160px] px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(255,0,128,0.2)] bg-gradient-to-r from-neon-pink/20 to-neon-purple/20 border border-neon-pink/50 text-white hover:border-white hover:shadow-[0_0_30px_rgba(255,0,128,0.4)] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-neon-pink/50 disabled:hover:shadow-none">
+              className="flex items-center gap-2 min-w-[180px] px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-neon-pink/20 to-neon-purple/20 border border-neon-pink/50 text-white hover:border-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {loading ? <Activity size={16} className="animate-spin" /> : <Send size={16} />}
-              {loading ? 'Processing...' : 'Submit to Network'}
+              {loading ? 'Processing...' : `Pay ${totalMDT} MDT & Submit`}
             </button>
           )}
           {result && (
             <button onClick={onClose}
-              className="px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-neon-green/20 to-emerald-500/20 border border-neon-green/50 text-white shadow-[0_0_20px_rgba(0,255,163,0.2)] hover:shadow-[0_0_30px_rgba(0,255,163,0.4)] hover:border-white hover:brightness-110 transition-all">
+              className="px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-neon-green/10 border border-neon-green/40 text-neon-green hover:bg-neon-green/20 transition-all">
               Done
             </button>
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, X, ShieldCheck, Activity, AlertTriangle, ThumbsUp, ThumbsDown, Target } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWallet } from '@/context/WalletContext';
@@ -25,8 +26,10 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
     const [isVerifying, setIsVerifying] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState('');
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
     const verdict = score >= 60 ? 'accepted' : 'rejected';
     const rewardWeight = Math.round(confidence * (score / 100) * 100) / 100;
@@ -67,8 +70,8 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-[#0a0e17]/80 backdrop-blur-sm" onClick={onClose} />
             
             <div className="relative w-full max-w-2xl bg-[#0a0e17] border border-white/10 rounded-xl shadow-2xl overflow-hidden glass-panel">
@@ -106,7 +109,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                                 { label: 'Reward Weight', value: result.reward_weight, color: 'text-neon-purple' },
                             ].map(item => (
                                 <div key={item.label} className="bg-black/40 rounded-lg p-3 border border-white/5">
-                                    <div className="text-[10px] text-slate-500 uppercase tracking-widest">{item.label}</div>
+                                    <div className="text-[12px] text-slate-500 uppercase tracking-widest">{item.label}</div>
                                     <div className={`text-xl font-bold font-mono ${item.color}`}>{item.value}</div>
                                 </div>
                             ))}
@@ -151,7 +154,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                                 <input type="range" min={0} max={100} value={score} onChange={e => setScore(Number(e.target.value))}
                                     className="w-full h-2 accent-purple-500 cursor-pointer"
                                 />
-                                <div className="flex justify-between text-[10px] text-slate-600">
+                                <div className="flex justify-between text-[12px] text-slate-600">
                                     <span>0 — Reject</span><span>60 — Accept</span><span>100 — Perfect</span>
                                 </div>
                             </div>
@@ -173,7 +176,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                                 }
                                 <div>
                                     <div className={`text-xs font-bold uppercase ${verdict === 'accepted' ? 'text-neon-green' : 'text-red-400'}`}>{verdict}</div>
-                                    <div className="text-[10px] text-slate-500">Reward weight: {rewardWeight}</div>
+                                    <div className="text-[12px] text-slate-500">Reward weight: {rewardWeight}</div>
                                 </div>
                             </div>
 
@@ -213,6 +216,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

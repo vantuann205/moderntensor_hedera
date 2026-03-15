@@ -56,10 +56,21 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           scoresRes.json()
         ]);
 
-        const subnetMiners = minersData.data?.filter((m: any) => {
+        // API already deduplicates, but filter for this subnet
+        const rawSubnetMiners: any[] = minersData.data?.filter((m: any) => {
           const ids = m.subnet_ids ?? m.subnetIds ?? [];
           return ids.includes(subnet.id);
         }) || [];
+
+        // Safety dedup by miner_id (keep latest hcs_sequence)
+        const minerMap = new Map<string, any>();
+        rawSubnetMiners.forEach((m: any) => {
+          const id = m.miner_id || m.account_id || m.minerId;
+          if (!id) return;
+          const ex = minerMap.get(id);
+          if (!ex || (m.hcs_sequence ?? 0) > (ex.hcs_sequence ?? 0)) minerMap.set(id, m);
+        });
+        const subnetMiners = Array.from(minerMap.values());
         
         const subnetTasks = tasksData.data?.filter((t: any) =>
           (t.subnetId || 0) === subnet.id
@@ -82,9 +93,13 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
     fetchSubnetData();
   }, [subnet.id]);
 
-  // Extract active validators for this subnet by viewing the scores
   const uniqueValidators = Array.from(new Set(scores.map(s => s.validatorId))).filter(Boolean);
-  const totalStaked = miners.reduce((sum, m) => sum + (m.stake_amount ?? m.stakeAmount ?? 0), 0);
+  // stake_amount from API is already in MDT (not raw 8-decimal)
+  const totalStaked = miners.reduce((sum, m) => {
+    const raw = m.stake_amount ?? m.stakeAmount ?? 0;
+    // Handle both raw (>1e6) and already-converted values
+    return sum + (Number(raw) > 1e6 ? Number(raw) / 1e8 : Number(raw));
+  }, 0);
 
   const REWARD_DATA = [
     { name: 'Miner Reward', value: 80, color: '#00f3ff' }, // neon-cyan
@@ -122,7 +137,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           </div>
           
           <div className="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col items-end min-w-[200px]">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.2em] font-bold mb-2 flex items-center gap-2">
+            <div className="text-[12px] text-text-secondary uppercase tracking-[0.2em] font-bold mb-2 flex items-center gap-2">
                <span className="w-2 h-2 rounded-full bg-neon-pink animate-pulse"></span> Emission Rate
             </div>
             <div className="text-5xl font-display font-black text-white neon-text">{subnet.emission}</div>
@@ -134,12 +149,12 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
             { label: 'Network Miners', val: miners.length, icon: 'memory', color: 'text-neon-cyan', suffix: '', decimals: 0 },
             { label: 'Active Validators', val: uniqueValidators.length, icon: 'shield_person', color: 'text-neon-pink', suffix: '', decimals: 0 },
             { label: 'Tasks Completed', val: tasks.length, icon: 'task', color: 'text-neon-green', suffix: '', decimals: 0 },
-            { label: 'Subnet Stake', val: totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', decimals: 0 }
+            { label: 'Subnet Stake', val: totalStaked, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', decimals: 0 }
           ].map((stat, i) => (
             <div key={i} className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-text-secondary">
                 <span className={`material-symbols-outlined text-sm ${stat.color}`}>{stat.icon}</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest">{stat.label}</span>
+                <span className="text-[12px] font-bold uppercase tracking-widest">{stat.label}</span>
               </div>
               <div className="text-3xl font-display font-bold text-white tracking-tight">
                 <CountUp end={stat.val} suffix={stat.suffix} decimals={stat.decimals || 0} />
@@ -161,7 +176,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
               </div>
               Miners
             </h2>
-            <span className="bg-neon-cyan/10 text-neon-cyan px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-cyan/20">
+            <span className="bg-neon-cyan/10 text-neon-cyan px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-widest border border-neon-cyan/20">
               {miners.length} Online
             </span>
           </div>
@@ -185,9 +200,9 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                   </div>
                   <div className="text-right">
                     <div className="font-display font-bold text-neon-cyan">
-                      <CountUp end={(miner.stake_amount ?? miner.stakeAmount ?? 0) / 100000000} suffix=" MDT" />
+                      <CountUp end={(() => { const raw = miner.stake_amount ?? miner.stakeAmount ?? 0; return Number(raw) > 1e6 ? Number(raw) / 1e8 : Number(raw); })()} suffix=" MDT" />
                     </div>
-                    <div className="text-[10px] text-text-secondary uppercase tracking-widest">Staked</div>
+                    <div className="text-[12px] text-text-secondary uppercase tracking-widest">Staked</div>
                   </div>
                 </div>
               ))
@@ -242,7 +257,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                   <span className="material-symbols-outlined text-neon-pink">shield_person</span>
                   Validators
                </h2>
-               <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-pink/20">
+               <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-widest border border-neon-pink/20">
                   {uniqueValidators.length} Active
                </span>
             </div>
@@ -273,7 +288,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
               </div>
               Transmissions
             </h2>
-            <span className="bg-neon-green/10 text-neon-green px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-green/20">
+            <span className="bg-neon-green/10 text-neon-green px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-widest border border-neon-green/20">
               Live Feed
             </span>
           </div>
@@ -290,14 +305,14 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
               tasks.slice(-15).reverse().map((task, idx) => (
                 <div key={idx} className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-neon-green/30 transition-all hover:bg-white/[0.04]">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="font-mono text-[10px] text-neon-green uppercase tracking-widest font-bold px-2 py-1 bg-neon-green/10 rounded-lg">{task.taskType}</div>
+                    <div className="font-mono text-[12px] text-neon-green uppercase tracking-widest font-bold px-2 py-1 bg-neon-green/10 rounded-lg">{task.taskType}</div>
                     <div className="text-white font-display font-black text-sm">
                       +<CountUp end={task.rewardAmount / 100000000} suffix=" MDT" />
                     </div>
                   </div>
                   <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed mb-3">"{task.prompt}"</p>
-                  <div className="flex items-center justify-between text-[10px] pt-3 border-t border-white/5">
-                    <span className="text-white/40 font-mono italic">ID: {task.taskId?.substring(0, 12)}...</span>
+                  <div className="flex items-center justify-between text-[12px] pt-3 border-t border-white/5">
+                    <span className="text-white/60 font-mono italic">ID: {task.taskId?.substring(0, 12)}...</span>
                     {task.consensusTimestamp && (
                       <a 
                         href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
@@ -305,7 +320,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                         rel="noopener noreferrer"
                         className="text-neon-cyan hover:text-white uppercase tracking-widest font-bold flex items-center gap-1"
                       >
-                        Verify TX <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                        Verify TX <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                       </a>
                     )}
                   </div>
@@ -323,52 +338,36 @@ interface SubnetsHubProps {
   onSelect?: (id: number) => void;
 }
 
+const SUBNET_STYLE: Record<number, { color: string; gradient: string; glow: string; icon: string }> = {
+  0: { color: 'neon-cyan',   gradient: 'from-neon-cyan/20 to-transparent',   glow: 'shadow-[0_0_20px_rgba(0,243,255,0.1)]',   icon: 'psychology' },
+  1: { color: 'neon-pink',   gradient: 'from-neon-pink/20 to-transparent',   glow: 'shadow-[0_0_20px_rgba(255,0,255,0.1)]',   icon: 'image' },
+  2: { color: 'neon-purple', gradient: 'from-neon-purple/20 to-transparent', glow: 'shadow-[0_0_20px_rgba(188,19,254,0.1)]', icon: 'code' },
+};
+const DEFAULT_STYLE = { color: 'neon-green', gradient: 'from-neon-green/20 to-transparent', glow: 'shadow-[0_0_20px_rgba(0,255,128,0.1)]', icon: 'hub' };
+
 export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
   const { data: stats, loading, error } = useProtocolStats();
   const [selectedSubnet, setSelectedSubnet] = useState<any>(null);
+  const [subnetDefs, setSubnetDefs] = useState<any[]>([]);
 
-  // Define Subnets with premium gradients and visuals
-  const subnets = [
-    {
-      id: 0,
-      name: 'General Intelligence',
-      description: 'Text generation, code review, and general AI tasks',
-      emission: '45%',
-      miners: stats?.minersPerSubnet?.[0] || 0,
-      validators: stats?.validatorsPerSubnet?.[0] || 0,
-      tasks: stats?.tasksPerSubnet?.[0] || 0,
-      color: 'neon-cyan',
-      gradient: 'from-neon-cyan/20 to-transparent',
-      glow: 'shadow-[0_0_20px_rgba(0,243,255,0.1)]',
-      icon: 'psychology'
-    },
-    {
-      id: 1,
-      name: 'Image Generation',
-      description: 'Image generation, style transfer, and visual AI',
-      emission: '30%',
-      miners: stats?.minersPerSubnet?.[1] || 0,
-      validators: stats?.validatorsPerSubnet?.[1] || 0,
-      tasks: stats?.tasksPerSubnet?.[1] || 0,
-      color: 'neon-pink',
-      gradient: 'from-neon-pink/20 to-transparent',
-      glow: 'shadow-[0_0_20px_rgba(255,0,255,0.1)]',
-      icon: 'image'
-    },
-    {
-      id: 2,
-      name: 'Code Analysis',
-      description: 'Code review, bug detection, and optimization',
-      emission: '25%',
-      miners: stats?.minersPerSubnet?.[2] || 0,
-      validators: stats?.validatorsPerSubnet?.[2] || 0,
-      tasks: stats?.tasksPerSubnet?.[2] || 0,
-      color: 'neon-purple',
-      gradient: 'from-neon-purple/20 to-transparent',
-      glow: 'shadow-[0_0_20px_rgba(188,19,254,0.1)]',
-      icon: 'code'
-    }
-  ];
+  useEffect(() => {
+    fetch('/api/subnets')
+      .then(r => r.json())
+      .then(d => { if (d.success && d.data?.length) setSubnetDefs(d.data); })
+      .catch(() => {});
+  }, []);
+
+  // Merge subnet definitions with live stats
+  const subnets = subnetDefs.map(s => {
+    const style = SUBNET_STYLE[s.id] ?? DEFAULT_STYLE;
+    return {
+      ...s,
+      miners: stats?.minersPerSubnet?.[s.id] ?? s.activeMiners ?? 0,
+      validators: stats?.validatorsPerSubnet?.[s.id] ?? 0,
+      tasks: stats?.tasksPerSubnet?.[s.id] ?? 0,
+      ...style,
+    };
+  });
 
   if (selectedSubnet) {
     return <SubnetDetail subnet={selectedSubnet} onBack={() => setSelectedSubnet(null)} />;
@@ -387,7 +386,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
           </p>
         </div>
         <div className="glass-panel px-6 py-4 rounded-2xl border border-neon-cyan/20 flex flex-col items-center min-w-[160px]">
-          <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
+          <span className="text-[12px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
           <span className="text-4xl font-display font-bold text-white leading-none">
             <CountUp end={subnets.length} />
           </span>
@@ -468,19 +467,19 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
 
             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/5 relative z-10">
               <div>
-                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Miners</div>
+                <div className="text-[12px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Miners</div>
                 <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.miners} />
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Validators</div>
+                <div className="text-[12px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Validators</div>
                 <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.validators} />
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Tasks</div>
+                <div className="text-[12px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Tasks</div>
                 <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.tasks} />
                 </div>

@@ -45,13 +45,13 @@ const MorphingText = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % words.length);
-    }, 5000); // More relaxed timing
+    }, 4000); // Changed from 5s to 4s
     return () => clearInterval(timer);
   }, [words.length]);
 
   return (
     <span className="relative inline-block min-w-[300px]">
-      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text" style={{ animationDuration: '5s, 6s' }}>
+      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text" style={{ animationDuration: '4s, 8s' }}>
         {words[index]}
       </span>
     </span>
@@ -59,22 +59,35 @@ const MorphingText = () => {
 };
 
 // ── Ticker bar ──
-const TickerContent = ({ price }: { price: number }) => (
-  <div className="flex items-center gap-12 whitespace-nowrap px-6">
-    {[
-      { label: 'MDT Price', value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>, extra: <span className="text-neon-green flex items-center gap-0.5 font-bold text-xs"><span className="material-symbols-outlined text-sm">arrow_drop_up</span>4.2%</span> },
-      { label: 'Market Cap', value: '$2.42B' },
-      { label: '24h Vol', value: '$145.2M' },
-      { label: 'Total Staked', value: '4.1M (72%)' },
-    ].map((item, i) => (
-      <div key={i} className="flex items-center gap-3">
-        <span className="text-text-secondary uppercase text-[10px] tracking-widest font-bold">{item.label}</span>
-        <span className="text-neon-cyan font-bold text-base">{item.value}</span>
-        {item.extra}
-      </div>
-    ))}
-  </div>
-);
+const TickerContent = ({ price }: { price: number }) => {
+  const diff = ((price - 11) / 11) * 100;
+  const isUp = diff >= 0;
+  return (
+    <div className="flex items-center gap-12 whitespace-nowrap px-6">
+      {[
+        { 
+          label: 'MDT Price', 
+          value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>, 
+          extra: (
+            <span className={`${isUp ? 'text-neon-green' : 'text-red-400'} flex items-center gap-0.5 font-bold text-xs`}>
+              <span className="material-symbols-outlined text-sm">{isUp ? 'arrow_drop_up' : 'arrow_drop_down'}</span>
+              {isUp ? '+' : ''}{diff.toFixed(1)}%
+            </span>
+          ) 
+        },
+        { label: 'Market Cap', value: '$2.42B' },
+        { label: '24h Vol', value: '$145.2M' },
+        { label: 'Total Staked', value: '4.1M (72%)' },
+      ].map((item, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <span className="text-text-secondary uppercase text-[12px] tracking-widest font-bold">{item.label}</span>
+          <span className="text-neon-cyan font-bold text-base">{item.value}</span>
+          {item.extra}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const initialChart = [
   { time: '00:00', value: 10.2 }, { time: '04:00', value: 10.8 }, { time: '08:00', value: 10.5 },
@@ -111,9 +124,9 @@ const ROLES = [
     desc: 'Score miner submissions and maintain network quality. Requires subnet owner approval.',
     minStake: '500 MDT',
     earn: '8% of task reward',
-    action: 'View Validators',
-    registerView: ViewState.VALIDATORS,
-    registerRole: null,
+    action: 'Register as Validator',
+    registerView: ViewState.REGISTER_VALIDATOR,
+    registerRole: 'validator',
   },
   {
     id: 'holder',
@@ -128,7 +141,7 @@ const ROLES = [
     minStake: '1 MDT',
     earn: 'Pro-rata from reward pool',
     action: 'Stake as Holder',
-    registerView: ViewState.REGISTER_ROLE,
+    registerView: ViewState.REGISTER_HOLDER,
     registerRole: 'holder',
   },
   {
@@ -150,7 +163,7 @@ const ROLES = [
 ];
 
 export default function HomeView({ onViewChange }: HomeViewProps) {
-  const { isConnected, accountId, isMiner, isValidator } = useWallet();
+  const { isConnected, accountId, isMiner, isValidator, isHolder } = useWallet();
   const { data: stats } = useProtocolStats();
   const [chart, setChart] = useState(initialChart);
   const [mdtSupply, setMdtSupply] = useState<number | null>(null);
@@ -221,7 +234,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             {/* Left: text */}
             <div className="flex-1 flex flex-col gap-6">
               <div className="flex items-center gap-3">
-                <span className="px-3 py-1 rounded-full border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan text-[12px] font-bold uppercase tracking-widest flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse inline-block" />
                   Live on Hedera Testnet
                 </span>
@@ -254,7 +267,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                 ))}
               </div>
 
-              <p className="text-slate-500 text-sm">
+              <p className="text-slate-400 text-sm">
                 Connect your wallet to get started — choose a role and join the network.
               </p>
             </div>
@@ -271,14 +284,14 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                   </div>
                   <div>
                     <div className="text-white font-black text-base font-display tracking-tight uppercase group-hover:text-neon-cyan transition-colors">{role.title}</div>
-                    <div className={`text-${role.color} text-[10px] font-extrabold uppercase tracking-widest bg-${role.color}/5 px-1.5 py-0.5 rounded border border-${role.color}/20 inline-block mt-1`}>
+                    <div className={`text-${role.color} text-[12px] font-extrabold uppercase tracking-widest bg-${role.color}/5 px-1.5 py-0.5 rounded border border-${role.color}/20 inline-block mt-1`}>
                       {role.subtitle}
                     </div>
                   </div>
                   <div className="text-[11px] text-slate-400 leading-snug font-medium line-clamp-3 italic opacity-90">{role.desc}</div>
                   <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Yield</span>
-                    <span className={`text-[10px] font-black uppercase text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]`}>
+                    <span className="text-[11px] text-slate-400 font-bold uppercase tracking-tighter">Yield</span>
+                    <span className={`text-[12px] font-black uppercase text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]`}>
                       {role.earn.replace('of task reward', '').replace('pool', '')}
                     </span>
                   </div>
@@ -300,7 +313,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                    <span className="material-symbols-outlined text-xl">{s.icon}</span>
                 </div>
                 <div>
-                  <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-0.5">{s.label}</div>
+                  <div className="text-[12px] text-slate-400 uppercase tracking-widest font-bold mb-0.5">{s.label}</div>
                   <div className={`text-white text-sm font-black tracking-wide font-display group-hover:${s.color} transition-colors uppercase`}>{s.value}</div>
                 </div>
               </div>
@@ -325,10 +338,12 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             {ROLES.map(role => {
               const isActive =
                 (role.id === 'miner' && isMiner) ||
-                (role.id === 'validator' && isValidator);
+                (role.id === 'validator' && isValidator) ||
+                (role.id === 'holder' && isHolder);
               const dashboardView =
                 role.id === 'miner' ? ViewState.MINER_DASHBOARD :
-                role.id === 'validator' ? ViewState.VALIDATORS : null;
+                role.id === 'validator' ? ViewState.VALIDATOR_DASHBOARD :
+                role.id === 'holder' ? ViewState.HOLDER_DASHBOARD : null;
               const handleClick = () => {
                 if (!onViewChange) return;
                 if (isActive && dashboardView) onViewChange(dashboardView);
@@ -354,12 +369,12 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                       )}
                     </div>
                     {isActive ? (
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-neon-green/50 text-neon-green bg-neon-green/10 flex items-center gap-1">
+                      <span className="text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-neon-green/50 text-neon-green bg-neon-green/10 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse inline-block" />
                         Active
                       </span>
                     ) : (
-                      <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-${role.color}/30 text-${role.color} bg-${role.color}/5`}>
+                      <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded border border-${role.color}/30 text-${role.color} bg-${role.color}/5`}>
                         {role.minStake === '0 MDT' ? 'FREE' : `Min ${role.minStake}`}
                       </span>
                     )}
@@ -377,13 +392,13 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                   </div>
                   <div className="mt-auto pt-3 border-t border-white/5">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest">Earn</span>
+                      <span className="text-[12px] text-slate-400 uppercase tracking-widest">Earn</span>
                       <span className="text-xs font-bold text-white">{role.earn}</span>
                     </div>
                     {isActive ? (
                       <button className="w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-neon-green/50 text-neon-green bg-neon-green/10 group-hover:bg-neon-green/20 flex items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-sm">dashboard</span>
-                        {role.id === 'miner' ? 'Miner Dashboard' : 'Validator Dashboard'}
+                      {role.id === 'miner' ? 'Miner Dashboard' : role.id === 'validator' ? 'Validator Dashboard' : 'Holder Dashboard'}
                       </button>
                     ) : (
                       <button className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all border border-${role.color}/40 text-${role.color} bg-${role.color}/5 group-hover:bg-${role.color}/20`}>
@@ -411,7 +426,9 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                 <span className="text-6xl font-display font-bold text-white tracking-tighter">
                   <CountUp end={price} prefix="$" decimals={2} duration={500} />
                 </span>
-                <span className="text-neon-green font-mono text-base bg-neon-green/10 px-3 py-1 rounded border border-neon-green/30">+4.2%</span>
+                <span className={`${(price >= 11) ? 'text-neon-green bg-neon-green/10 border-neon-green/30' : 'text-red-400 bg-red-400/10 border-red-400/30'} font-mono text-base px-3 py-1 rounded border`}>
+                  {price >= 11 ? '+' : ''}{(((price - 11) / 11) * 100).toFixed(1)}%
+                </span>
               </div>
             </div>
           </div>
@@ -442,7 +459,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             <p className="text-white text-4xl font-display font-bold">
               {mdtSupply !== null
                 ? <CountUp end={mdtSupply} />
-                : <span className="text-slate-500 text-2xl">Loading...</span>
+                : <span className="text-slate-400 text-2xl">Loading...</span>
               }
               <span className="text-xl text-text-secondary ml-2">MDT</span>
             </p>
@@ -450,7 +467,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
               <div className="bg-gradient-to-r from-neon-cyan to-blue-600 h-full shadow-[0_0_10px_rgba(0,243,255,0.8)] transition-all duration-1000"
                 style={{ width: mdtSupply !== null && mdtMaxSupply ? `${Math.min((mdtSupply / mdtMaxSupply) * 100, 100).toFixed(1)}%` : '0%' }} />
             </div>
-            <p className="text-[10px] text-slate-500 mt-2 flex justify-between">
+            <p className="text-[12px] text-slate-400 mt-2 flex justify-between">
               <a href="https://hashscan.io/testnet/token/0.0.8198586" target="_blank" rel="noopener noreferrer" className="text-neon-cyan hover:underline">0.0.8198586</a>
               {mdtSupply !== null && mdtMaxSupply ? (
                 <span>{((mdtSupply / mdtMaxSupply) * 100).toFixed(1)}% of {mdtMaxSupply.toLocaleString()} max</span>
@@ -483,7 +500,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             Subnet Performance
           </h3>
           <a href="https://hashscan.io/testnet/topic/0.0.8198583" target="_blank" rel="noopener noreferrer"
-            className="text-[10px] font-bold text-neon-cyan hover:text-white transition-colors uppercase tracking-widest border border-neon-cyan/30 px-2 py-1 rounded bg-neon-cyan/5">
+            className="text-[12px] font-bold text-neon-cyan hover:text-white transition-colors uppercase tracking-widest border border-neon-cyan/30 px-2 py-1 rounded bg-neon-cyan/5">
             Verify on HashScan
           </a>
         </div>
@@ -514,18 +531,18 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                       <span className={`w-2 h-2 rounded-full bg-${subnet.color} shadow-[0_0_6px_currentColor]`} />
                       <div>
                         <div className="font-bold text-white text-sm">Subnet {subnet.id}</div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-widest">{subnet.name}</div>
+                        <div className="text-[12px] text-slate-400 uppercase tracking-widest">{subnet.name}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-neon-cyan">
-                    {isLoading ? <span className="text-slate-600">—</span> : miners}
+                    {isLoading ? <span className="text-slate-500">—</span> : miners}
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-purple-400">
-                    {isLoading ? <span className="text-slate-600">—</span> : validators}
+                    {isLoading ? <span className="text-slate-500">—</span> : validators}
                   </td>
                   <td className="px-6 py-4 text-right font-mono text-neon-green">
-                    {isLoading ? <span className="text-slate-600">—</span> : tasks}
+                    {isLoading ? <span className="text-slate-500">—</span> : tasks}
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="inline-block size-2.5 rounded-full bg-neon-green shadow-[0_0_8px_#00ffa3]" />

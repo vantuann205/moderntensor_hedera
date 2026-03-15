@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import BootSequence from "./BootSequence";
 import ParticleBackground from "./ParticleBackground";
 import Navbar from "./Navbar";
@@ -20,6 +20,11 @@ import BlockDetailsView from "../dashboard/BlockDetailsView";
 import MinerDashboard from "../dashboard/MinerDashboard";
 import ValidatorDetailView from "../dashboard/ValidatorDetailView";
 import MinerDetailView from "../dashboard/MinerDetailView";
+import ValidatorRegistrationView from "../dashboard/ValidatorRegistrationView";
+import ValidatorDashboard from "../dashboard/ValidatorDashboard";
+import HolderDashboard from "../dashboard/HolderDashboard";
+import HolderRegistrationView from "../dashboard/HolderRegistrationView";
+import AccountView from "../dashboard/AccountView";
 import { useWallet } from "@/context/WalletContext";
 
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
@@ -30,8 +35,18 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
   const [selectedValidatorId, setSelectedValidatorId] = useState<string | null>(null);
   const [selectedMinerId, setSelectedMinerId] = useState<string | null>(null);
   const { isMiner, isConnected, accountId } = useWallet();
+  const prevConnected = useRef(isConnected);
 
-  // No auto-navigate — user stays on HOME, cards show registered state
+  // Reset to HOME whenever wallet connects or disconnects
+  useEffect(() => {
+    if (!prevConnected.current && isConnected) {
+      setCurrentView(ViewState.HOME);
+    }
+    if (prevConnected.current && !isConnected) {
+      setCurrentView(ViewState.HOME);
+    }
+    prevConnected.current = isConnected;
+  }, [isConnected]);
 
   const handleSelectTransaction = (id: string) => {
     setSelectedTransactionId(id);
@@ -55,6 +70,24 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
         />;
       case ViewState.MINER_DASHBOARD:
         return <MinerDashboard onBack={() => setCurrentView(ViewState.HOME)} />;
+      case ViewState.REGISTER_VALIDATOR:
+        return <ValidatorRegistrationView
+          onBack={() => setCurrentView(ViewState.HOME)}
+          onViewChange={(v) => setCurrentView(v)}
+          onRegistered={() => setCurrentView(ViewState.VALIDATOR_DASHBOARD)}
+        />;
+      case ViewState.VALIDATOR_DASHBOARD:
+        return <ValidatorDashboard onBack={() => setCurrentView(ViewState.HOME)} />;
+      case ViewState.HOLDER_DASHBOARD:
+        return <HolderDashboard onBack={() => setCurrentView(ViewState.HOME)} />;
+      case ViewState.REGISTER_HOLDER:
+        return <HolderRegistrationView
+          onBack={() => setCurrentView(ViewState.HOME)}
+          onViewChange={(v) => setCurrentView(v)}
+          onRegistered={() => setCurrentView(ViewState.HOLDER_DASHBOARD)}
+        />;
+      case ViewState.ACCOUNT:
+        return <AccountView onBack={() => setCurrentView(ViewState.HOME)} />;
       case ViewState.EXPLORER:
         return <ExplorerView 
           onSelectBlock={handleSelectBlock} 

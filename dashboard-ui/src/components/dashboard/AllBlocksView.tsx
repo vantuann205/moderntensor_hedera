@@ -20,9 +20,9 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
     <div className="flex justify-center py-8 px-4 lg:px-12 relative z-10 w-full min-h-screen animate-fade-in-up">
       <div className="w-full max-w-[1400px] flex flex-col gap-8">
         <div className="flex flex-col gap-6">
-          <div className="flex items-center gap-2 text-[10px] font-mono tracking-widest text-slate-500 uppercase">
+          <div className="flex items-center gap-2 text-[12px] font-mono tracking-widest text-slate-500 uppercase">
              <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>HOME</button>
-             <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+             <span className="material-symbols-outlined text-[12px]">chevron_right</span>
              <span className="text-neon-cyan">BLOCKS</span>
           </div>
 
@@ -44,7 +44,7 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
               { label: 'Consensus', val: 'Gossip', icon: 'verified_user', color: 'text-neon-blue', border: 'border-l-2 border-neon-blue' }
             ].map((stat, i) => (
               <div key={i} className={`glass-panel p-6 rounded-xl ${stat.border} relative overflow-hidden group`}>
-                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">{stat.label}</p>
+                <p className="text-slate-500 text-[12px] font-black uppercase tracking-widest mb-1">{stat.label}</p>
                 <h3 className="text-3xl font-black text-white font-mono tracking-tighter">{stat.val}</h3>
                 <span className={`material-symbols-outlined ${stat.color} absolute right-6 top-1/2 -translate-y-1/2 text-3xl opacity-20`}>{stat.icon}</span>
               </div>
@@ -62,7 +62,7 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-white/5 border-b border-white/10 text-[10px] uppercase font-black text-slate-500">
+                  <tr className="bg-white/5 border-b border-white/10 text-[12px] uppercase font-black text-slate-500">
                     <th className="px-6 py-5">Block Height</th>
                     <th className="px-6 py-4">Txs (Count)</th>
                     <th className="px-6 py-4">Gas Used</th>
@@ -78,8 +78,8 @@ export default function AllBlocksView({ onBack, onSelectBlock }: { onBack: () =>
                       <td className="px-6 py-5 text-neon-cyan font-black">#{block.height}</td>
                       <td className="px-6 py-4 text-center"><span className="bg-white/5 px-2 py-0.5 rounded text-xs text-white">{block.count}</span></td>
                       <td className="px-6 py-4 text-slate-300 font-bold">{block.gas_used.toLocaleString()}</td>
-                      <td className="px-6 py-4 font-mono text-slate-500 text-[10px] truncate max-w-[150px]" title={block.hash}>{block.hash}</td>
-                      <td className="px-6 py-4 text-right text-slate-500 text-[10px]">{formatTimestamp(block.timestamp)}</td>
+                      <td className="px-6 py-4 font-mono text-slate-500 text-[12px] truncate max-w-[150px]" title={block.hash}>{block.hash}</td>
+                      <td className="px-6 py-4 text-right text-slate-500 text-[12px]">{formatTimestamp(block.timestamp)}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -58,7 +58,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
           <form onSubmit={handleSearch} className="relative w-full max-w-3xl mx-auto rounded-full group overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-neon-cyan/5 -skew-x-12 animate-pulse"></div>
             <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none z-10">
-              <span className="material-symbols-outlined text-slate-500 group-focus-within:text-neon-cyan transition-colors">search</span>
+              <span className="material-symbols-outlined text-slate-400 group-focus-within:text-neon-cyan transition-colors">search</span>
             </div>
             <input 
               className="w-full bg-panel-dark/80 border border-white/10 rounded-full pl-14 pr-32 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-neon-cyan focus:shadow-[0_0_20px_rgba(0,243,255,0.2)] text-base font-mono backdrop-blur-md transition-all" 
@@ -68,7 +68,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
               type="text"
             />
             <button type="submit" className="absolute inset-y-0 right-2 flex items-center pr-4">
-              <span className="px-3 py-1.5 text-[10px] font-bold bg-neon-cyan/20 rounded-full text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/40 transition-colors uppercase tracking-widest">Search</span>
+              <span className="px-3 py-1.5 text-[12px] font-bold bg-neon-cyan/20 rounded-full text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/40 transition-colors uppercase tracking-widest">Search</span>
             </button>
           </form>
         </div>
@@ -93,7 +93,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
                         </h3>
                         <div className="flex items-center gap-2 mt-2">
                             <span className="relative flex h-2 w-2 mr-1"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
-                            <p className="text-xs font-mono font-bold text-slate-500">{stat.sub}</p>
+                            <p className="text-xs font-mono font-bold text-slate-400">{stat.sub}</p>
                         </div>
                     </div>
                 </div>
@@ -109,7 +109,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
               <h3 className="text-white font-bold text-lg uppercase tracking-wider flex items-center gap-2 font-display">
                 <span className="material-symbols-outlined text-neon-cyan">view_in_ar</span> Latest Blocks
               </h3>
-              <button onClick={onViewAllBlocks} className="text-[10px] font-bold text-neon-cyan hover:text-white uppercase tracking-widest transition-colors border border-neon-cyan/30 px-3 py-1 rounded hover:bg-neon-cyan/10">View All</button>
+              <button onClick={onViewAllBlocks} className="text-[12px] font-bold text-neon-cyan hover:text-white uppercase tracking-widest transition-colors border border-neon-cyan/30 px-3 py-1 rounded hover:bg-neon-cyan/10">View All</button>
             </div>
             
             <div className="bg-panel-dark/60 rounded-xl overflow-hidden border border-white/5 flex flex-col relative min-h-[400px]">
@@ -124,7 +124,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
                   </thead>
                   <tbody className="text-sm font-mono divide-y divide-white/5 tracking-wider">
                     {blocksLoading ? (
-                      <tr><td colSpan={3} className="px-6 py-20 text-center animate-pulse text-slate-500 uppercase tracking-widest">Fetching blocks...</td></tr>
+                      <tr><td colSpan={3} className="px-6 py-20 text-center animate-pulse text-slate-400 uppercase tracking-widest">Fetching blocks...</td></tr>
                     ) : blocks.map((block, i) => (
                       <tr key={i} className="group hover:bg-white/[0.04] transition-all duration-200">
                         <td className="px-6 py-4">
@@ -140,7 +140,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
                             {block.count} txns
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right text-slate-500 text-xs">
+                        <td className="px-6 py-4 text-right text-slate-400 text-xs">
                           {formatTimestamp(block.timestamp)}
                         </td>
                       </tr>
@@ -157,7 +157,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
               <h3 className="text-white font-bold text-lg uppercase tracking-wider flex items-center gap-2 font-display">
                 <span className="material-symbols-outlined text-neon-pink">swap_horiz</span> Transactions
               </h3>
-              <button onClick={onViewAllTransactions} className="text-[10px] font-bold text-neon-pink hover:text-white uppercase tracking-widest transition-colors border border-neon-pink/30 px-3 py-1 rounded hover:bg-neon-pink/10">View All</button>
+              <button onClick={onViewAllTransactions} className="text-[12px] font-bold text-neon-pink hover:text-white uppercase tracking-widest transition-colors border border-neon-pink/30 px-3 py-1 rounded hover:bg-neon-pink/10">View All</button>
             </div>
             
             <div className="bg-panel-dark/60 rounded-xl overflow-hidden border border-white/5 flex flex-col relative min-h-[400px]">
@@ -172,7 +172,7 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
                   </thead>
                   <tbody className="text-sm font-mono divide-y divide-white/5 tracking-wider">
                     {txLoading ? (
-                      <tr><td colSpan={3} className="px-6 py-20 text-center animate-pulse text-slate-500 uppercase tracking-widest">Fetching transactions...</td></tr>
+                      <tr><td colSpan={3} className="px-6 py-20 text-center animate-pulse text-slate-400 uppercase tracking-widest">Fetching transactions...</td></tr>
                     ) : transactions.map((tx, i) => (
                       <tr key={i} className="group hover:bg-white/[0.04] transition-all duration-200 cursor-pointer" onClick={() => onSelectTransaction?.(tx.transaction_id)}>
                         <td className="px-6 py-4">
@@ -180,17 +180,17 @@ const ExplorerView: React.FC<ExplorerViewProps> = ({
                             <span className="text-neon-pink font-bold hover:underline transition-colors w-32 truncate block" title={tx.transaction_id}>
                               {tx.transaction_id}
                             </span>
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter opacity-70">
+                            <span className="text-[12px] text-slate-400 font-bold uppercase tracking-tighter opacity-70">
                               {tx.name.replace('_', ' ')}
                             </span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${tx.result === 'SUCCESS' ? 'text-green-400 border-green-400/20 bg-green-400/5' : 'text-red-400 border-red-400/20 bg-red-400/5'}`}>
+                          <span className={`text-[12px] font-bold px-2 py-0.5 rounded border ${tx.result === 'SUCCESS' ? 'text-green-400 border-green-400/20 bg-green-400/5' : 'text-red-400 border-red-400/20 bg-red-400/5'}`}>
                             {tx.result}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right text-slate-500 text-xs">
+                        <td className="px-6 py-4 text-right text-slate-400 text-xs">
                           {formatTimestamp(tx.consensus_timestamp)}
                         </td>
                       </tr>

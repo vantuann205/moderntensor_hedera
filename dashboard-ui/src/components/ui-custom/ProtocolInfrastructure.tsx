@@ -41,7 +41,7 @@ export default function ProtocolInfrastructure() {
                             <div className={`p-2 rounded-lg bg-white/[0.03] border border-white/5 ${t.color}`}>
                                 <t.icon size={16} />
                             </div>
-                            <span className="text-[10px] font-mono font-bold text-slate-600 group-hover:text-slate-400">
+                            <span className="text-[12px] font-mono font-bold text-slate-600 group-hover:text-slate-400">
                                 {t.id}
                             </span>
                         </div>
@@ -49,13 +49,13 @@ export default function ProtocolInfrastructure() {
                             <h4 className="text-xs font-bold text-white uppercase tracking-tight italic">
                                 {t.name}
                             </h4>
-                            <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                            <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
                                 {t.desc}
                             </p>
                         </div>
                         <Link
                             href={`/explorer?topic=${t.id}`}
-                            className="pt-2 flex items-center gap-2 text-[9px] font-bold text-neon-cyan/60 hover:text-neon-cyan transition-colors uppercase tracking-widest border-t border-white/5"
+                            className="pt-2 flex items-center gap-2 text-[11px] font-bold text-neon-cyan/60 hover:text-neon-cyan transition-colors uppercase tracking-widest border-t border-white/5"
                         >
                             Open Internal Explorer <ArrowRight size={10} />
                         </Link>

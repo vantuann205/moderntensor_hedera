@@ -47,7 +47,7 @@ export default function SubmitTaskForm() {
             <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 text-cyan-400 mb-1">
                     <Zap size={16} fill="currentColor" />
-                    <Badge variant="outline" className="text-[10px] font-mono border-cyan-400/30 text-cyan-400">SIMULATOR</Badge>
+                    <Badge variant="outline" className="text-[12px] font-mono border-cyan-400/30 text-cyan-400">SIMULATOR</Badge>
                 </div>
                 <CardTitle className="text-lg font-bold text-white">Submit AI Task</CardTitle>
                 <CardDescription className="text-xs text-slate-500">
@@ -107,7 +107,7 @@ export default function SubmitTaskForm() {
                                     onChange={e => setFormData({ ...formData, reward: e.target.value })}
                                     className="bg-white/5 border-white/10 text-slate-200 focus:border-cyan-400/40 h-10"
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-500">ℏ FEE INCL.</span>
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-mono text-slate-500">ℏ FEE INCL.</span>
                             </div>
                         </div>
 

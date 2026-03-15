@@ -78,9 +78,9 @@ export default function MinerDetailView({ minerId, onBack }: Props) {
         {/* Breadcrumb */}
         <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-500 uppercase">
           <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>HOME</button>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[12px]">chevron_right</span>
           <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>MINERS</button>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[12px]">chevron_right</span>
           <span className="text-neon-cyan">{minerId}</span>
         </div>
 
@@ -116,7 +116,7 @@ export default function MinerDetailView({ minerId, onBack }: Props) {
                 { label: 'Avg Quality', val: stats.avgQual.toFixed(1), color: 'text-yellow-400' },
               ].map((s, i) => (
                 <div key={i} className="glass-panel p-5 rounded-xl border border-white/5">
-                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">{s.label}</p>
+                  <p className="text-slate-400 text-[12px] font-bold uppercase tracking-widest mb-1">{s.label}</p>
                   <p className={`text-3xl font-black font-display tracking-tighter ${s.color}`}>{s.val}</p>
                 </div>
               ))}
@@ -167,7 +167,7 @@ export default function MinerDetailView({ minerId, onBack }: Props) {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                  <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                  <thead className="bg-white/5 border-b border-white/10 text-[12px] uppercase tracking-widest text-slate-400 font-bold">
                     <tr>
                       <th className="px-5 py-3">#</th>
                       <th className="px-5 py-3">Task ID</th>
@@ -190,7 +190,7 @@ export default function MinerDetailView({ minerId, onBack }: Props) {
                         <td className="px-5 py-3 text-slate-500">{idx + 1}</td>
                         <td className="px-5 py-3 text-white font-bold max-w-[130px] truncate">{s.taskId}</td>
                         <td className="px-5 py-3">
-                          <span className="px-2 py-0.5 rounded text-[9px] bg-neon-purple/10 text-neon-purple border border-neon-purple/20 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded text-[11px] bg-neon-purple/10 text-neon-purple border border-neon-purple/20 whitespace-nowrap">
                             {s.taskType?.replace(/_/g, ' ') || '—'}
                           </span>
                         </td>
@@ -209,7 +209,7 @@ export default function MinerDetailView({ minerId, onBack }: Props) {
                           {s.consensusTimestamp ? (
                             <a href={`https://hashscan.io/testnet/transaction/${s.consensusTimestamp}`}
                               target="_blank" rel="noopener noreferrer"
-                              className="text-neon-cyan hover:underline whitespace-nowrap text-[10px]">
+                              className="text-neon-cyan hover:underline whitespace-nowrap text-[12px]">
                               HashScan
                             </a>
                           ) : <span className="text-slate-600">—</span>}

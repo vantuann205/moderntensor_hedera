@@ -69,9 +69,9 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
       <div className="w-full max-w-[1400px] flex flex-col gap-6">
         
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-[10px] font-mono tracking-widest text-slate-500 uppercase">
+        <div className="flex items-center gap-2 text-[12px] font-mono tracking-widest text-slate-500 uppercase">
           <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>EXPLORER</button>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[12px]">chevron_right</span>
           <span className="text-neon-pink">TRANSACTION DETAILS</span>
         </div>
 
@@ -80,14 +80,14 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
           <div className="flex flex-col gap-2">
              <h1 className="text-4xl font-black text-white uppercase tracking-tight font-display">Transaction</h1>
              <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-sm text-[10px] font-black uppercase tracking-widest ${tx.result === 'SUCCESS' ? 'bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-red-500 text-white'}`}>
+                <span className={`px-3 py-1 rounded-sm text-[12px] font-black uppercase tracking-widest ${tx.result === 'SUCCESS' ? 'bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-red-500 text-white'}`}>
                   {tx.result}
                 </span>
                 <span className="text-slate-500 font-mono text-xs font-bold uppercase tracking-widest">DEFAULT FORMAT</span>
              </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">HBAR Price</p>
+             <p className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">HBAR Price</p>
              <p className="text-xl font-black text-white font-mono tracking-tighter">${hbarPrice.toFixed(4)}</p>
           </div>
         </div>
@@ -133,7 +133,7 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-widest md:w-40">Charged Fee</span>
                     <div className="flex flex-col items-end">
                         <span className="text-sm font-black text-white font-mono">{formatHbar(tx.charged_tx_fee)} ℏ</span>
-                        <span className="text-[10px] font-bold text-slate-500 font-mono italic">{formatUsd(tx.charged_tx_fee)}</span>
+                        <span className="text-[12px] font-bold text-slate-500 font-mono italic">{formatUsd(tx.charged_tx_fee)}</span>
                     </div>
                 </div>
 
@@ -141,7 +141,7 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-widest md:w-40">Max Fee</span>
                     <div className="flex flex-col items-end">
                         <span className="text-sm font-black text-slate-300 font-mono">{formatHbar(tx.max_fee)} ℏ</span>
-                        <span className="text-[10px] font-bold text-slate-600 font-mono italic">{formatUsd(tx.max_fee)}</span>
+                        <span className="text-[12px] font-bold text-slate-600 font-mono italic">{formatUsd(tx.max_fee)}</span>
                     </div>
                 </div>
 
@@ -168,7 +168,7 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                </div>
                <div className="overflow-x-auto">
                  <table className="w-full text-left">
-                   <thead className="bg-[#050b14]/80 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
+                   <thead className="bg-[#050b14]/80 text-[12px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5">
                       <tr>
                         <th className="px-6 py-4">Account</th>
                         <th className="px-6 py-4 text-right">Amount</th>
@@ -181,12 +181,12 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                             <button onClick={() => onSelectAccount?.(transfer.account)} className="text-neon-cyan hover:underline">
                               {transfer.account}
                             </button>
-                            {transfer.is_approval && <span className="ml-2 text-[8px] bg-neon-cyan/10 text-neon-cyan px-1 border border-neon-cyan/20 rounded">APPROVED</span>}
+                            {transfer.is_approval && <span className="ml-2 text-[10px] bg-neon-cyan/10 text-neon-cyan px-1 border border-neon-cyan/20 rounded">APPROVED</span>}
                           </td>
                           <td className={`px-6 py-4 text-right font-black ${transfer.amount > 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {transfer.amount > 0 ? '+' : ''}{formatHbar(transfer.amount)} ℏ
                             <br/>
-                            <span className="text-[8px] opacity-60 font-normal italic">{formatUsd(transfer.amount)}</span>
+                            <span className="text-[10px] opacity-60 font-normal italic">{formatUsd(transfer.amount)}</span>
                           </td>
                         </tr>
                       ))}
@@ -212,22 +212,22 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                   {tx.name === 'CONSENSUSSUBMITMESSAGE' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Sequence Number</span>
+                        <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Sequence Number</span>
                         <span className="text-lg font-black text-neon-cyan font-mono">{tx.sequence_number || '—'}</span>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Hash Version</span>
+                        <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Running Hash Version</span>
                         <span className="text-lg font-black text-white font-mono">{tx.running_hash_version || '—'}</span>
                       </div>
                       <div className="col-span-1 md:col-span-2 flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Running Hash</span>
-                        <span className="text-[10px] font-mono text-slate-400 break-all bg-black/20 p-2 rounded border border-white/5">{tx.running_hash || '—'}</span>
+                        <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest">Running Hash</span>
+                        <span className="text-[12px] font-mono text-slate-400 break-all bg-black/20 p-2 rounded border border-white/5">{tx.running_hash || '—'}</span>
                       </div>
                     </div>
                   )}
 
                   <div className="flex flex-col gap-2">
-                    {tx.name === 'CONSENSUSSUBMITMESSAGE' && <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center md:text-left">Message Payload</span>}
+                    {tx.name === 'CONSENSUSSUBMITMESSAGE' && <span className="text-[12px] font-bold text-slate-500 uppercase tracking-widest text-center md:text-left">Message Payload</span>}
                     <div className="bg-black/40 rounded p-4 border border-white/5 overflow-x-auto relative group">
                        <pre className="text-[11px] text-slate-300 font-mono leading-relaxed whitespace-pre-wrap">
                          {(() => {
@@ -258,7 +258,7 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                  <span className="material-symbols-outlined text-neon-cyan">account_balance</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Fee Collection Account</span>
+                <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest">Fee Collection Account</span>
                 <span className="text-sm font-bold text-white font-mono">
                     {tx.node || '—'} {tx.node === '0.0.3' ? '(Hedera Node 0)' : ''}
                 </span>
@@ -268,7 +268,7 @@ const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
               href={`https://hashscan.io/testnet/transaction/${tx.consensus_timestamp}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-[10px] font-black uppercase tracking-widest rounded hover:bg-neon-cyan/20 transition-all"
+              className="px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-[12px] font-black uppercase tracking-widest rounded hover:bg-neon-cyan/20 transition-all"
             >
               View on HashScan
             </a>

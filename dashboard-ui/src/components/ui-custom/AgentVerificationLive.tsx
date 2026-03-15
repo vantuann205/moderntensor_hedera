@@ -51,11 +51,11 @@ export default function AgentVerificationLive() {
                     </h3>
                 </div>
                 {log.status === 'success' ? (
-                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[12px] font-bold uppercase tracking-widest flex items-center gap-1">
                         <CheckCircle size={10} /> Verified
                     </span>
                 ) : (
-                    <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/30 rounded text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                    <span className="px-2 py-1 bg-neon-yellow/20 text-neon-yellow border border-neon-yellow/30 rounded text-[12px] font-bold uppercase tracking-widest flex items-center gap-1">
                         <Activity size={10} className="animate-pulse" /> {log.step ? `Step ${log.step}/5` : 'Processing'}
                     </span>
                 )}
@@ -64,12 +64,12 @@ export default function AgentVerificationLive() {
             <div className="space-y-3">
                 <div className="flex justify-between items-end border-b border-white/5 pb-3">
                     <div>
-                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current State</div>
+                        <div className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current State</div>
                         <div className="text-sm font-mono text-white max-w-[200px] sm:max-w-md truncate">{log.message}</div>
                     </div>
                     {log.score !== undefined && (
                         <div className="text-right">
-                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Trust Score</div>
+                            <div className="text-[12px] font-bold text-slate-500 uppercase tracking-widest mb-1">Trust Score</div>
                             <div className="text-lg font-bold text-neon-cyan">{log.score.toFixed(4)}</div>
                         </div>
                     )}
@@ -80,7 +80,7 @@ export default function AgentVerificationLive() {
                         <span className="text-xs font-mono text-slate-400 truncate max-w-[200px]">TX: {log.tx_id}</span>
                         <Link
                             href="/explorer"
-                            className="text-[10px] font-bold text-neon-cyan hover:text-white uppercase tracking-widest flex items-center gap-1 transition-colors"
+                            className="text-[12px] font-bold text-neon-cyan hover:text-white uppercase tracking-widest flex items-center gap-1 transition-colors"
                         >
                             View on ledger <ExternalLink size={10} />
                         </Link>

@@ -11,6 +11,22 @@
 import { NextResponse } from 'next/server';
 import { ethers } from 'ethers';
 
+/** Resolve EVM tx hash → HashScan URL via mirror node contracts/results */
+async function resolveEvmTxUrl(txHash: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://testnet.mirrornode.hedera.com/api/v1/contracts/results/${txHash}`,
+      { cache: 'no-store' }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      const ts = data?.timestamp;
+      if (ts) return `https://hashscan.io/testnet/transaction/${ts}`;
+    }
+  } catch (_) {}
+  return `https://hashscan.io/testnet/transaction/${txHash}`;
+}
+
 const HEDERA_RPC = 'https://testnet.hashio.io/api';
 const MIRROR = 'https://testnet.mirrornode.hedera.com/api/v1';
 const VAULT_EVM = process.env.STAKING_VAULT_EVM_ADDRESS || '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f';
@@ -56,11 +72,14 @@ export async function POST(req: Request) {
 
     const pending = await vault.pendingDeposit(evmAddress);
 
+    // Resolve real consensus_timestamp for HashScan link
+    const hashscanUrl = await resolveEvmTxUrl(receipt.hash);
+
     return NextResponse.json({
       success: true,
       txHash: receipt.hash,
       pendingDeposit: Number(pending) / 1e8,
-      hashscanUrl: `https://hashscan.io/testnet/transaction/${receipt.hash}`,
+      hashscanUrl,
     });
   } catch (err: any) {
     console.error('[staking/deposit]', err);

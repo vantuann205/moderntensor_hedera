@@ -18,9 +18,9 @@ export default function NetworkStats() {
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Real-time Network State</span>
+                    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.2em]">Real-time Network State</span>
                 </div>
-                <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">Mirror Node Connected</div>
+                <div className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">Mirror Node Connected</div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 {metrics.map((m) => (
@@ -32,7 +32,7 @@ export default function NetworkStats() {
                         <div className={`text-xl font-display font-bold ${m.color} tracking-tight`}>
                             {isLoading ? '...' : m.value}
                         </div>
-                        <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                        <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mt-1">
                             {m.label}
                         </div>
                     </div>

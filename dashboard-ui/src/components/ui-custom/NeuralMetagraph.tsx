@@ -104,18 +104,18 @@ export default function NeuralMetagraph() {
             </div>
 
             <div className="absolute top-3 left-3 flex flex-col gap-1 border-l-2 border-neon-cyan/50 pl-2 z-20 pointer-events-none">
-                <span className="text-[9px] uppercase tracking-tighter text-slate-500 font-bold">Metagraph Sync</span>
+                <span className="text-[11px] uppercase tracking-tighter text-slate-500 font-bold">Metagraph Sync</span>
                 <span className="text-xs font-mono text-neon-cyan drop-shadow-[0_0_5px_#00f3ff]">LIVE_STATE</span>
             </div>
 
             <div className="absolute bottom-3 right-3 flex gap-4 z-20 pointer-events-none">
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#bc13fe]" />
-                    <span className="text-[8px] uppercase font-bold text-slate-500">Validator</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Validator</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#00f3ff]" />
-                    <span className="text-[8px] uppercase font-bold text-slate-500">Miner</span>
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Miner</span>
                 </div>
             </div>
         </div>

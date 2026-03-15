@@ -40,7 +40,7 @@ export default function WalletConnectModal({ isOpen, onClose }: WalletConnectMod
                         <h2 className="text-2xl font-black text-white uppercase tracking-tighter font-display">Wallet Gateway</h2>
                         <div className="flex items-center gap-2">
                              <div className="h-1.5 w-1.5 rounded-full bg-neon-cyan animate-pulse" />
-                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Connect to protocol</span>
+                             <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest">Connect to protocol</span>
                         </div>
                     </div>
                     <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-500 hover:text-white hover:bg-white/10 transition-all">
@@ -62,11 +62,11 @@ export default function WalletConnectModal({ isOpen, onClose }: WalletConnectMod
                             </div>
                             <div className="text-left flex flex-col">
                                 <span className="text-sm font-black text-white uppercase tracking-wider group-hover:text-neon-cyan transition-colors font-display">HashPack Wallet</span>
-                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Hedera Native • Testnet</span>
+                                <span className="text-[12px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Hedera Native • Testnet</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-[8px] font-black text-neon-cyan uppercase tracking-widest">Premium</span>
+                            <span className="px-2 py-0.5 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-[10px] font-black text-neon-cyan uppercase tracking-widest">Premium</span>
                             <span className="material-symbols-outlined text-slate-700 group-hover:text-neon-cyan group-hover:translate-x-1 transition-all">chevron_right</span>
                         </div>
                     </button>
@@ -78,15 +78,15 @@ export default function WalletConnectModal({ isOpen, onClose }: WalletConnectMod
                     >
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-xl bg-[#111827] p-2.5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3ymr3UNKopfI0NmUY95Dr-0589vG-91KuAA&s" alt="MetaMask" className="w-full h-full object-contain rounded-md" />
+                                <img src="https://www.pngall.com/wp-content/uploads/17/Metamask-Wallet-Logo-Design-PNG.png" alt="MetaMask" className="w-full h-full object-contain" />
                             </div>
                             <div className="text-left flex flex-col">
                                 <span className="text-sm font-black text-white uppercase tracking-wider group-hover:text-orange-500 transition-colors font-display">MetaMask / EVM</span>
-                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Compatible • Hedera RPC</span>
+                                <span className="text-[12px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Compatible • Hedera RPC</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-[8px] font-black text-orange-400 uppercase tracking-widest">Web3</span>
+                            <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-[10px] font-black text-orange-400 uppercase tracking-widest">Web3</span>
                             <span className="material-symbols-outlined text-slate-700 group-hover:text-orange-500 group-hover:translate-x-1 transition-all">chevron_right</span>
                         </div>
                     </button>
@@ -95,7 +95,7 @@ export default function WalletConnectModal({ isOpen, onClose }: WalletConnectMod
                         <div className="w-8 h-8 rounded-full bg-neon-purple/10 flex items-center justify-center shrink-0">
                             <ShieldCheck className="w-4 h-4 text-neon-purple" />
                         </div>
-                        <div className="text-[10px] text-slate-400 leading-relaxed font-medium">
+                        <div className="text-[12px] text-slate-400 leading-relaxed font-medium">
                             <span className="text-neon-purple font-black uppercase tracking-widest block mb-0.5">Protocol Verification</span>
                             Authentication is read-only. Your keys remain encrypted within your wallet provider at all times.
                         </div>

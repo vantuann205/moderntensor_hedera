@@ -63,7 +63,7 @@ export default function TransactionList() {
                                             <XCircle size={12} className="text-red-500" />
                                         }
                                     </div>
-                                    <div className="flex items-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                    <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
                                         <Clock size={10} />
                                         {tx.consensus_timestamp ? new Date(tx.consensus_timestamp * 1000).toLocaleString('en-GB', { 
                                             timeZone: 'Asia/Ho_Chi_Minh', 
@@ -86,7 +86,7 @@ export default function TransactionList() {
                                     href={`https://hashscan.io/testnet/transaction/${tx.consensus_timestamp}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="flex items-center justify-end gap-1 text-[9px] font-bold text-slate-600 hover:text-neon-cyan transition-colors uppercase tracking-widest"
+                                    className="flex items-center justify-end gap-1 text-[11px] font-bold text-slate-600 hover:text-neon-cyan transition-colors uppercase tracking-widest"
                                 >
                                     Hashscan <ExternalLink size={10} />
                                 </a>

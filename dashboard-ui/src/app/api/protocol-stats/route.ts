@@ -9,30 +9,42 @@ export async function GET() {
       hcsMirrorClient.getScoreSubmissions()
     ]);
 
-    // Calculate stats from real HCS data
-    const totalMiners = miners.length;
+    // Deduplicate miners by minerId — keep latest registration (highest sequenceNumber)
+    // This matches the dedup logic in MinersView so all counts are consistent
+    const minerMap = new Map<string, typeof miners[0]>();
+    miners.forEach(m => {
+      const id = m.minerId || m.accountId;
+      if (!id) return;
+      const existing = minerMap.get(id);
+      if (!existing || (m.sequenceNumber ?? 0) > (existing.sequenceNumber ?? 0)) {
+        minerMap.set(id, m);
+      }
+    });
+    const uniqueMiners = Array.from(minerMap.values());
+
+    const totalMiners = uniqueMiners.length;
     const totalTasks = tasks.length;
     const totalScores = scores.length;
-    
-    // Calculate total staked from miners
-    const totalStaked = miners.reduce((sum, m) => sum + (m.stakeAmount || 0), 0);
-    
+
+    // Calculate total staked from deduplicated miners
+    const totalStaked = uniqueMiners.reduce((sum, m) => sum + (m.stakeAmount || 0), 0);
+
     // Calculate average score
-    const avgScore = scores.length > 0 
-      ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length 
+    const avgScore = scores.length > 0
+      ? scores.reduce((sum, s) => sum + s.score, 0) / scores.length
       : 0;
 
     // Get unique validators
     const uniqueValidators = new Set(scores.map(s => s.validatorId));
     const totalValidators = uniqueValidators.size;
 
-    // Get unique subnets
-    const uniqueSubnets = new Set(miners.flatMap(m => m.subnetIds || []));
-    const totalSubnets = uniqueSubnets.size || 1; // At least 1 subnet
+    // Get unique subnets from deduplicated miners
+    const uniqueSubnets = new Set(uniqueMiners.flatMap(m => m.subnetIds || []));
+    const totalSubnets = uniqueSubnets.size || 1;
 
-    // Calculate distributions accurately from full arrays
+    // minersPerSubnet from deduplicated miners — each unique miner counted once per subnet
     const minersPerSubnet: Record<number, number> = {};
-    miners.forEach(m => {
+    uniqueMiners.forEach(m => {
       (m.subnetIds || []).forEach((sid: number) => {
         minersPerSubnet[sid] = (minersPerSubnet[sid] || 0) + 1;
       });
@@ -71,7 +83,7 @@ export async function GET() {
         minersPerSubnet,
         tasksPerSubnet,
         validatorsPerSubnet,
-        miners: miners.slice(-10), // Last 10 miners
+        miners: uniqueMiners.slice(-10), // Last 10 unique miners
         tasks: tasks.slice(-10), // Last 10 tasks
         scores: scores.slice(-10) // Last 10 scores
       }
