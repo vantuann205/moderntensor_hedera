@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
-
-const execAsync = promisify(exec);
+import { submitHcsMessage } from '@/lib/hcs-submit';
 
 const REGISTRATION_TOPIC_ID = process.env.NEXT_PUBLIC_REGISTRATION_TOPIC_ID || '0.0.8198583';
 const MIRROR = 'https://testnet.mirrornode.hedera.com/api/v1';
 const MDT_TOKEN_ID = process.env.NEXT_PUBLIC_MDT_TOKEN_ID || '0.0.8198586';
-const PYTHON = process.env.PYTHON_PATH
-  || 'C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe';
 
 // Min stakes per StakingVaultV2.sol
 const MIN_MINER_STAKE = 10;    // MDT (StakingVaultV2: minMinerStake = 10 MDT)
@@ -112,64 +104,22 @@ export async function POST(req: Request) {
     }
 
     // ── Step 3: Submit HCS message ─────────────────────────────────────────
-    // Message format matches sdk/hedera/hcs.py MinerRegistration.to_json()
     const hcsMessage: Record<string, any> = {
       type: 'miner_register',
       miner_id: accountId,
       account_id: accountId,
       capabilities: role === 'holder' ? ['passive_holder'] : (capabilities || ['text_generation']),
-      stake_amount: Math.floor(stakeAmount * 1e8), // MDT → 8 decimals
+      stake_amount: Math.floor(stakeAmount * 1e8),
       subnet_ids: subnetIds || [0],
       timestamp: new Date().toISOString(),
       ...(role === 'holder' ? { role: 'holder' } : {}),
-      // Include on-chain stake proof if available
       ...(stakeResult?.txHash ? { stake_tx: stakeResult.txHash } : {}),
     };
 
-    const tmpFile = path.join(os.tmpdir(), `hcs_register_${Date.now()}.json`);
-    const params = { topic_id: REGISTRATION_TOPIC_ID, message: hcsMessage };
-    fs.writeFileSync(tmpFile, JSON.stringify(params), 'utf-8');
-
-    const projectRoot = path.join(process.cwd(), '..');
-    const scriptPath = path.join(projectRoot, 'scripts', 'hcs_submit.py');
-
-    let hcsResult: any = {};
-    try {
-      const { stdout } = await execAsync(
-        `"${PYTHON}" "${scriptPath}" "${tmpFile}"`,
-        {
-          cwd: projectRoot,
-          env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
-          timeout: 60000,
-        }
-      );
-      const lines = stdout.trim().split('\n').filter(Boolean);
-      hcsResult = JSON.parse(lines[lines.length - 1]);
-      if (hcsResult.error) throw new Error(hcsResult.error);
-    } finally {
-      try { fs.unlinkSync(tmpFile); } catch {}
-    }
-
+    const hcsResult = await submitHcsMessage(REGISTRATION_TOPIC_ID, hcsMessage);
     const sequence = hcsResult.sequence || '0';
-
-    // Query mirror node to get real consensus_timestamp for this sequence
-    const rawTxId: string = hcsResult.transaction_id || '';
-    let txTimestamp = '';
-    try {
-      const mirrorRes = await fetch(
-        `https://testnet.mirrornode.hedera.com/api/v1/topics/${REGISTRATION_TOPIC_ID}/messages/${sequence}`,
-        { cache: 'no-store' }
-      );
-      if (mirrorRes.ok) {
-        const mirrorData = await mirrorRes.json();
-        txTimestamp = mirrorData.consensus_timestamp || '';
-      }
-    } catch (_) {}
-
-    // Fallback
-    if (!txTimestamp) {
-      txTimestamp = rawTxId.includes('@') ? rawTxId.split('@')[1] : rawTxId;
-    }
+    const rawTxId = hcsResult.transaction_id || '';
+    const txTimestamp = hcsResult.consensus_timestamp || '';
 
     return NextResponse.json({
       success: true,
