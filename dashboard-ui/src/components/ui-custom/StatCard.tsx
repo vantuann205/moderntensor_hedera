@@ -34,7 +34,7 @@ export default function StatCard({ label, value, subtext, icon: Icon, isLoading,
 
             <div className="flex items-center gap-2 mb-4 relative z-10">
                 <Icon size={18} className={cn(a.text, "drop-shadow-[0_0_8px_currentColor]")} />
-                <p className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", a.text)}>{label}</p>
+                <p className={cn("text-[12px] font-bold uppercase tracking-[0.2em]", a.text)}>{label}</p>
             </div>
 
             <div className="flex items-baseline gap-2 relative z-10">

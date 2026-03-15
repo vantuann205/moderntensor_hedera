@@ -15,6 +15,7 @@ interface WalletState {
     isConnected: boolean;
     isMiner: boolean;
     isValidator: boolean;
+    isHolder: boolean;
 }
 
 interface WalletContextType extends WalletState {
@@ -42,6 +43,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isConnected: false,
         isMiner: false,
         isValidator: false,
+        isHolder: false,
     });
 
     const [hc, setHc] = useState<HashConnect | null>(null);
@@ -102,6 +104,32 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 isConnected: true,
                 isMiner: isM && !isV,  // mutually exclusive: validator cannot also be miner
                 isValidator: isV,
+                isHolder: !isM && !isV && await (async () => {
+                    try {
+                        const STAKING_VAULT = '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f';
+                        const HEDERA_RPC = 'https://testnet.hashio.io/api';
+                        // getStakeInfo(address) selector: 0x7a766460
+                        const callData = '0x7a766460' + evmAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+                        const rpcRes = await fetch(HEDERA_RPC, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                jsonrpc: '2.0', id: 3, method: 'eth_call',
+                                params: [{ to: STAKING_VAULT, data: callData }, 'latest'],
+                            }),
+                        });
+                        const rpcData = await rpcRes.json();
+                        if (!rpcData.result || rpcData.result === '0x') return false;
+                        // result: amount(uint256), role(uint8), stakedAt, unstakeRequestedAt, isActive(bool), pendingReward
+                        // role is at offset 32 bytes (second slot), isActive at offset 128 bytes (5th slot)
+                        const hex = rpcData.result.slice(2);
+                        const role = parseInt(hex.slice(64, 128), 16);   // second 32-byte word
+                        const isActive = parseInt(hex.slice(128, 192), 16) !== 0; // third 32-byte word (stakedAt) — actually isActive is 5th
+                        // Decode properly: amount[0..63], role[64..127], stakedAt[128..191], unstakeRequestedAt[192..255], isActive[256..319]
+                        const isActiveParsed = parseInt(hex.slice(256, 320), 16) !== 0;
+                        return role === 3 && isActiveParsed;
+                    } catch (_) { return false; }
+                })(),
             });
             
             localStorage.setItem('mt_wallet_type', type);
@@ -223,6 +251,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             isConnected: false,
             isMiner: false,
             isValidator: false,
+            isHolder: false,
         });
         
         localStorage.removeItem('mt_wallet_type');

@@ -53,9 +53,9 @@ const BlockDetailsView: React.FC<BlockDetailsViewProps> = ({
       <div className="w-full max-w-[1400px] flex flex-col gap-6">
         
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-[10px] font-mono tracking-widest text-slate-500 uppercase">
+        <div className="flex items-center gap-2 text-[12px] font-mono tracking-widest text-slate-500 uppercase">
           <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>EXPLORER</button>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[12px]">chevron_right</span>
           <span className="text-neon-cyan">BLOCK DETAILS</span>
         </div>
 
@@ -64,7 +64,7 @@ const BlockDetailsView: React.FC<BlockDetailsViewProps> = ({
           <div className="flex flex-col gap-2">
              <h1 className="text-4xl font-black text-white uppercase tracking-tight font-display">Block {block.height}</h1>
              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 bg-neon-cyan text-black rounded-sm text-[10px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.4)]">
+                <span className="px-3 py-1 bg-neon-cyan text-black rounded-sm text-[12px] font-black uppercase tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.4)]">
                   Consensus
                 </span>
                 <span className="text-slate-500 font-mono text-xs font-bold uppercase tracking-widest">v1.0.0</span>
@@ -89,7 +89,7 @@ const BlockDetailsView: React.FC<BlockDetailsViewProps> = ({
                   <div key={i} className="py-6 flex flex-col md:flex-row md:items-center justify-between gap-2 group">
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-slate-500 uppercase tracking-widest md:w-60">{item.label}</span>
-                        {item.subLabel && <span className="text-[10px] font-black text-slate-600 uppercase tracking-wider">{item.subLabel}</span>}
+                        {item.subLabel && <span className="text-[12px] font-black text-slate-600 uppercase tracking-wider">{item.subLabel}</span>}
                     </div>
                     <div className="flex-grow flex items-center gap-2 overflow-hidden md:justify-end">
                         <span className={`text-sm font-mono text-white break-all text-right`}>
@@ -108,21 +108,21 @@ const BlockDetailsView: React.FC<BlockDetailsViewProps> = ({
           {/* Visualization Placeholder */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="glass-panel p-6 rounded-xl border border-white/5 bg-gradient-to-br from-neon-cyan/5 to-transparent">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Efficiency</p>
+                    <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Efficiency</p>
                     <h4 className="text-2xl font-black text-white font-mono">100%</h4>
                     <div className="w-full bg-white/5 h-1 mt-4 overflow-hidden rounded-full">
                         <div className="w-full h-full bg-neon-cyan animate-pulse"></div>
                     </div>
                 </div>
                 <div className="glass-panel p-6 rounded-xl border border-white/5 bg-gradient-to-br from-neon-pink/5 to-transparent">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Block Propagation</p>
+                    <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Block Propagation</p>
                     <h4 className="text-2xl font-black text-white font-mono">182ms</h4>
                     <div className="w-full bg-white/5 h-1 mt-4 overflow-hidden rounded-full">
                         <div className="w-8/12 h-full bg-neon-pink"></div>
                     </div>
                 </div>
                 <div className="glass-panel p-6 rounded-xl border border-white/5 bg-gradient-to-br from-neon-purple/5 to-transparent">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Average Tx Fee</p>
+                    <p className="text-[12px] font-black text-slate-500 uppercase tracking-widest mb-2">Average Tx Fee</p>
                     <h4 className="text-2xl font-black text-white font-mono">0.0001ℏ</h4>
                     <div className="w-full bg-white/5 h-1 mt-4 overflow-hidden rounded-full">
                         <div className="w-5/12 h-full bg-neon-purple"></div>
@@ -139,7 +139,7 @@ const BlockDetailsView: React.FC<BlockDetailsViewProps> = ({
                  <span className="material-symbols-outlined text-neon-cyan">inventory_2</span>
               </div>
               <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Network Consensus</span>
+                <span className="text-[12px] font-black text-slate-500 uppercase tracking-widest">Network Consensus</span>
                 <span className="text-sm font-bold text-white font-mono">Immutable Ledger Entry Verified</span>
               </div>
             </div>
@@ -147,7 +147,7 @@ const BlockDetailsView: React.FC<BlockDetailsViewProps> = ({
               href={`https://hashscan.io/testnet/block/${block.height}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-[10px] font-black uppercase tracking-widest rounded hover:bg-neon-cyan/20 transition-all font-bold"
+              className="px-8 py-3 bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-[12px] font-black uppercase tracking-widest rounded hover:bg-neon-cyan/20 transition-all font-bold"
             >
               View on HashScan
             </a>

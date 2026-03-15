@@ -54,13 +54,15 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
   const [metrics, setMetrics] = useState<Record<string, string>>({});
   const [confidence, setConfidence] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
-  const [done, setDone] = useState<Record<string, { onChainTx: string; hcsTx: string; hcsSeq?: number }>>({});
+  const [done, setDone] = useState<Record<string, { onChainTx: string; hcsTx: string; hcsSeq?: number; hcsTs?: string }>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // scoredByMe: key = `${onChainId}_${subIdx}` → true if this validator already scored on-chain
+  const [scoredByMe, setScoredByMe] = useState<Record<string, boolean>>({});
 
   const loadTasks = useCallback(async () => {
     setLoadingTasks(true);
     try {
-      const res = await fetch('/api/hcs/tasks');
+      const res = await fetch('/api/hcs/tasks?role=validator');
       const json = await res.json();
       if (json.success) {
         const all: any[] = json.data || [];
@@ -71,6 +73,8 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
         const provider = new ethers.JsonRpcProvider(CONTRACTS.HEDERA_RPC);
         const registry = new ethers.Contract(CONTRACTS.SUBNET_REGISTRY, SUBNET_REGISTRY_ABI, provider);
         const subMap: Record<string, any[]> = {};
+        const scoredMap: Record<string, boolean> = {};
+        const validatorEvm = evmAddress?.toLowerCase();
         await Promise.all(sorted.slice(0, 15).filter(t => t.onChainTaskId != null && t.onChainTaskId !== '').map(async (t) => {
           try {
             const subs = await registry.getSubmissions(t.onChainTaskId);
@@ -83,9 +87,19 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
               submittedAt: Number(s.submittedAt),
               validationCount: Number(s.validationCount),
             }));
+            // Check if this validator already scored each submission
+            if (validatorEvm) {
+              await Promise.all(subs.map(async (_: any, i: number) => {
+                try {
+                  const already = await registry.hasValidatorScored(t.onChainTaskId, i, validatorEvm);
+                  if (already) scoredMap[`${t.onChainTaskId}_${i}`] = true;
+                } catch (_) {}
+              }));
+            }
           } catch (_) { subMap[t.onChainTaskId] = []; }
         }));
         setSubmissions(subMap);
+        setScoredByMe(scoredMap);
         setTasks(sorted.slice(0, 15));
       }
     } catch (_) {}
@@ -125,7 +139,7 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
           }),
         });
         const hcsData = await hcsRes.json();
-        setDone(d => ({ ...d, [key]: { onChainTx: 'hcs-only', hcsTx: hcsData.transactionId || '', hcsSeq: hcsData.sequence } }));
+        setDone(d => ({ ...d, [key]: { onChainTx: 'hcs-only', hcsTx: hcsData.transactionId || '', hcsSeq: hcsData.sequence, hcsTs: hcsData.consensusTimestamp || '' } }));
         await loadTasks();
         return;
       }
@@ -165,7 +179,7 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
         }),
       });
       const hcsData = await hcsRes.json();
-      setDone(d => ({ ...d, [key]: { onChainTx, hcsTx: hcsData.transactionId || '', hcsSeq: hcsData.sequence } }));
+      setDone(d => ({ ...d, [key]: { onChainTx, hcsTx: hcsData.transactionId || '', hcsSeq: hcsData.sequence, hcsTs: hcsData.consensusTimestamp || '' } }));
       await loadTasks();
     } catch (e: any) { setErrors(er => ({ ...er, [key]: e.reason || e.message || 'Failed' })); }
     finally { setSubmitting(s => ({ ...s, [key]: false })); }
@@ -207,23 +221,23 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
           <div className="w-8 h-8 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center"><Star size={14} className="text-neon-cyan" /></div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Score Submissions</div>
-            <div className="text-[9px] text-slate-500 font-mono">SubnetRegistryV2.validateSubmission(taskId, idx, score 0–10000)</div>
+            <div className="text-[11px] text-slate-400 font-mono">SubnetRegistryV2.validateSubmission(taskId, idx, score 0–10000)</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-bold text-neon-cyan border border-neon-cyan/30 bg-neon-cyan/5 px-2 py-1 rounded-full uppercase tracking-widest">{tasks.length} tasks</span>
-          <button onClick={loadTasks} className="text-slate-600 hover:text-neon-cyan transition-colors"><RefreshCw size={12} /></button>
+          <span className="text-[11px] font-bold text-neon-cyan border border-neon-cyan/30 bg-neon-cyan/5 px-2 py-1 rounded-full uppercase tracking-widest">{tasks.length} tasks</span>
+          <button onClick={loadTasks} className="text-slate-500 hover:text-neon-cyan transition-colors"><RefreshCw size={12} /></button>
         </div>
       </div>
 
       <div className="divide-y divide-white/5 max-h-[600px] overflow-y-auto">
         {loadingTasks ? (
-          <div className="py-8 text-center text-slate-600 text-xs font-mono">Loading tasks from HCS + contract...</div>
+          <div className="py-8 text-center text-slate-500 text-xs font-mono">Loading tasks from HCS + contract...</div>
         ) : tasks.length === 0 ? (
           <div className="py-10 text-center">
-            <Star size={24} className="text-slate-700 mx-auto mb-2" />
-            <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No on-chain tasks yet</div>
-            <div className="text-slate-700 text-[10px] mt-1">Tasks created via createTask() will appear here</div>
+            <Star size={24} className="text-slate-600 mx-auto mb-2" />
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No on-chain tasks yet</div>
+            <div className="text-slate-600 text-[12px] mt-1">Tasks created via createTask() will appear here</div>
           </div>
         ) : tasks.map((task, ti) => {
           const onChainId = task.onChainTaskId ?? null;
@@ -238,19 +252,19 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] font-black text-neon-cyan border border-neon-cyan/30 bg-neon-cyan/5 px-2 py-0.5 rounded uppercase tracking-widest">{task.taskType || 'TASK'}</span>
-                    <span className="text-[9px] text-slate-600 font-mono">Subnet {task.subnetId ?? 0}</span>
+                    <span className="text-[11px] font-black text-neon-cyan border border-neon-cyan/30 bg-neon-cyan/5 px-2 py-0.5 rounded uppercase tracking-widest">{task.taskType || 'TASK'}</span>
+                    <span className="text-[11px] text-slate-500 font-mono">Subnet {task.subnetId ?? 0}</span>
                     {onChainId
-                      ? <span className="text-[9px] text-neon-purple font-mono">On-chain #{onChainId}</span>
-                      : <span className="text-[9px] text-yellow-400/70 font-mono border border-yellow-400/20 px-1.5 py-0.5 rounded">HCS-only</span>
+                      ? <span className="text-[11px] text-neon-purple font-mono">On-chain #{onChainId}</span>
+                      : <span className="text-[11px] text-yellow-400/70 font-mono border border-yellow-400/20 px-1.5 py-0.5 rounded">HCS-only</span>
                     }
-                    {task.sequenceNumber && <span className="text-[9px] text-slate-600 font-mono">Seq #{task.sequenceNumber}</span>}
+                    {task.sequenceNumber && <span className="text-[11px] text-slate-500 font-mono">Seq #{task.sequenceNumber}</span>}
                   </div>
                   <div className="text-xs text-slate-300 line-clamp-1 font-mono">{task.prompt || task.taskHash || task.taskId}</div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-neon-green font-black text-sm">{Number(task.rewardAmount ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })} MDT</div>
-                  <div className="text-[9px] text-slate-500">{isHcsOnly ? 'HCS payment' : `${subs.length} submission${subs.length !== 1 ? 's' : ''}`}</div>
+                  <div className="text-[11px] text-slate-400">{isHcsOnly ? 'HCS payment' : `${subs.length} submission${subs.length !== 1 ? 's' : ''}`}</div>
                 </div>
               </div>
 
@@ -260,12 +274,12 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                 const doneEntry = done[key];
                 return doneEntry ? (
                   <div className="space-y-1 pl-2">
-                    <div className="flex items-center gap-2 text-neon-green text-[10px] font-bold">
+                    <div className="flex items-center gap-2 text-neon-green text-[12px] font-bold">
                       <CheckCircle size={10} /> Score recorded via HCS
                     </div>
                     {doneEntry.hcsTx && hashscanUrl(doneEntry.hcsTx) && (
                       <a href={hashscanUrl(doneEntry.hcsTx)} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-neon-cyan text-[10px] hover:underline ml-4">
+                        className="flex items-center gap-1 text-neon-cyan text-[12px] hover:underline ml-4">
                         <ExternalLink size={9} /> HCS Score Message
                       </a>
                     )}
@@ -276,39 +290,39 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                     <div className="grid grid-cols-2 gap-2">
                       {METRIC_KEYS.map(mk => (
                         <div key={mk}>
-                          <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1 capitalize">{mk} (0-100)</label>
+                          <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1 capitalize">{mk} (0-100)</label>
                           <input type="number" min="0" max="100" placeholder="0-100" value={metrics[`${key}_${mk}`] || ''}
-                            onChange={e => setMetrics(m => ({ ...m, [`${key}_${mk}`]: e.target.value }))}
+                            onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setMetrics(m => ({ ...m, [`${key}_${mk}`]: e.target.value }))}
                             className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white font-mono text-xs focus:border-neon-cyan/40 outline-none" />
                         </div>
                       ))}
                     </div>
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1">Overall Score (0–10000)</label>
+                        <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1">Overall Score (0–10000)</label>
                         <input type="number" min="0" max="10000" placeholder="0–10000" value={scores[key] || ''}
-                          onChange={e => setScores(sc => ({ ...sc, [key]: e.target.value }))}
+                          onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setScores(sc => ({ ...sc, [key]: e.target.value }))}
                           className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-neon-cyan/40 outline-none" />
                       </div>
                       <div className="w-24">
-                        <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1">Confidence</label>
+                        <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1">Confidence</label>
                         <input type="number" min="0" max="1" step="0.01" placeholder="0-1" value={confidence[key] || ''}
-                          onChange={e => setConfidence(c => ({ ...c, [key]: e.target.value }))}
+                          onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setConfidence(c => ({ ...c, [key]: e.target.value }))}
                           className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-white font-mono text-xs focus:border-neon-cyan/40 outline-none" />
                       </div>
                       <button onClick={() => scoreSubmission(task, 0)} disabled={submitting[key]}
-                        className="self-end px-4 py-2 bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/40 text-neon-cyan font-black text-[10px] uppercase tracking-widest rounded-lg transition-all disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap">
+                        className="self-end px-4 py-2 bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/40 text-neon-cyan font-black text-[12px] uppercase tracking-widest rounded-lg transition-all disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap">
                         <Star size={10} /> {submitting[key] ? 'Scoring...' : 'Score (HCS)'}
                       </button>
                     </div>
-                    {errors[key] && <div className="text-[10px] text-red-400 font-mono">✗ {errors[key]}</div>}
+                    {errors[key] && <div className="text-[12px] text-red-400 font-mono">✗ {errors[key]}</div>}
                   </div>
                 );
               })() : null}
 
               {/* On-chain submissions */}
               {!isHcsOnly && (subs.length === 0 ? (
-                <div className="text-[10px] text-slate-600 font-mono pl-2">No submissions yet</div>
+                <div className="text-[12px] text-slate-500 font-mono pl-2">No submissions yet</div>
               ) : subs.map((sub, si) => {
                 const key = `${onChainId}_${si}`;
                 const doneEntry = done[key];
@@ -316,20 +330,20 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                   <div key={si} className={`p-3 rounded-xl border space-y-2 ${sub.validated ? 'bg-neon-green/5 border-neon-green/20' : 'bg-white/[0.02] border-white/10'}`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-[9px] text-slate-500 font-mono">Miner: {sub.miner.slice(0, 10)}...{sub.miner.slice(-6)}</div>
-                        <div className="text-[9px] text-slate-600 font-mono mt-0.5">Hash: {sub.resultHash.slice(0, 20)}... · {sub.validationCount} validations</div>
+                        <div className="text-[11px] text-slate-400 font-mono">Miner: {sub.miner.slice(0, 10)}...{sub.miner.slice(-6)}</div>
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">Hash: {sub.resultHash.slice(0, 20)}... · {sub.validationCount} validations</div>
                       </div>
                       {sub.validated && (
                         <div className="text-right">
                           <div className="text-neon-green font-black text-sm">{(sub.score / 100).toFixed(0)}%</div>
-                          <div className="text-[9px] text-neon-green">Consensus</div>
+                          <div className="text-[11px] text-neon-green">Consensus</div>
                         </div>
                       )}
                     </div>
-                    {!sub.validated && (
+                    {!sub.validated && !scoredByMe[key] && (
                       doneEntry ? (
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-neon-green text-[10px] font-bold">
+                          <div className="flex items-center gap-2 text-neon-green text-[12px] font-bold">
                             <CheckCircle size={10} /> Scored
                             {doneEntry.onChainTx && hashscanUrl(doneEntry.onChainTx) && (
                               <a href={hashscanUrl(doneEntry.onChainTx)} target="_blank" rel="noopener noreferrer"
@@ -337,14 +351,13 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                                 <ExternalLink size={9} /> On-chain TX
                               </a>
                             )}
+                            {(doneEntry.hcsTs || doneEntry.hcsTx) && (
+                              <a href={`https://hashscan.io/testnet/transaction/${doneEntry.hcsTs || doneEntry.hcsTx}`} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-neon-purple hover:underline ml-1">
+                                <ExternalLink size={9} /> HCS Seq #{doneEntry.hcsSeq}
+                              </a>
+                            )}
                           </div>
-                          {doneEntry.hcsTx && hashscanUrl(doneEntry.hcsTx) && (
-                            <a href={hashscanUrl(doneEntry.hcsTx)} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-neon-purple text-[10px] hover:underline ml-4">
-                              <ExternalLink size={9} /> HCS Score Message
-                              {doneEntry.hcsSeq && <span className="text-slate-500 ml-1">Seq #{doneEntry.hcsSeq}</span>}
-                            </a>
-                          )}
                         </div>
                       ) : (
                         <div className="space-y-2">
@@ -352,35 +365,35 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                           <div className="grid grid-cols-2 gap-2">
                             {METRIC_KEYS.map(mk => (
                               <div key={mk}>
-                                <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1 capitalize">{mk} (0-100)</label>
+                                <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1 capitalize">{mk} (0-100)</label>
                                 <input type="number" min="0" max="100" placeholder="0-100" value={metrics[`${key}_${mk}`] || ''}
-                                  onChange={e => setMetrics(m => ({ ...m, [`${key}_${mk}`]: e.target.value }))}
+                                  onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setMetrics(m => ({ ...m, [`${key}_${mk}`]: e.target.value }))}
                                   className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-1.5 text-white font-mono text-xs focus:border-neon-cyan/40 outline-none" />
                               </div>
                             ))}
                           </div>
                           <div className="flex gap-2">
                             <div className="flex-1">
-                              <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1">Overall Score (0–10000)</label>
+                              <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1">Overall Score (0–10000)</label>
                               <input type="number" min="0" max="10000" placeholder="0–10000" value={scores[key] || ''}
-                                onChange={e => setScores(sc => ({ ...sc, [key]: e.target.value }))}
+                                onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setScores(sc => ({ ...sc, [key]: e.target.value }))}
                                 className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-neon-cyan/40 outline-none" />
                             </div>
                             <div className="w-24">
-                              <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1">Confidence</label>
+                              <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1">Confidence</label>
                               <input type="number" min="0" max="1" step="0.01" placeholder="0-1" value={confidence[key] || ''}
-                                onChange={e => setConfidence(c => ({ ...c, [key]: e.target.value }))}
+                                onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setConfidence(c => ({ ...c, [key]: e.target.value }))}
                                 className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-white font-mono text-xs focus:border-neon-cyan/40 outline-none" />
                             </div>
                             <button onClick={() => scoreSubmission(task, si)} disabled={submitting[key]}
-                              className="self-end px-4 py-2 bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/40 text-neon-cyan font-black text-[10px] uppercase tracking-widest rounded-lg transition-all disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap">
+                              className="self-end px-4 py-2 bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/40 text-neon-cyan font-black text-[12px] uppercase tracking-widest rounded-lg transition-all disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap">
                               <Star size={10} /> {submitting[key] ? 'Scoring...' : 'Score'}
                             </button>
                           </div>
                         </div>
                       )
                     )}
-                    {errors[key] && <div className="text-[10px] text-red-400 font-mono">✗ {errors[key]}</div>}
+                    {errors[key] && <div className="text-[12px] text-red-400 font-mono">✗ {errors[key]}</div>}
                   </div>
                 );
               }))}
@@ -390,7 +403,7 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                 <div className="pt-1">
                   {done[finalizeKey] ? (
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-neon-green text-[10px] font-bold">
+                      <div className="flex items-center gap-2 text-neon-green text-[12px] font-bold">
                         <Gavel size={10} /> Task Finalized
                         {done[finalizeKey].onChainTx && hashscanUrl(done[finalizeKey].onChainTx) && (
                           <a href={hashscanUrl(done[finalizeKey].onChainTx)} target="_blank" rel="noopener noreferrer"
@@ -402,18 +415,18 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
                     </div>
                   ) : (
                     <button onClick={() => finalizeTask(task)} disabled={submitting[finalizeKey]}
-                      className="w-full py-2 bg-neon-purple/10 hover:bg-neon-purple/20 border border-neon-purple/40 text-neon-purple font-black text-[10px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+                      className="w-full py-2 bg-neon-purple/10 hover:bg-neon-purple/20 border border-neon-purple/40 text-neon-purple font-black text-[12px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
                       <Gavel size={10} /> {submitting[finalizeKey] ? 'Finalizing...' : 'Finalize Task & Distribute Rewards'}
                     </button>
                   )}
-                  {errors[finalizeKey] && <div className="text-[10px] text-red-400 font-mono mt-1">✗ {errors[finalizeKey]}</div>}
+                  {errors[finalizeKey] && <div className="text-[12px] text-red-400 font-mono mt-1">✗ {errors[finalizeKey]}</div>}
                 </div>
               )}
             </div>
           );
         })}
       </div>
-      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[10px] text-slate-600 font-mono">
+      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[12px] text-slate-500 font-mono">
         Score 0–10000 · 10000 = perfect · Consensus reached after min validators score · finalizeTask() distributes rewards
       </div>
     </div>
@@ -466,7 +479,7 @@ function ValidatorReputationPanel({ evmAddress }: { evmAddress: string }) {
   const repPct = rep ? (rep.reputationScore / 100).toFixed(1) : '—';
   const repColor = rep
     ? rep.reputationScore >= 8000 ? 'text-neon-green' : rep.reputationScore >= 5000 ? 'text-neon-cyan' : 'text-yellow-400'
-    : 'text-slate-500';
+    : 'text-slate-400';
   const repBarColor = rep
     ? rep.reputationScore >= 8000 ? 'bg-neon-green' : rep.reputationScore >= 5000 ? 'bg-neon-cyan' : 'bg-yellow-400'
     : 'bg-slate-600';
@@ -480,30 +493,30 @@ function ValidatorReputationPanel({ evmAddress }: { evmAddress: string }) {
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">On-Chain Reputation</div>
-            <div className="text-[9px] text-slate-500 font-mono">SubnetRegistryV2.getValidatorReputation()</div>
+            <div className="text-[11px] text-slate-400 font-mono">SubnetRegistryV2.getValidatorReputation()</div>
           </div>
         </div>
-        <button onClick={load} className="text-slate-600 hover:text-neon-cyan transition-colors">
+        <button onClick={load} className="text-slate-500 hover:text-neon-cyan transition-colors">
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
       <div className="p-5 space-y-4">
         {loading ? (
-          <div className="text-center text-slate-600 text-xs font-mono py-4">Loading from chain...</div>
+          <div className="text-center text-slate-500 text-xs font-mono py-4">Loading from chain...</div>
         ) : (
           <>
             {/* Reputation score bar */}
             <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Reputation Score</span>
+                <span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Reputation Score</span>
                 <span className={`text-2xl font-black font-mono ${repColor}`}>{repPct}%</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all ${repBarColor}`}
                   style={{ width: `${rep ? rep.reputationScore / 100 : 0}%` }} />
               </div>
-              <div className="text-[9px] text-slate-600 font-mono">
+              <div className="text-[11px] text-slate-500 font-mono">
                 {rep?.reputationScore === 0 && rep?.totalValidations === 0
                   ? 'No validations yet — score starts at 50% after first validation'
                   : rep?.reputationScore === 5000 && rep?.totalValidations === 0
@@ -521,7 +534,7 @@ function ValidatorReputationPanel({ evmAddress }: { evmAddress: string }) {
                 { label: 'Pending Withdrawal', val: `${(rep?.pendingWithdrawal ?? 0).toFixed(4)} MDT`, color: 'text-neon-pink' },
               ].map(s => (
                 <div key={s.label} className="p-3 rounded-xl bg-black/30 border border-white/5">
-                  <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">{s.label}</div>
+                  <div className="text-[11px] text-slate-400 uppercase tracking-widest mb-1">{s.label}</div>
                   <div className={`font-black text-sm ${s.color}`}>{s.val}</div>
                 </div>
               ))}
@@ -529,19 +542,19 @@ function ValidatorReputationPanel({ evmAddress }: { evmAddress: string }) {
 
             {/* How reputation works */}
             <div className="p-3 bg-neon-purple/5 border border-neon-purple/20 rounded-xl space-y-1.5">
-              <div className="text-[9px] text-neon-purple font-black uppercase tracking-widest flex items-center gap-1.5">
+              <div className="text-[11px] text-neon-purple font-black uppercase tracking-widest flex items-center gap-1.5">
                 <BarChart2 size={9} /> How Rewards Are Weighted
               </div>
-              <div className="text-[9px] text-slate-400 space-y-0.5 font-mono">
+              <div className="text-[11px] text-slate-400 space-y-0.5 font-mono">
                 <div>share = <span className="text-white">deviation_weight</span> × <span className="text-neon-cyan">reputation</span> × <span className="text-neon-green">stake_amount</span></div>
-                <div className="text-slate-500 mt-1">· Score within 20% of median → weight 100 (accurate)</div>
-                <div className="text-slate-500">· Score within 50% of median → weight 50 (partial)</div>
-                <div className="text-slate-500">· Score outside 50% → weight 0 (penalized)</div>
+                <div className="text-slate-400 mt-1">· Score within 20% of median → weight 100 (accurate)</div>
+                <div className="text-slate-400">· Score within 50% of median → weight 50 (partial)</div>
+                <div className="text-slate-400">· Score outside 50% → weight 0 (penalized)</div>
               </div>
             </div>
 
             {rep?.lastActiveAt && rep.lastActiveAt > 0 && (
-              <div className="text-[9px] text-slate-600 font-mono">
+              <div className="text-[11px] text-slate-500 font-mono">
                 Last active: {toUTC7(rep.lastActiveAt)}
               </div>
             )}
@@ -560,7 +573,7 @@ function CompletedTasksPanel({ evmAddress }: { evmAddress: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/hcs/tasks');
+      const res = await fetch('/api/hcs/tasks?role=validator');
       const json = await res.json();
       if (!json.success) return;
       const all: any[] = json.data || [];
@@ -592,7 +605,7 @@ function CompletedTasksPanel({ evmAddress }: { evmAddress: string }) {
   useEffect(() => { load(); }, [load]);
 
   const STATUS_LABELS = ['Created', 'In Progress', 'Pending Review', 'Completed', 'Cancelled', 'Expired'];
-  const STATUS_COLORS = ['text-slate-400', 'text-neon-cyan', 'text-yellow-400', 'text-neon-green', 'text-red-400', 'text-slate-600'];
+  const STATUS_COLORS = ['text-slate-400', 'text-neon-cyan', 'text-yellow-400', 'text-neon-green', 'text-red-400', 'text-slate-500'];
 
   return (
     <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden">
@@ -603,20 +616,20 @@ function CompletedTasksPanel({ evmAddress }: { evmAddress: string }) {
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Task Results</div>
-            <div className="text-[9px] text-slate-500 font-mono">On-chain status · winner · score</div>
+            <div className="text-[11px] text-slate-400 font-mono">On-chain status · winner · score</div>
           </div>
         </div>
-        <button onClick={load} className="text-slate-600 hover:text-neon-cyan transition-colors">
+        <button onClick={load} className="text-slate-500 hover:text-neon-cyan transition-colors">
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
       <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
         {loading ? (
-          <div className="py-8 text-center text-slate-600 text-xs font-mono">Loading task results...</div>
+          <div className="py-8 text-center text-slate-500 text-xs font-mono">Loading task results...</div>
         ) : tasks.length === 0 ? (
           <div className="py-10 text-center">
-            <Zap size={24} className="text-slate-700 mx-auto mb-2" />
-            <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No on-chain tasks yet</div>
+            <Zap size={24} className="text-slate-600 mx-auto mb-2" />
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No on-chain tasks yet</div>
           </div>
         ) : tasks.map((t, i) => {
           const statusLabel = STATUS_LABELS[t.status ?? 0] ?? 'Unknown';
@@ -628,28 +641,28 @@ function CompletedTasksPanel({ evmAddress }: { evmAddress: string }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCompleted ? 'text-neon-green border-neon-green/30 bg-neon-green/5' : 'text-slate-400 border-white/10 bg-white/[0.02]'}`}>
+                    <span className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCompleted ? 'text-neon-green border-neon-green/30 bg-neon-green/5' : 'text-slate-400 border-white/10 bg-white/[0.02]'}`}>
                       {statusLabel}
                     </span>
-                    <span className="text-[9px] text-neon-purple font-mono">#{t.onChainTaskId}</span>
-                    <span className="text-[9px] text-slate-600 font-mono">Subnet {t.subnetId ?? 0}</span>
+                    <span className="text-[11px] text-neon-purple font-mono">#{t.onChainTaskId}</span>
+                    <span className="text-[11px] text-slate-500 font-mono">Subnet {t.subnetId ?? 0}</span>
                   </div>
                   <div className="text-xs text-slate-300 line-clamp-1 font-mono">{t.prompt || t.taskHash || t.taskId}</div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-neon-green font-black text-sm">{(t.rewardAmount ?? 0).toLocaleString()} MDT</div>
-                  {scorePct && <div className="text-[9px] text-neon-cyan font-mono">Score: {scorePct}%</div>}
+                  {scorePct && <div className="text-[11px] text-neon-cyan font-mono">Score: {scorePct}%</div>}
                 </div>
               </div>
               {isCompleted && t.winningMiner && t.winningMiner !== '0x0000000000000000000000000000000000000000' && (
                 <div className="flex flex-col gap-2 p-3 bg-neon-green/5 rounded-xl border border-neon-green/20">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[9px] font-mono">
+                    <div className="flex items-center gap-2 text-[11px] font-mono">
                       <CheckCircle size={9} className="text-neon-green flex-shrink-0" />
                       <span className="text-slate-400">Winner:</span>
                       <span className="text-white">{t.winningMiner.slice(0, 10)}...{t.winningMiner.slice(-6)}</span>
                     </div>
-                    <div className="text-[10px] font-black text-neon-green uppercase tracking-widest">
+                    <div className="text-[12px] font-black text-neon-green uppercase tracking-widest">
                       Final Score: {scorePct}%
                     </div>
                   </div>
@@ -658,13 +671,13 @@ function CompletedTasksPanel({ evmAddress }: { evmAddress: string }) {
                   <div className="flex items-center gap-3 pt-1 border-t border-white/5">
                     {t.hcs_sequence && (
                       <a href={hashscanUrl(t.hcs_sequence, true, '0.0.8198584')} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-neon-cyan text-[9px] font-bold hover:underline">
+                        className="flex items-center gap-1 text-neon-cyan text-[11px] font-bold hover:underline">
                         <ExternalLink size={9} /> HCS Score Proof
                       </a>
                     )}
                     {t.hcs_transaction_id && (
                       <a href={hashscanUrl(t.hcs_transaction_id)} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-neon-purple text-[9px] font-bold hover:underline">
+                        className="flex items-center gap-1 text-neon-purple text-[11px] font-bold hover:underline">
                         <Shield size={9} /> Verify Result TX
                       </a>
                     )}
@@ -675,7 +688,7 @@ function CompletedTasksPanel({ evmAddress }: { evmAddress: string }) {
           );
         })}
       </div>
-      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[9px] text-slate-600 font-mono">
+      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[11px] text-slate-500 font-mono">
         Score = median of validator scores · Rewards auto-distributed on finalizeTask()
       </div>
     </div>
@@ -765,8 +778,8 @@ export default function ValidatorDashboard({ onBack }: Props) {
     return (
       <div className="flex justify-center items-center py-24">
         <div className="text-center space-y-3">
-          <Shield size={40} className="text-slate-700 mx-auto" />
-          <div className="text-slate-500 font-bold uppercase tracking-widest text-sm">Connect wallet to view validator dashboard</div>
+          <Shield size={40} className="text-slate-600 mx-auto" />
+          <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Connect wallet to view validator dashboard</div>
         </div>
       </div>
     );
@@ -787,7 +800,7 @@ export default function ValidatorDashboard({ onBack }: Props) {
   return (
     <div className="flex justify-center py-8 px-4 lg:px-12 w-full animate-fade-in-up">
       <div className="w-full max-w-[1400px] flex flex-col gap-8">
-        <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-500 uppercase">
+        <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-400 uppercase">
           <button className="hover:text-neon-purple transition-colors" onClick={onBack}>HOME</button>
           <ChevronRight size={12} />
           <span className="text-neon-purple">VALIDATOR DASHBOARD</span>
@@ -800,13 +813,13 @@ export default function ValidatorDashboard({ onBack }: Props) {
               </div>
               <div>
                 <h1 className="text-3xl font-black text-white uppercase tracking-tighter font-display">Validator <span className="text-neon-purple">Dashboard</span></h1>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">{accountId}</div>
+                <div className="text-[12px] text-slate-400 font-mono mt-0.5">{accountId}</div>
               </div>
             </div>
             {isStaked ? (
-              <div className="flex items-center gap-2 text-[10px] font-bold text-neon-green"><CheckCircle size={12} /><span>On-chain staked · {stakeInfo.amount.toLocaleString()} MDT · Validator</span></div>
+              <div className="flex items-center gap-2 text-[12px] font-bold text-neon-green"><CheckCircle size={12} /><span>On-chain staked · {stakeInfo.amount.toLocaleString()} MDT · Validator</span></div>
             ) : (
-              <div className="flex items-center gap-2 text-[10px] font-bold text-yellow-400"><AlertCircle size={12} /><span>Pending subnet owner approval</span></div>
+              <div className="flex items-center gap-2 text-[12px] font-bold text-yellow-400"><AlertCircle size={12} /><span>Pending subnet owner approval</span></div>
             )}
           </div>
           <button onClick={() => { setLoading(true); loadData(); }} className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-all">
@@ -822,11 +835,11 @@ export default function ValidatorDashboard({ onBack }: Props) {
           ].map((s, i) => (
             <div key={i} className="glass-panel p-5 rounded-xl border border-white/5">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{s.label}</span>
+                <span className="text-[11px] text-slate-400 uppercase font-bold tracking-widest">{s.label}</span>
                 <span className={`material-symbols-outlined text-lg opacity-30 ${s.color}`}>{s.icon}</span>
               </div>
               <div className="font-black font-display text-xl text-white tracking-tight">{s.val}</div>
-              <div className="text-[9px] text-slate-600 mt-1">{s.sub}</div>
+              <div className="text-[11px] text-slate-500 mt-1">{s.sub}</div>
             </div>
           ))}
         </div>
@@ -838,7 +851,7 @@ export default function ValidatorDashboard({ onBack }: Props) {
               <div className="glass-panel p-5 border border-yellow-400/30 space-y-2">
                 <div className="flex items-center gap-2 text-yellow-400 font-black text-sm uppercase tracking-widest"><AlertCircle size={16} />Pending Subnet Owner Approval</div>
                 <div className="text-[11px] text-slate-400 leading-relaxed">You have staked MDT but are not yet activated. A subnet owner must call <code className="text-white">addValidator(subnetId, {evmAddress})</code> on SubnetRegistryV2.</div>
-                <div className="text-[10px] text-slate-500 font-mono">Your EVM address: <span className="text-white">{evmAddress}</span></div>
+                <div className="text-[12px] text-slate-400 font-mono">Your EVM address: <span className="text-white">{evmAddress}</span></div>
               </div>
             )}
             <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden">
@@ -847,17 +860,17 @@ export default function ValidatorDashboard({ onBack }: Props) {
                   <div className="w-8 h-8 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center"><TrendingUp size={14} className="text-neon-cyan" /></div>
                   <div>
                     <div className="text-sm font-black text-white uppercase tracking-wider">Validation History</div>
-                    <div className="text-[9px] text-slate-500 uppercase tracking-widest">HCS Topic 0.0.8198584</div>
+                    <div className="text-[11px] text-slate-400 uppercase tracking-widest">HCS Topic 0.0.8198584</div>
                   </div>
                 </div>
-                {avgScore !== null && <div className="text-right"><div className="text-neon-cyan font-black text-lg">{avgScore.toFixed(1)}%</div><div className="text-[9px] text-slate-500 uppercase tracking-widest">Avg Accuracy</div></div>}
+                {avgScore !== null && <div className="text-right"><div className="text-neon-cyan font-black text-lg">{avgScore.toFixed(1)}%</div><div className="text-[11px] text-slate-400 uppercase tracking-widest">Avg Accuracy</div></div>}
               </div>
               <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
-                {loading ? <div className="py-8 text-center text-slate-600 text-xs font-mono">Loading...</div>
+                {loading ? <div className="py-8 text-center text-slate-500 text-xs font-mono">Loading...</div>
                   : scores.length === 0 ? (
                     <div className="py-10 text-center">
-                      <TrendingUp size={24} className="text-slate-700 mx-auto mb-2" />
-                      <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No validations yet</div>
+                      <TrendingUp size={24} className="text-slate-600 mx-auto mb-2" />
+                      <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No validations yet</div>
                     </div>
                   ) : scores.map((s: any, i: number) => {
                     const raw = Number(s.score ?? 0);
@@ -870,8 +883,8 @@ export default function ValidatorDashboard({ onBack }: Props) {
                       <div key={i} className="px-6 py-3 space-y-2 hover:bg-white/[0.02] transition-colors">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="text-[10px] font-mono text-white">Task: {String(s.taskId || '').substring(0, 20)}...</div>
-                            <div className="text-[9px] text-slate-600 mt-0.5">
+                            <div className="text-[12px] font-mono text-white">Task: {String(s.taskId || '').substring(0, 20)}...</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
                               Miner: {s.minerId || s.miner_id || '—'}
                               {s.confidence != null && <span className="ml-2">· conf {(Number(s.confidence) * 100).toFixed(0)}%</span>}
                               {s.consensusTimestamp && <span className="ml-2">· {toUTC7(s.consensusTimestamp)}</span>}
@@ -879,13 +892,13 @@ export default function ValidatorDashboard({ onBack }: Props) {
                           </div>
                           <div className="text-right">
                             <div className={`font-black text-lg ${sc}`}>{score100.toFixed(1)}%</div>
-                            {s.consensusTimestamp && (
+                            {s.consensusTimestamp ? (
                               <a href={`https://hashscan.io/testnet/transaction/${s.consensusTimestamp}`}
                                 target="_blank" rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-neon-cyan/60 hover:text-neon-cyan text-[9px] justify-end mt-0.5">
-                                <ExternalLink size={8} /> HCS
+                                className="flex items-center gap-1 text-neon-cyan/70 hover:text-neon-cyan text-[11px] justify-end mt-0.5">
+                                <ExternalLink size={8} /> HashScan
                               </a>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                         <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
@@ -897,8 +910,8 @@ export default function ValidatorDashboard({ onBack }: Props) {
                               const vp = Number(v ?? 0); const vPct = vp > 1 ? vp : vp * 100;
                               return (
                                 <div key={k} className="flex items-center justify-between">
-                                  <span className="text-[9px] text-slate-600 capitalize">{k}</span>
-                                  <span className="text-[9px] text-slate-400 font-mono">{vPct.toFixed(0)}%</span>
+                                  <span className="text-[11px] text-slate-500 capitalize">{k}</span>
+                                  <span className="text-[11px] text-slate-400 font-mono">{vPct.toFixed(0)}%</span>
                                 </div>
                               );
                             })}
@@ -915,13 +928,13 @@ export default function ValidatorDashboard({ onBack }: Props) {
             <div className="glass-panel rounded-2xl border border-neon-green/30 overflow-hidden">
               <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/20 flex items-center justify-center"><Gift size={14} className="text-neon-green" /></div>
-                <div><div className="text-sm font-black text-white uppercase tracking-wider">Earnings</div><div className="text-[9px] text-slate-500 font-mono">SubnetRegistryV2.pendingWithdrawals</div></div>
+                <div><div className="text-sm font-black text-white uppercase tracking-wider">Earnings</div><div className="text-[11px] text-slate-400 font-mono">SubnetRegistryV2.pendingWithdrawals</div></div>
               </div>
               <div className="p-5 space-y-4">
                 <div className={`p-4 rounded-xl border ${pendingEarnings > 0 ? 'bg-neon-green/5 border-neon-green/20' : 'bg-white/[0.02] border-white/10'}`}>
-                  <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Pending Withdrawal</div>
-                  <div className={`text-2xl font-black font-mono ${pendingEarnings > 0 ? 'text-neon-green' : 'text-slate-600'}`}>{pendingEarnings.toFixed(4)} MDT</div>
-                  <div className="text-[9px] text-slate-600 mt-1">8% of finalized task rewards</div>
+                  <div className="text-[11px] text-slate-400 uppercase tracking-widest font-bold mb-1">Pending Withdrawal</div>
+                  <div className={`text-2xl font-black font-mono ${pendingEarnings > 0 ? 'text-neon-green' : 'text-slate-500'}`}>{pendingEarnings.toFixed(4)} MDT</div>
+                  <div className="text-[11px] text-slate-500 mt-1">8% of finalized task rewards</div>
                 </div>
                 {pendingEarnings > 0 && (
                   <button onClick={withdrawEarnings} disabled={!!txStep && !txStep.startsWith('✓')}
@@ -929,38 +942,38 @@ export default function ValidatorDashboard({ onBack }: Props) {
                     <Gift size={12} /> Withdraw {pendingEarnings.toFixed(4)} MDT
                   </button>
                 )}
-                {txStep && <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[10px] font-mono text-neon-cyan">{txStep}</div>}
-                {txError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-mono text-red-400">✗ {txError}</div>}
-                {txHash && hashscanUrl(txHash) && <a href={hashscanUrl(txHash)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline"><ExternalLink size={10} /> View TX on HashScan</a>}
+                {txStep && <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[12px] font-mono text-neon-cyan">{txStep}</div>}
+                {txError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[12px] font-mono text-red-400">✗ {txError}</div>}
+                {txHash && hashscanUrl(txHash) && <a href={hashscanUrl(txHash)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline"><ExternalLink size={10} /> View TX on HashScan</a>}
               </div>
             </div>
             <div className="glass-panel rounded-2xl border border-neon-purple/30 overflow-hidden">
               <div className="px-6 py-4 border-b border-white/5 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center"><Shield size={14} className="text-neon-purple" /></div>
-                <div><div className="text-sm font-black text-white uppercase tracking-wider">Stake Status</div><div className="text-[9px] text-slate-500 font-mono">StakingVaultV2</div></div>
+                <div><div className="text-sm font-black text-white uppercase tracking-wider">Stake Status</div><div className="text-[11px] text-slate-400 font-mono">StakingVaultV2</div></div>
               </div>
               <div className="p-5 space-y-3">
                 {stakeInfo ? (
                   <>
                     <div className={`p-4 rounded-xl border space-y-2 ${isStaked ? 'bg-neon-green/5 border-neon-green/20' : hasUnstake ? 'bg-yellow-400/5 border-yellow-400/20' : 'bg-white/[0.02] border-white/10'}`}>
-                      <div className="flex justify-between"><span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Status</span><span className={`text-xs font-black ${isStaked ? 'text-neon-green' : hasUnstake ? 'text-yellow-400' : 'text-slate-500'}`}>{isStaked ? 'ACTIVE · VALIDATOR' : hasUnstake ? 'UNSTAKING' : 'INACTIVE'}</span></div>
-                      <div className="flex justify-between"><span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Amount</span><span className="text-white font-black">{stakeInfo.amount.toLocaleString()} MDT</span></div>
-                      {stakeInfo.stakedAt > 0 && <div className="flex justify-between"><span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Since</span><span className="text-slate-300 text-[10px] font-mono">{toUTC7(stakeInfo.stakedAt)}</span></div>}
+                      <div className="flex justify-between"><span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Status</span><span className={`text-xs font-black ${isStaked ? 'text-neon-green' : hasUnstake ? 'text-yellow-400' : 'text-slate-400'}`}>{isStaked ? 'ACTIVE · VALIDATOR' : hasUnstake ? 'UNSTAKING' : 'INACTIVE'}</span></div>
+                      <div className="flex justify-between"><span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Amount</span><span className="text-white font-black">{stakeInfo.amount.toLocaleString()} MDT</span></div>
+                      {stakeInfo.stakedAt > 0 && <div className="flex justify-between"><span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Since</span><span className="text-slate-300 text-[12px] font-mono">{toUTC7(stakeInfo.stakedAt)}</span></div>}
                       {hasUnstake && (
                         <div className="mt-2 p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
-                          <div className="flex justify-between items-center"><span className="text-[9px] text-yellow-400 uppercase tracking-widest font-bold">Unlock In</span><span className={`text-[10px] font-black ${canWithdrawStake ? 'text-neon-green' : 'text-yellow-400'}`}>{unstakeCountdown(stakeInfo.unstakeRequestedAt)}</span></div>
+                          <div className="flex justify-between items-center"><span className="text-[11px] text-yellow-400 uppercase tracking-widest font-bold">Unlock In</span><span className={`text-[12px] font-black ${canWithdrawStake ? 'text-neon-green' : 'text-yellow-400'}`}>{unstakeCountdown(stakeInfo.unstakeRequestedAt)}</span></div>
                           {!canWithdrawStake && (() => { const pct = Math.min(100, Math.max(0, ((Math.floor(Date.now() / 1000) - stakeInfo.unstakeRequestedAt) / COOLDOWN) * 100)); return <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-2"><div className="h-full bg-yellow-400 rounded-full" style={{ width: `${pct}%` }} /></div>; })()}
                         </div>
                       )}
                     </div>
                     {isStaked && !hasUnstake && (
                       <button onClick={requestUnstake} disabled={!!txStep && !txStep.startsWith('✓')}
-                        className="w-full py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400/60 hover:text-red-400 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+                        className="w-full py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400/60 hover:text-red-400 font-bold text-[12px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
                         <Unlock size={10} /> Request Unstake (7-day cooldown)
                       </button>
                     )}
                   </>
-                ) : <div className="text-slate-600 text-xs font-mono text-center py-4">Loading...</div>}
+                ) : <div className="text-slate-500 text-xs font-mono text-center py-4">Loading...</div>}
               </div>
             </div>
             <div className="glass-panel rounded-2xl p-6 border border-white/10 space-y-3">
@@ -973,8 +986,8 @@ export default function ValidatorDashboard({ onBack }: Props) {
                 { n: '5', label: 'Withdraw', desc: 'SubnetRegistryV2.withdrawEarnings()', done: false },
               ].map((s) => (
                 <div key={s.n} className={`flex items-start gap-3 p-3 rounded-xl border ${s.done ? 'bg-neon-green/5 border-neon-green/20' : 'bg-white/[0.02] border-white/5'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-black ${s.done ? 'bg-neon-green/20 text-neon-green border border-neon-green/40' : 'bg-neon-purple/10 text-neon-purple border border-neon-purple/30'}`}>{s.done ? '✓' : s.n}</div>
-                  <div><div className="text-[11px] font-bold text-white">{s.label}</div><div className="text-[9px] text-slate-600 font-mono mt-0.5">{s.desc}</div></div>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-black ${s.done ? 'bg-neon-green/20 text-neon-green border border-neon-green/40' : 'bg-neon-purple/10 text-neon-purple border border-neon-purple/30'}`}>{s.done ? '✓' : s.n}</div>
+                  <div><div className="text-[11px] font-bold text-white">{s.label}</div><div className="text-[11px] text-slate-500 font-mono mt-0.5">{s.desc}</div></div>
                 </div>
               ))}
             </div>

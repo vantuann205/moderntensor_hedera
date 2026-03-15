@@ -11,7 +11,7 @@
   --color-panel-dark: #0a0e17;
   --color-panel-border: #1f293a;
   --color-card-dark: #0a0c12;
-  --color-text-secondary: #cbd5e1;
+  --color-text-secondary: #e2e8f0; /* slate-200 for better contrast */
   --color-background-dark: #050b14;
   --color-surface-dark: #0f172a;
   --color-console-bg: #0a1120;
@@ -100,6 +100,10 @@ body {
 
 .neon-text {
   text-shadow: 0 0 5px rgba(0, 243, 255, 0.5), 0 0 10px rgba(0, 243, 255, 0.3);
+}
+
+.text-muted-label {
+  @apply text-slate-400 font-bold uppercase tracking-widest text-[11px];
 }
 
 .glass-card-hover {
@@ -224,17 +228,16 @@ body {
   animation: scan-input 2s linear infinite;
 }
 
-/* Hide number input arrows */
-.no-spinners::-webkit-outer-spin-button,
-.no-spinners::-webkit-inner-spin-button {
+/* Hide number input arrows globally */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-.no-spinners {
+input[type=number] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
-
 /* AI Neural Gradient Flow - Left to Right then Diagonal Rotating */
 .animate-gradient-flow {
   background: linear-gradient(135deg, 

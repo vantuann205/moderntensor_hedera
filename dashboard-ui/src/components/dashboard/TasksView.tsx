@@ -64,9 +64,9 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
   return (
     <div className="flex justify-center py-8 px-4 lg:px-12 relative z-10 w-full animate-fade-in-up">
         <div className="w-full max-w-[1600px] flex flex-col gap-8">
-            <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-500 uppercase">
+            <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-400 uppercase">
                 <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>HOME</button>
-                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                <span className="material-symbols-outlined text-[12px]">chevron_right</span>
                 <span className="text-neon-cyan">TASKS</span>
             </div>
 
@@ -130,7 +130,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                   { label: 'Avg Score', val: tasksWithStats.length > 0 ? (tasksWithStats.reduce((sum: number, t: any) => sum + t.avgScore, 0) / tasksWithStats.filter((t: any) => t.avgScore > 0).length).toFixed(1) : '0', icon: 'star', color: 'text-neon-purple', border: 'border-l-2 border-neon-purple' }
                 ].map((stat, i) => (
                   <div key={i} className={`glass-panel p-5 rounded-xl ${stat.border} relative overflow-hidden group`}>
-                      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
+                      <p className="text-slate-400 text-[12px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
                       <div className="flex items-end justify-between mt-1 z-10">
                           <p className="text-white text-3xl font-black font-display tracking-tighter">{stat.val}</p>
                           <span className={`material-symbols-outlined ${stat.color} text-2xl opacity-50`}>{stat.icon}</span>
@@ -153,9 +153,9 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
 
             {!loading && !error && filteredTasks.length === 0 && (
               <div className="glass-panel rounded-xl p-12 border border-white/10 text-center">
-                <span className="material-symbols-outlined text-6xl text-slate-600 mb-4">search_off</span>
+                <span className="material-symbols-outlined text-6xl text-slate-500 mb-4">search_off</span>
                 <div className="text-xl text-slate-400">No tasks found</div>
-                <div className="text-sm text-slate-500 mt-2">Tasks will appear here after submission</div>
+                <div className="text-sm text-slate-400 mt-2">Tasks will appear here after submission</div>
               </div>
             )}
 
@@ -165,7 +165,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                       <div className="glass-panel rounded-xl overflow-hidden border border-white/5 font-body">
                           <div className="overflow-x-auto">
                               <table className="w-full text-left border-collapse">
-                                  <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                                  <thead className="bg-white/5 border-b border-white/10 text-[12px] uppercase tracking-widest text-slate-400 font-bold">
                                       <tr>
                                           <SortTh col="taskId" sort={sort} onToggle={toggle} className="px-4 py-4">Task ID</SortTh>
                                           <th className="px-4 py-4">Task Type</th>
@@ -188,9 +188,9 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                                                           <span className="material-symbols-outlined text-neon-pink text-sm">task</span>
                                                       </div>
                                                       <div className="flex flex-col min-w-0">
-                                                          <span className="font-bold text-white group-hover:text-neon-cyan transition-colors text-[10px] truncate max-w-[120px]">{task.taskId}</span>
+                                                          <span className="font-bold text-white group-hover:text-neon-cyan transition-colors text-[12px] truncate max-w-[120px]">{task.taskId}</span>
                                                           {task.consensusTimestamp ? (
-                                                            <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                                            <span className="text-[12px] text-slate-400 whitespace-nowrap">
                                                               Verify on{' '}
                                                               <a href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
                                                                 target="_blank" rel="noopener noreferrer"
@@ -199,13 +199,13 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                                                                 HashScan
                                                               </a>
                                                             </span>
-                                                          ) : <span className="text-[9px] text-slate-600 whitespace-nowrap">Recorded on HCS</span>}
+                                                          ) : <span className="text-[11px] text-slate-500 whitespace-nowrap">Recorded on HCS</span>}
                                                       </div>
                                                   </div>
                                               </td>
                                               {/* Task Type */}
                                               <td className="px-4 py-4">
-                                                  <span className="px-2 py-1 rounded text-[9px] bg-neon-purple/10 text-neon-purple border border-neon-purple/30 whitespace-nowrap">
+                                                  <span className="px-2 py-1 rounded text-[11px] bg-neon-purple/10 text-neon-purple border border-neon-purple/30 whitespace-nowrap">
                                                       {task.taskType?.replace(/_/g, ' ')}
                                                   </span>
                                               </td>
@@ -216,27 +216,27 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                                               {/* Reward */}
                                               <td className="px-4 py-4 text-right whitespace-nowrap">
                                                   <div className="font-bold text-neon-green text-xs">{(task.rewardAmount / 1e8).toFixed(2)}</div>
-                                                  <div className="text-[9px] text-slate-500">MDT</div>
+                                                  <div className="text-[11px] text-slate-400">MDT</div>
                                               </td>
                                               {/* Subnet */}
                                               <td className="px-4 py-4 text-center">
-                                                  <span className="px-2 py-1 rounded text-[9px] bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
+                                                  <span className="px-2 py-1 rounded text-[11px] bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
                                                       {task.subnetId ?? 0}
                                                   </span>
                                               </td>
                                               {/* Requester */}
                                               <td className="px-4 py-4">
-                                                  <span className="text-[10px] text-slate-400 font-mono">{task.requester || '—'}</span>
+                                                  <span className="text-[12px] text-slate-400 font-mono">{task.requester || '—'}</span>
                                               </td>
                                               {/* Deadline */}
                                               <td className="px-4 py-4 text-right">
-                                                  <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                                                  <span className="text-[12px] text-slate-400 whitespace-nowrap">
                                                       {task.deadline ? `${task.deadline}h` : '24h'}
                                                   </span>
                                               </td>
                                               {/* Timestamp */}
                                               <td className="px-4 py-4">
-                                                  <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                                  <span className="text-[12px] text-slate-400 whitespace-nowrap">
                                                       {task.consensusTimestamp
                                                           ? new Date(Number(task.consensusTimestamp.split('.')[0]) * 1000).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false })
                                                           : task.timestamp
@@ -246,7 +246,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                                               </td>
                                               {/* Status */}
                                               <td className="px-4 py-4 text-center">
-                                                  <span className={`px-2 py-1 rounded text-[9px] font-bold whitespace-nowrap ${
+                                                  <span className={`px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap ${
                                                       task.status === 'completed'
                                                           ? 'bg-green-500/10 text-green-400 border border-green-500/40'
                                                           : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/40'
@@ -338,7 +338,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                         >
                           View Task Topic on HashScan
                         </a>
-                        <div className="text-xs text-slate-500 mt-3 text-center">
+                        <div className="text-xs text-slate-400 mt-3 text-center">
                           All tasks are recorded on Hedera HCS
                         </div>
                       </div>

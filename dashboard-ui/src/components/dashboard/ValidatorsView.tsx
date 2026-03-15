@@ -12,7 +12,7 @@ interface ValidatorsViewProps {
 
 export default function ValidatorsView({ onBack, onSelectValidator }: ValidatorsViewProps) {
   const { data: scores, loading, error } = useScores();
-  const [stakeAmount, setStakeAmount] = useState<number>(1000);
+  const [stakeAmount, setStakeAmount] = useState<string>('1000');
   const { sort, toggle, sortData } = useSort('totalValidations', 'desc');
 
   // Extract unique validators from scores
@@ -70,7 +70,7 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
         <div className="w-full max-w-[1600px] flex flex-col gap-8">
             <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-500 uppercase">
                 <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>HOME</button>
-                <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+                <span className="material-symbols-outlined text-[12px]">chevron_right</span>
                 <span className="text-neon-cyan">VALIDATORS</span>
             </div>
 
@@ -98,7 +98,7 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                   { label: 'Avg Confidence', val: validators.length > 0 ? ((validators.reduce((sum, v) => sum + v.avgConfidence, 0) / validators.length) * 100).toFixed(0) + '%' : '0%', icon: 'verified_user', color: 'text-green-400', border: 'border-l-2 border-green-500' }
                 ].map((stat, i) => (
                   <div key={i} className={`glass-panel p-5 rounded-xl ${stat.border} relative overflow-hidden group`}>
-                      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
+                      <p className="text-slate-400 text-[12px] font-bold uppercase tracking-widest mb-1">{stat.label}</p>
                       <div className="flex items-end justify-between mt-1 z-10">
                           <p className="text-white text-3xl font-black font-display tracking-tighter">{stat.val}</p>
                           <span className={`material-symbols-outlined ${stat.color} text-2xl opacity-50`}>{stat.icon}</span>
@@ -133,7 +133,7 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                       <div className="glass-panel rounded-xl overflow-hidden border border-white/5 font-body">
                           <div className="overflow-x-auto">
                               <table className="w-full text-left border-collapse">
-                                  <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                                  <thead className="bg-white/5 border-b border-white/10 text-[12px] uppercase tracking-widest text-slate-400 font-bold">
                                       <tr>
                                           <th className="px-6 py-5 w-16 text-center">Rank</th>
                                           <SortTh col="id" sort={sort} onToggle={toggle} className="px-6 py-5">Validator ID</SortTh>
@@ -156,7 +156,7 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                                                       </div>
                                                       <div className="flex flex-col">
                                                           <span className="font-bold text-white group-hover:text-neon-cyan transition-colors">{val.id}</span>
-                                                          <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                                          <span className="text-[12px] text-slate-500 whitespace-nowrap">
                                                             {val.consensusTimestamp ? (
                                                               <>
                                                                 Verify on{' '}
@@ -184,12 +184,12 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                                                 {val.avgScore.toFixed(1)}
                                               </td>
                                               <td className="px-6 py-5 text-right">
-                                                <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[10px] text-slate-300">
+                                                <span className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-[12px] text-slate-300">
                                                   {(val.avgConfidence * 100).toFixed(0)}%
                                                 </span>
                                               </td>
                                               <td className="px-6 py-5 text-center">
-                                                  <span className="px-3 py-1 rounded text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/40">
+                                                  <span className="px-3 py-1 rounded text-[12px] font-bold bg-green-500/10 text-green-400 border border-green-500/40">
                                                     ACTIVE
                                                   </span>
                                               </td>
@@ -258,14 +258,19 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                           </h3>
                           <div className="flex flex-col gap-6">
                               <div className="flex flex-col gap-2">
-                                  <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                                  <label className="text-[12px] text-slate-500 uppercase font-bold tracking-widest">
                                     Validations per Day
                                   </label>
                                   <div className="relative">
                                       <input 
                                         type="number" 
                                         value={stakeAmount} 
-                                        onChange={(e) => setStakeAmount(Number(e.target.value))} 
+                                        onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+                                        onChange={(e) => {
+                                          let v = e.target.value;
+                                          if (v.length > 1 && v[0] === '0' && v[1] !== '.') v = v.substring(1);
+                                          setStakeAmount(v);
+                                        }} 
                                         className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:border-neon-pink focus:ring-1 focus:ring-neon-pink outline-none transition-all"
                                       />
                                   </div>
@@ -275,18 +280,22 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                                     max="1000" 
                                     step="10" 
                                     value={stakeAmount} 
-                                    onChange={(e) => setStakeAmount(Number(e.target.value))} 
+                                    onChange={(e) => {
+                                          let v = e.target.value;
+                                          if (v.length > 1 && v[0] === '0' && v[1] !== '.') v = v.substring(1);
+                                          setStakeAmount(v);
+                                        }} 
                                     className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-neon-pink mt-4"
                                   />
                               </div>
                               <div className="flex flex-col gap-2">
                                   {[
-                                    { label: 'Daily Earnings', val: (stakeAmount * 0.15).toFixed(2), color: 'border-neon-pink text-neon-pink' },
-                                    { label: 'Weekly Earnings', val: (stakeAmount * 0.15 * 7).toFixed(2), color: 'border-neon-purple text-neon-purple' },
-                                    { label: 'Monthly Earnings', val: (stakeAmount * 0.15 * 30).toFixed(2), color: 'border-neon-green text-neon-green' }
+                                    { label: 'Daily Earnings', val: (Number(stakeAmount) * 0.15).toFixed(2), color: 'border-neon-pink text-neon-pink' },
+                                    { label: 'Weekly Earnings', val: (Number(stakeAmount) * 0.15 * 7).toFixed(2), color: 'border-neon-purple text-neon-purple' },
+                                    { label: 'Monthly Earnings', val: (Number(stakeAmount) * 0.15 * 30).toFixed(2), color: 'border-neon-green text-neon-green' }
                                   ].map((r, i) => (
                                     <div key={i} className={`bg-white/5 rounded-lg p-3 border-l-2 ${r.color} flex justify-between items-center`}>
-                                        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{r.label}</span>
+                                        <span className="text-[12px] text-slate-500 uppercase font-bold tracking-widest">{r.label}</span>
                                         <span className="font-mono font-bold text-lg">{r.val} MDT</span>
                                     </div>
                                   ))}

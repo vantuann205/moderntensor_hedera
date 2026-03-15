@@ -10,8 +10,12 @@ const GET_TASK_ABI = [
   'function getTask(uint256 id) view returns (uint256 id, uint256 subnetId, address requester, string taskHash, uint256 totalDeposit, uint256 rewardAmount, uint256 protocolFee, uint256 validatorReward, uint256 stakingPoolFee, uint256 subnetFee, uint256 deadline, uint8 status, address winningMiner, uint256 winningScore, uint256 createdAt)',
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    // role=validator → show tasks that have submissions pending scoring (don't hide on result_submit)
+    const isValidator = searchParams.get('role') === 'validator';
+
     // Fetch tasks + scoring topic messages in parallel
     const [tasks, scoringMessages] = await Promise.all([
       hcsMirrorClient.getTaskSubmissions(),
@@ -19,8 +23,6 @@ export async function GET() {
     ]);
 
     // Build sets of "done" taskIds from HCS scoring topic
-    // result_submit → miner submitted result (task no longer needs action from miner)
-    // score_submit  → validator scored (HCS-only task fully done)
     const resultSubmittedIds = new Set<string>();
     const scoredIds = new Set<string>();
     for (const msg of scoringMessages) {
@@ -40,20 +42,37 @@ export async function GET() {
         const onChainId = t.onChainTaskId;
 
         if (onChainId) {
-          // On-chain task:
-          // 1. Hide if miner already submitted result (result_submit on HCS)
-          if (resultSubmittedIds.has(tid)) return null;
-          // 2. Hide if on-chain status >= 3 (Completed/Cancelled/Expired)
+          // Check on-chain status — hide if Completed/Cancelled/Expired (status >= 3)
           try {
             const task = await registry.getTask(onChainId);
-            if (Number(task.status) >= 3) return null;
-          } catch (_) {}
-          return t;
+            const status = Number(task.status);
+            if (status >= 3) return null;
+
+            if (isValidator) {
+              // Validator: show task as long as it's not finalized on-chain
+              // status 2 = PendingReview (has submissions to score) — always show
+              return t;
+            } else {
+              // Miner: hide if already submitted result
+              if (resultSubmittedIds.has(tid)) return null;
+              return t;
+            }
+          } catch (_) {
+            // Can't read on-chain — show to validator, hide to miner if result submitted
+            if (!isValidator && resultSubmittedIds.has(tid)) return null;
+            return t;
+          }
         } else {
-          // HCS-only task:
-          // Hide if result submitted OR already scored
-          if (resultSubmittedIds.has(tid) || scoredIds.has(tid)) return null;
-          return t;
+          // HCS-only task
+          if (isValidator) {
+            // Validator: hide only if already scored
+            if (scoredIds.has(tid)) return null;
+            return t;
+          } else {
+            // Miner: hide if result submitted OR scored
+            if (resultSubmittedIds.has(tid) || scoredIds.has(tid)) return null;
+            return t;
+          }
         }
       })
     );

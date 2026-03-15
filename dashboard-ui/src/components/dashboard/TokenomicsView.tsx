@@ -9,19 +9,25 @@ const data = [
 ];
 
 export default function TokenomicsView() {
-  const [stakeAmount, setStakeAmount] = useState<number>(1000);
+  const [stakeAmount, setStakeAmount] = useState<string>('1000');
   const apy = 0.184;
   const price = 423.50;
 
-  const dailyOutput = useMemo(() => (stakeAmount * apy) / 365, [stakeAmount]);
-  const monthlyOutput = useMemo(() => (stakeAmount * apy) / 12, [stakeAmount]);
+  const dailyOutput = useMemo(() => (Number(stakeAmount) * apy) / 365, [stakeAmount]);
+  const monthlyOutput = useMemo(() => (Number(stakeAmount) * apy) / 12, [stakeAmount]);
 
   const projectionData = useMemo(() => {
       const data = [];
-      let currentStaked = stakeAmount;
+      let currentStaked = Number(stakeAmount); // Ensure initial value is a number
       const monthlyRate = apy / 12;
       for(let i = 0; i <= 12; i++) {
-          data.push({ month: i, staked: currentStaked, holding: stakeAmount });
+          data.push({
+            month: i,
+            staked: currentStaked,
+            holding: Number(stakeAmount), // Cast holding to number
+            currentValue: Number(stakeAmount),
+            projected: Number(stakeAmount) * Math.pow(1 + apy / 12, i)
+          });
           currentStaked = currentStaked * (1 + monthlyRate);
       }
       return data;
@@ -36,10 +42,10 @@ export default function TokenomicsView() {
             <p className="text-slate-400 max-w-2xl font-light text-lg">Network economy analytics, supply dynamics, and delegation control center.</p>
          </div>
          <div className="flex gap-3">
-            <span className="px-4 py-1.5 bg-neon-green/10 text-neon-green text-[10px] font-black border border-neon-green/30 flex items-center gap-2 uppercase tracking-widest rounded">
+            <span className="px-4 py-1.5 bg-neon-green/10 text-neon-green text-[12px] font-black border border-neon-green/30 flex items-center gap-2 uppercase tracking-widest rounded">
                 <span className="size-2 rounded-full bg-neon-green animate-pulse"></span> Network Active
             </span>
-            <span className="px-4 py-1.5 bg-black/50 text-neon-cyan font-mono text-[10px] border border-neon-cyan/30 flex items-center rounded">
+            <span className="px-4 py-1.5 bg-black/50 text-neon-cyan font-mono text-[12px] border border-neon-cyan/30 flex items-center rounded">
                BLOCK: #45,102
             </span>
          </div>
@@ -56,7 +62,7 @@ export default function TokenomicsView() {
                     </Pie>
                   </PieChart>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                     <span className="text-slate-500 text-[10px] uppercase tracking-widest mb-1 font-mono">Circulating</span>
+                     <span className="text-slate-500 text-[12px] uppercase tracking-widest mb-1 font-mono">Circulating</span>
                      <span className="text-5xl font-display font-bold text-white neon-text">MTN</span>
                      <span className="text-neon-cyan text-lg font-bold mt-1">67%</span>
                   </div>
@@ -64,20 +70,20 @@ export default function TokenomicsView() {
                
                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8 font-mono">
                   <div className="relative pl-4 border-l-2 border-neon-cyan">
-                     <h4 className="text-slate-500 text-[10px] uppercase tracking-widest mb-1">Circulating Supply</h4>
+                     <h4 className="text-slate-500 text-[12px] uppercase tracking-widest mb-1">Circulating Supply</h4>
                      <p className="text-3xl font-display font-bold text-white tracking-tight">14,204,591 <span className="text-sm font-normal text-neon-cyan">MTN</span></p>
                   </div>
                   <div className="relative pl-4 border-l-2 border-white/10">
-                     <h4 className="text-slate-500 text-[10px] uppercase tracking-widest mb-1">Locked Supply</h4>
+                     <h4 className="text-slate-500 text-[12px] uppercase tracking-widest mb-1">Locked Supply</h4>
                      <p className="text-3xl font-display font-bold text-white/50 tracking-tight">6,795,409 <span className="text-sm font-normal text-slate-500 font-display">MTN</span></p>
                   </div>
                   <div className="pt-6 border-t border-dashed border-white/10 col-span-1 sm:col-span-2 flex justify-between items-end mt-2 uppercase tracking-widest">
                      <div>
-                        <h4 className="text-neon-cyan text-[10px] mb-1">Max Supply Cap</h4>
+                        <h4 className="text-neon-cyan text-[12px] mb-1">Max Supply Cap</h4>
                         <p className="text-4xl font-display font-bold text-white">21.0M</p>
                      </div>
                      <div className="text-right">
-                        <h4 className="text-neon-purple text-[10px] mb-1">Market Cap</h4>
+                        <h4 className="text-neon-purple text-[12px] mb-1">Market Cap</h4>
                         <p className="text-2xl font-display font-bold text-white neon-text-purple">$6.2B</p>
                      </div>
                   </div>
@@ -87,7 +93,7 @@ export default function TokenomicsView() {
 
          <div className="glass-panel rounded-xl p-0 flex flex-col justify-between border border-neon-cyan/30 relative overflow-hidden bg-black/60 font-mono">
             <div className="bg-neon-cyan/10 p-4 border-b border-neon-cyan/20 flex items-center justify-between">
-               <h3 className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-2">
+               <h3 className="text-[12px] font-bold text-white uppercase tracking-widest flex items-center gap-2">
                    <span className="size-2 bg-neon-cyan rounded-full animate-pulse"></span>
                    Yield_Console
                </h3>
@@ -97,11 +103,27 @@ export default function TokenomicsView() {
             <div className="p-6 space-y-6 flex-grow">
                <div>
                   <div className="flex justify-between mb-2">
-                     <label className="text-[10px] text-neon-cyan uppercase font-black">Stake Amount</label>
-                     <span className="text-neon-cyan text-[10px] opacity-60">∑ MTN</span>
+                     <label className="text-[12px] text-neon-cyan uppercase font-black">Stake Amount</label>
+                     <span className="text-neon-cyan text-[12px] opacity-60">∑ MTN</span>
                   </div>
-                  <input className="w-full bg-black/40 border border-neon-cyan/30 rounded p-3 text-right text-white font-mono focus:border-neon-cyan outline-none text-lg" type="number" value={stakeAmount} onChange={(e) => setStakeAmount(Number(e.target.value))}/>
-                  <input className="w-full accent-neon-cyan h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer mt-4" type="range" min="100" max="100000" step="100" value={stakeAmount} onChange={(e) => setStakeAmount(Number(e.target.value))}/>
+                   <input className="w-full bg-black/40 border border-neon-cyan/30 rounded p-3 text-right text-white font-mono focus:border-neon-cyan outline-none text-lg" 
+                     type="number" value={stakeAmount} 
+                     onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+                     onChange={(e) => {
+                       let v = e.target.value;
+                       if (v.length > 1 && v[0] === '0' && v[1] !== '.') v = v.substring(1);
+                       setStakeAmount(v);
+                     }}
+                   />
+                   <input className="w-full accent-neon-cyan h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer mt-4" 
+                     type="range" min="100" max="100000" step="100" 
+                     value={stakeAmount}
+                     onChange={(e) => {
+                       let v = e.target.value;
+                       if (v.length > 1 && v[0] === '0' && v[1] !== '.') v = v.substring(1);
+                       setStakeAmount(v);
+                     }}
+                   />
                </div>
                
                <div className="h-24 w-full mt-4 border border-white/5 rounded bg-black/40 p-2">
@@ -114,11 +136,11 @@ export default function TokenomicsView() {
 
                <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="bg-black/60 p-3 rounded border border-white/10">
-                     <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Daily Output</p>
+                     <p className="text-[11px] text-slate-500 uppercase font-black mb-1">Daily Output</p>
                      <p className="text-lg font-bold text-neon-green">{dailyOutput.toFixed(2)} M</p>
                   </div>
                   <div className="bg-black/60 p-3 rounded border border-white/10">
-                     <p className="text-[9px] text-slate-500 uppercase font-black mb-1">Monthly Output</p>
+                     <p className="text-[11px] text-slate-500 uppercase font-black mb-1">Monthly Output</p>
                      <p className="text-lg font-bold text-neon-green">{monthlyOutput.toFixed(2)} M</p>
                   </div>
                </div>

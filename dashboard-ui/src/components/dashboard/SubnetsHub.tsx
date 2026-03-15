@@ -137,7 +137,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           </div>
           
           <div className="glass-panel p-6 rounded-2xl border border-white/10 flex flex-col items-end min-w-[200px]">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.2em] font-bold mb-2 flex items-center gap-2">
+            <div className="text-[12px] text-text-secondary uppercase tracking-[0.2em] font-bold mb-2 flex items-center gap-2">
                <span className="w-2 h-2 rounded-full bg-neon-pink animate-pulse"></span> Emission Rate
             </div>
             <div className="text-5xl font-display font-black text-white neon-text">{subnet.emission}</div>
@@ -154,7 +154,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
             <div key={i} className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-text-secondary">
                 <span className={`material-symbols-outlined text-sm ${stat.color}`}>{stat.icon}</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest">{stat.label}</span>
+                <span className="text-[12px] font-bold uppercase tracking-widest">{stat.label}</span>
               </div>
               <div className="text-3xl font-display font-bold text-white tracking-tight">
                 <CountUp end={stat.val} suffix={stat.suffix} decimals={stat.decimals || 0} />
@@ -176,7 +176,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
               </div>
               Miners
             </h2>
-            <span className="bg-neon-cyan/10 text-neon-cyan px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-cyan/20">
+            <span className="bg-neon-cyan/10 text-neon-cyan px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-widest border border-neon-cyan/20">
               {miners.length} Online
             </span>
           </div>
@@ -202,7 +202,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                     <div className="font-display font-bold text-neon-cyan">
                       <CountUp end={(() => { const raw = miner.stake_amount ?? miner.stakeAmount ?? 0; return Number(raw) > 1e6 ? Number(raw) / 1e8 : Number(raw); })()} suffix=" MDT" />
                     </div>
-                    <div className="text-[10px] text-text-secondary uppercase tracking-widest">Staked</div>
+                    <div className="text-[12px] text-text-secondary uppercase tracking-widest">Staked</div>
                   </div>
                 </div>
               ))
@@ -257,7 +257,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                   <span className="material-symbols-outlined text-neon-pink">shield_person</span>
                   Validators
                </h2>
-               <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-pink/20">
+               <span className="bg-neon-pink/10 text-neon-pink px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-widest border border-neon-pink/20">
                   {uniqueValidators.length} Active
                </span>
             </div>
@@ -288,7 +288,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
               </div>
               Transmissions
             </h2>
-            <span className="bg-neon-green/10 text-neon-green px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-neon-green/20">
+            <span className="bg-neon-green/10 text-neon-green px-3 py-1 rounded-full text-[12px] font-bold uppercase tracking-widest border border-neon-green/20">
               Live Feed
             </span>
           </div>
@@ -305,14 +305,14 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
               tasks.slice(-15).reverse().map((task, idx) => (
                 <div key={idx} className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 hover:border-neon-green/30 transition-all hover:bg-white/[0.04]">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="font-mono text-[10px] text-neon-green uppercase tracking-widest font-bold px-2 py-1 bg-neon-green/10 rounded-lg">{task.taskType}</div>
+                    <div className="font-mono text-[12px] text-neon-green uppercase tracking-widest font-bold px-2 py-1 bg-neon-green/10 rounded-lg">{task.taskType}</div>
                     <div className="text-white font-display font-black text-sm">
                       +<CountUp end={task.rewardAmount / 100000000} suffix=" MDT" />
                     </div>
                   </div>
                   <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed mb-3">"{task.prompt}"</p>
-                  <div className="flex items-center justify-between text-[10px] pt-3 border-t border-white/5">
-                    <span className="text-white/40 font-mono italic">ID: {task.taskId?.substring(0, 12)}...</span>
+                  <div className="flex items-center justify-between text-[12px] pt-3 border-t border-white/5">
+                    <span className="text-white/60 font-mono italic">ID: {task.taskId?.substring(0, 12)}...</span>
                     {task.consensusTimestamp && (
                       <a 
                         href={`https://hashscan.io/testnet/transaction/${task.consensusTimestamp}`}
@@ -320,7 +320,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                         rel="noopener noreferrer"
                         className="text-neon-cyan hover:text-white uppercase tracking-widest font-bold flex items-center gap-1"
                       >
-                        Verify TX <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                        Verify TX <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                       </a>
                     )}
                   </div>
@@ -386,7 +386,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
           </p>
         </div>
         <div className="glass-panel px-6 py-4 rounded-2xl border border-neon-cyan/20 flex flex-col items-center min-w-[160px]">
-          <span className="text-[10px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
+          <span className="text-[12px] font-bold text-neon-cyan uppercase tracking-[0.2em] mb-1">Total Protocols</span>
           <span className="text-4xl font-display font-bold text-white leading-none">
             <CountUp end={subnets.length} />
           </span>
@@ -467,19 +467,19 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
 
             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-white/5 relative z-10">
               <div>
-                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Miners</div>
+                <div className="text-[12px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Miners</div>
                 <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.miners} />
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Validators</div>
+                <div className="text-[12px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Validators</div>
                 <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.validators} />
                 </div>
               </div>
               <div>
-                <div className="text-[10px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Tasks</div>
+                <div className="text-[12px] text-text-secondary uppercase tracking-widest font-bold mb-1 italic">Tasks</div>
                 <div className="text-2xl font-display font-bold text-white">
                   <CountUp end={subnet.tasks} />
                 </div>

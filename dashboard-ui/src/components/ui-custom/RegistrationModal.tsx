@@ -118,7 +118,7 @@ export default function RegistrationModal({ isOpen, onClose }: RegistrationModal
                                 <span className={`text-sm font-bold uppercase tracking-widest ${type === 'miner' ? 'text-neon-cyan' : 'text-white'}`}>Compute Miner</span>
                             </div>
                             <p className="text-xs text-white/80 leading-relaxed mb-3">Receive AI tasks, run models, submit results</p>
-                            <div className={`text-[10px] font-mono ${type === 'miner' ? 'text-neon-cyan' : 'text-white/70'}`}>Min stake: 100 MDT</div>
+                            <div className={`text-[12px] font-mono ${type === 'miner' ? 'text-neon-cyan' : 'text-white/70'}`}>Min stake: 100 MDT</div>
                         </button>
                         
                         <button
@@ -130,7 +130,7 @@ export default function RegistrationModal({ isOpen, onClose }: RegistrationModal
                                 <span className={`text-sm font-bold uppercase tracking-widest ${type === 'validator' ? 'text-neon-purple' : 'text-white'}`}>Consensus Validator</span>
                             </div>
                             <p className="text-xs text-white/80 leading-relaxed mb-3">Verify miner results, score accuracy, vote on HCS</p>
-                            <div className={`text-[10px] font-mono ${type === 'validator' ? 'text-neon-purple' : 'text-white/70'}`}>Min stake: 50,000 MDT</div>
+                            <div className={`text-[12px] font-mono ${type === 'validator' ? 'text-neon-purple' : 'text-white/70'}`}>Min stake: 50,000 MDT</div>
                         </button>
                     </div>
 
@@ -161,7 +161,17 @@ export default function RegistrationModal({ isOpen, onClose }: RegistrationModal
                             <input 
                                 type="number"
                                 value={stake}
-                                onChange={(e) => setStake(e.target.value)}
+                                onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()}
+                                onChange={(e) => {
+                                    let v = e.target.value;
+                                    // Allow empty string or numbers, handle leading zeros
+                                    if (v === '' || /^\d*\.?\d*$/.test(v)) {
+                                        if (v.length > 1 && v[0] === '0' && v[1] !== '.') {
+                                            v = v.substring(1);
+                                        }
+                                        setStake(v);
+                                    }
+                                }}
                                 className={`w-full bg-black/60 border-2 rounded-xl px-4 py-3 text-base text-white focus:outline-none font-mono transition-colors ${stakeInsufficient ? 'border-red-500/70' : 'border-white/30 focus:border-neon-cyan/70'}`}
                             />
                         </div>

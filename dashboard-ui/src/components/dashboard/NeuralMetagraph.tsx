@@ -151,7 +151,7 @@ export default function NeuralMetagraph({ activeNodes }: NeuralMetagraphProps) {
       <canvas ref={canvasRef} className="relative z-10 w-full h-full block" />
       <div className="absolute top-0 left-0 w-full h-1 bg-neon-cyan/30 shadow-[0_0_15px_#00f3ff] animate-[scan_4s_ease-in-out_infinite] pointer-events-none opacity-50"></div>
       <div className="absolute top-4 left-4 text-xs text-neon-cyan font-mono border-l-2 border-neon-cyan/50 pl-2 bg-black/40 backdrop-blur py-1 pr-2 shadow-lg">
-          <p className="text-[10px] text-text-secondary uppercase mb-0.5">Active Nodes</p>
+          <p className="text-[12px] text-text-secondary uppercase mb-0.5">Active Nodes</p>
           <p className="font-bold text-sm">
             {activeNodes !== undefined
               ? <CountUp end={activeNodes} />
@@ -160,7 +160,7 @@ export default function NeuralMetagraph({ activeNodes }: NeuralMetagraphProps) {
           </p>
       </div>
       <div className="absolute bottom-4 right-4 text-xs text-neon-purple font-mono border-r-2 border-neon-purple/50 pr-2 bg-black/40 backdrop-blur py-1 pl-2 text-right shadow-lg">
-          <p className="text-[10px] text-text-secondary uppercase mb-0.5">Throughput</p>
+          <p className="text-[12px] text-text-secondary uppercase mb-0.5">Throughput</p>
           <p className="font-bold text-sm"><CountUp end={12402} suffix=" TPS" /></p>
       </div>
       

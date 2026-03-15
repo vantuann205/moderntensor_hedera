@@ -93,10 +93,10 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">On-Chain Staking</div>
-            <div className="text-[9px] text-slate-500 font-mono">StakingVaultV2 · {CONTRACTS.STAKING_VAULT.slice(0, 10)}...</div>
+            <div className="text-[11px] text-slate-400 font-mono">StakingVaultV2 · {CONTRACTS.STAKING_VAULT.slice(0, 10)}...</div>
           </div>
         </div>
-        <button onClick={() => loadStakeInfo(evmAddress)} className="text-slate-600 hover:text-neon-cyan transition-colors">
+        <button onClick={() => loadStakeInfo(evmAddress)} className="text-slate-500 hover:text-neon-cyan transition-colors">
           <RefreshCw size={12} />
         </button>
       </div>
@@ -105,26 +105,26 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
         {/* ── Stake status card ── */}
         <div className={`p-4 rounded-xl border space-y-2 ${isStaked ? 'bg-neon-green/5 border-neon-green/20' : hasUnstakeRequest ? 'bg-yellow-400/5 border-yellow-400/20' : 'bg-white/[0.02] border-white/10'}`}>
           <div className="flex justify-between items-center">
-            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Status</span>
-            <span className={`text-xs font-black ${isStaked ? 'text-neon-green' : hasUnstakeRequest ? 'text-yellow-400' : 'text-slate-500'}`}>
+            <span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Status</span>
+            <span className={`text-xs font-black ${isStaked ? 'text-neon-green' : hasUnstakeRequest ? 'text-yellow-400' : 'text-slate-400'}`}>
               {isStaked ? 'ACTIVE · MINER' : hasUnstakeRequest ? 'UNSTAKING' : 'NOT STAKED'}
             </span>
           </div>
           {stakeInfo && stakeInfo.amount > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Staked Amount</span>
+              <span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Staked Amount</span>
               <span className="text-white font-black text-sm">{stakeInfo.amountMDT.toLocaleString()} MDT</span>
             </div>
           )}
           {isStaked && stakeInfo && stakeInfo.stakedAt > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Staked Since</span>
-              <span className="text-slate-300 text-[10px] font-mono">{toUTC7(stakeInfo.stakedAt)}</span>
+              <span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Staked Since</span>
+              <span className="text-slate-300 text-[12px] font-mono">{toUTC7(stakeInfo.stakedAt)}</span>
             </div>
           )}
           {isStaked && stakeInfo && stakeInfo.pendingRewardMDT > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Pending Reward</span>
+              <span className="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Pending Reward</span>
               <span className="text-neon-green font-bold text-[11px]">{stakeInfo.pendingRewardMDT.toFixed(4)} MDT</span>
             </div>
           )}
@@ -132,12 +132,12 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
           {hasUnstakeRequest && stakeInfo && (
             <div className="mt-2 p-2 bg-yellow-400/10 rounded-lg border border-yellow-400/20">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] text-yellow-400 uppercase tracking-widest font-bold">Unlock In</span>
-                <span className={`text-[10px] font-black ${canWithdraw ? 'text-neon-green' : 'text-yellow-400'}`}>
+                <span className="text-[11px] text-yellow-400 uppercase tracking-widest font-bold">Unlock In</span>
+                <span className={`text-[12px] font-black ${canWithdraw ? 'text-neon-green' : 'text-yellow-400'}`}>
                   {unstakeCountdown(stakeInfo.unstakeRequestedAt)}
                 </span>
               </div>
-              <div className="text-[9px] text-slate-500 mt-1 font-mono">
+              <div className="text-[11px] text-slate-400 mt-1 font-mono">
                 Requested: {toUTC7(stakeInfo.unstakeRequestedAt)}
               </div>
               {/* Progress bar */}
@@ -156,7 +156,7 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
         </div>
 
         {/* Reg fee info */}
-        <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-black/20 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-[12px] text-slate-400 bg-black/20 rounded-lg px-3 py-2">
           <Info size={10} className="text-neon-yellow flex-shrink-0" />
           <span>Reg fee: <span className="text-neon-yellow font-bold">{regFee.toFixed(4)} MDT</span> (burned) + stake (refundable after 7d cooldown)</span>
         </div>
@@ -165,11 +165,11 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
         {!hasUnstakeRequest && (
           <div className="space-y-3">
             <div>
-              <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1.5">
+              <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1.5">
                 {isStaked ? 'Add More Stake (MDT)' : 'Stake Amount (MDT) · min 10'}
               </label>
               <input type="number" min={isStaked ? 1 : 10} value={stakeAmount}
-                onChange={e => setStakeAmount(e.target.value)}
+                onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setStakeAmount(e.target.value)}
                 className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:border-neon-purple/50 outline-none" />
             </div>
             <button onClick={() => stakeAsMiner(Number(stakeAmount))} disabled={loading}
@@ -179,7 +179,7 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
                 ? `Add ${stakeAmount} MDT via ${walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}`
                 : `Stake ${stakeAmount} MDT via ${walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}`}
             </button>
-            <p className="text-[9px] text-slate-600 text-center">
+            <p className="text-[11px] text-slate-500 text-center">
               {walletType === 'hashpack'
                 ? 'HashPack: 3 signatures — transfer MDT + recordDeposit + stake'
                 : 'MetaMask: 2 signatures — transfer + stake'}
@@ -199,7 +199,7 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
         {/* ── Request unstake ── */}
         {isStaked && !hasUnstakeRequest && (
           <button onClick={requestUnstake} disabled={loading}
-            className="w-full py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400/60 hover:text-red-400 font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+            className="w-full py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 text-red-400/60 hover:text-red-400 font-bold text-[12px] uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2">
             <Unlock size={10} />
             Request Unstake (7-day cooldown)
           </button>
@@ -207,10 +207,10 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
 
         {/* ── Step / error ── */}
         {step && !error && (
-          <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[10px] font-mono text-neon-cyan break-all">{step}</div>
+          <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[12px] font-mono text-neon-cyan break-all">{step}</div>
         )}
         {error && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-mono text-red-400 flex items-start gap-2">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[12px] font-mono text-red-400 flex items-start gap-2">
             <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
             {error}
           </div>
@@ -219,24 +219,24 @@ function OnChainStakingPanel({ evmAddress, accountId }: { evmAddress: string; ac
         {/* ── TX Links ── */}
         {(txHash || txHashTransfer || txHashContract) && (
           <div className="space-y-1.5 pt-1 border-t border-white/5">
-            <div className="text-[9px] text-slate-600 uppercase tracking-widest font-bold">Last Transaction</div>
+            <div className="text-[11px] text-slate-500 uppercase tracking-widest font-bold">Last Transaction</div>
             {txHashTransfer && (
               <a href={hashscanUrl(txHashTransfer)} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+                className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline">
                 <ExternalLink size={10} />
                 MDT Transfer TX
               </a>
             )}
             {txHashContract && (
               <a href={hashscanUrl(txHashContract)} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-neon-green text-[10px] font-bold hover:underline">
+                className="flex items-center gap-1.5 text-neon-green text-[12px] font-bold hover:underline">
                 <ExternalLink size={10} />
                 Contract Stake TX
               </a>
             )}
             {txHash && !txHashTransfer && !txHashContract && (
               <a href={hashscanUrl(txHash)} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+                className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline">
                 <ExternalLink size={10} />
                 View TX on HashScan
               </a>
@@ -285,10 +285,10 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Stake History</div>
-            <div className="text-[9px] text-slate-500 font-mono">StakingVaultV2 · {CONTRACTS.STAKING_VAULT.slice(0, 10)}... · real on-chain data</div>
+            <div className="text-[11px] text-slate-400 font-mono">StakingVaultV2 · {CONTRACTS.STAKING_VAULT.slice(0, 10)}... · real on-chain data</div>
           </div>
         </div>
-        <span className="text-[9px] font-bold text-neon-purple border border-neon-purple/30 bg-neon-purple/5 px-2 py-1 rounded-full uppercase tracking-widest">
+        <span className="text-[11px] font-bold text-neon-purple border border-neon-purple/30 bg-neon-purple/5 px-2 py-1 rounded-full uppercase tracking-widest">
           {history.length} event{history.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -297,16 +297,16 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
       {stakeInfo && stakeInfo.isActive && (
         <div className="mx-5 mt-4 p-4 rounded-xl bg-neon-green/5 border border-neon-green/20 space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] text-neon-green uppercase tracking-widest font-black">Active Stake</span>
+            <span className="text-[11px] text-neon-green uppercase tracking-widest font-black">Active Stake</span>
             <span className="text-white font-black">{stakeInfo.amountMDT.toLocaleString()} MDT</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+          <div className="grid grid-cols-2 gap-2 text-[12px] font-mono">
             <div>
-              <div className="text-slate-500 text-[9px] uppercase tracking-widest mb-0.5">Staked Since</div>
+              <div className="text-slate-400 text-[11px] uppercase tracking-widest mb-0.5">Staked Since</div>
               <div className="text-white">{toUTC7(stakeInfo.stakedAt)}</div>
             </div>
             <div>
-              <div className="text-slate-500 text-[9px] uppercase tracking-widest mb-0.5">Pending Reward</div>
+              <div className="text-slate-400 text-[11px] uppercase tracking-widest mb-0.5">Pending Reward</div>
               <div className="text-neon-green font-bold">{stakeInfo.pendingRewardMDT.toFixed(4)} MDT</div>
             </div>
           </div>
@@ -315,15 +315,15 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
           {hasUnstake && stakeInfo && (
             <div className="mt-1 p-3 rounded-lg bg-yellow-400/5 border border-yellow-400/20 space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] text-yellow-400 uppercase tracking-widest font-bold">Unstake Cooldown</span>
-                <span className={`text-[10px] font-black ${canWithdraw ? 'text-neon-green' : 'text-yellow-400'}`}>
+                <span className="text-[11px] text-yellow-400 uppercase tracking-widest font-bold">Unstake Cooldown</span>
+                <span className={`text-[12px] font-black ${canWithdraw ? 'text-neon-green' : 'text-yellow-400'}`}>
                   {unstakeCountdown(stakeInfo.unstakeRequestedAt)}
                 </span>
               </div>
-              <div className="text-[9px] text-slate-500 font-mono">
+              <div className="text-[11px] text-slate-400 font-mono">
                 Requested: {toUTC7(stakeInfo.unstakeRequestedAt)}
               </div>
-              <div className="text-[9px] text-slate-500 font-mono">
+              <div className="text-[11px] text-slate-400 font-mono">
                 Unlocks at: {toUTC7(stakeInfo.unstakeRequestedAt + COOLDOWN)}
               </div>
               {!canWithdraw && (() => {
@@ -334,7 +334,7 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
                     <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="text-[9px] text-slate-600 text-right">{pct.toFixed(1)}% of 7 days</div>
+                    <div className="text-[11px] text-slate-500 text-right">{pct.toFixed(1)}% of 7 days</div>
                   </div>
                 );
               })()}
@@ -346,25 +346,25 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
       {/* Transaction history */}
       <div className="divide-y divide-white/5 mt-4">
         {loading ? (
-          <div className="py-8 text-center text-slate-600 text-xs font-mono">Loading from mirror node...</div>
+          <div className="py-8 text-center text-slate-500 text-xs font-mono">Loading from mirror node...</div>
         ) : history.length === 0 ? (
           <div className="py-10 text-center">
-            <Lock size={24} className="text-slate-700 mx-auto mb-2" />
-            <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No stake transactions found</div>
-            <div className="text-slate-700 text-[10px] mt-1">Stake MDT to see history here</div>
+            <Lock size={24} className="text-slate-600 mx-auto mb-2" />
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No stake transactions found</div>
+            <div className="text-slate-600 text-[12px] mt-1">Stake MDT to see history here</div>
           </div>
         ) : (
           history.map((ev, i) => (
             <div key={i} className="px-5 py-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-black text-neon-purple uppercase tracking-widest px-2 py-0.5 bg-neon-purple/10 border border-neon-purple/20 rounded">
+                <span className="text-[11px] font-black text-neon-purple uppercase tracking-widest px-2 py-0.5 bg-neon-purple/10 border border-neon-purple/20 rounded">
                   STAKE #{history.length - i}
                 </span>
                 <div className="text-right">
                   {ev.mdtAmount != null && (
                     <div className="text-white font-black text-sm">{ev.mdtAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} MDT</div>
                   )}
-                  <div className="text-[9px] text-slate-500 font-mono">{toUTC7(ev.timestamp)}</div>
+                  <div className="text-[11px] text-slate-400 font-mono">{toUTC7(ev.timestamp)}</div>
                 </div>
               </div>
 
@@ -373,18 +373,18 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
                 {ev.transferTs && (
                   <a href={hashscanUrl(ev.transferTs)}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+                    className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline">
                     <ExternalLink size={10} />
                     MDT Transfer TX
-                    <span className="text-slate-600 font-normal">{ev.transferTs}</span>
+                    <span className="text-slate-500 font-normal">{ev.transferTs}</span>
                   </a>
                 )}
                 <a href={hashscanUrl(ev.contractTs)}
                   target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-neon-green text-[10px] font-bold hover:underline">
+                  className="flex items-center gap-1.5 text-neon-green text-[12px] font-bold hover:underline">
                   <ExternalLink size={10} />
                   Contract Stake TX
-                  <span className="text-slate-600 font-normal">{ev.contractTs}</span>
+                  <span className="text-slate-500 font-normal">{ev.contractTs}</span>
                 </a>
               </div>
             </div>
@@ -392,10 +392,10 @@ function StakeHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
         )}
       </div>
 
-      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[10px] text-slate-600 font-mono flex justify-between">
+      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[12px] text-slate-500 font-mono flex justify-between">
         <a href={`https://hashscan.io/testnet/account/${accountId}/operations`}
           target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1 text-slate-500 hover:text-neon-cyan transition-colors">
+          className="flex items-center gap-1 text-slate-400 hover:text-neon-cyan transition-colors">
           <ExternalLink size={9} /> All account operations
         </a>
         <span>Mirror Node · real-time</span>
@@ -453,18 +453,18 @@ function WithdrawEarningsPanel({ evmAddress, accountId }: { evmAddress: string; 
           <div className="w-8 h-8 rounded-lg bg-neon-green/10 border border-neon-green/20 flex items-center justify-center"><Gift size={14} className="text-neon-green" /></div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Claim Rewards</div>
-            <div className="text-[9px] text-slate-500 font-mono">SubnetRegistryV2.withdrawEarnings()</div>
+            <div className="text-[11px] text-slate-400 font-mono">SubnetRegistryV2.withdrawEarnings()</div>
           </div>
         </div>
-        <button onClick={loadPending} className="text-slate-600 hover:text-neon-cyan transition-colors"><RefreshCw size={12} /></button>
+        <button onClick={loadPending} className="text-slate-500 hover:text-neon-cyan transition-colors"><RefreshCw size={12} /></button>
       </div>
       <div className="p-5 space-y-4">
         <div className={`p-4 rounded-xl border ${pending && pending > 0 ? 'bg-neon-green/5 border-neon-green/20' : 'bg-white/[0.02] border-white/10'}`}>
-          <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1">Pending Withdrawal</div>
-          <div className={`text-2xl font-black font-mono ${pending && pending > 0 ? 'text-neon-green' : 'text-slate-600'}`}>
+          <div className="text-[11px] text-slate-400 uppercase tracking-widest font-bold mb-1">Pending Withdrawal</div>
+          <div className={`text-2xl font-black font-mono ${pending && pending > 0 ? 'text-neon-green' : 'text-slate-500'}`}>
             {loadingPending ? '...' : `${(pending ?? 0).toFixed(4)} MDT`}
           </div>
-          <div className="text-[9px] text-slate-600 mt-1">85% of finalized task rewards</div>
+          <div className="text-[11px] text-slate-500 mt-1">85% of finalized task rewards</div>
         </div>
         {pending !== null && pending > 0 && (
           <button onClick={withdraw} disabled={!!txStep && !txStep.startsWith('✓')}
@@ -472,9 +472,9 @@ function WithdrawEarningsPanel({ evmAddress, accountId }: { evmAddress: string; 
             <Gift size={12} /> Withdraw {pending.toFixed(4)} MDT
           </button>
         )}
-        {txStep && <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[10px] font-mono text-neon-cyan">{txStep}</div>}
-        {txError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-mono text-red-400">✗ {txError}</div>}
-        {txHash && <a href={hashscanUrl(txHash)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline"><ExternalLink size={10} /> View TX on HashScan</a>}
+        {txStep && <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[12px] font-mono text-neon-cyan">{txStep}</div>}
+        {txError && <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[12px] font-mono text-red-400">✗ {txError}</div>}
+        {txHash && <a href={hashscanUrl(txHash)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline"><ExternalLink size={10} /> View TX on HashScan</a>}
       </div>
     </div>
   );
@@ -542,28 +542,28 @@ function RegisterMinerPanel({ accountId, evmAddress }: { accountId: string; evmA
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Register in Subnet</div>
-            <div className="text-[9px] text-slate-500 font-mono">SubnetRegistryV2.registerMiner(subnetId)</div>
+            <div className="text-[11px] text-slate-400 font-mono">SubnetRegistryV2.registerMiner(subnetId)</div>
           </div>
         </div>
-        <button onClick={checkRegistration} disabled={checking} className="text-slate-600 hover:text-neon-cyan transition-colors">
+        <button onClick={checkRegistration} disabled={checking} className="text-slate-500 hover:text-neon-cyan transition-colors">
           <RefreshCw size={12} className={checking ? 'animate-spin' : ''} />
         </button>
       </div>
       <div className="p-5 space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex-1">
-            <label className="text-[9px] text-slate-500 uppercase tracking-widest block mb-1.5">Subnet ID</label>
+            <label className="text-[11px] text-slate-400 uppercase tracking-widest block mb-1.5">Subnet ID</label>
             <input type="number" min={0} value={subnetId}
-              onChange={e => setSubnetId(Number(e.target.value))}
+              onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setSubnetId(Number(e.target.value))}
               className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2.5 text-white font-mono text-sm focus:border-neon-yellow/50 outline-none" />
           </div>
           <div className="pt-5">
             {checking ? (
-              <div className="text-[10px] text-slate-500 font-mono">Checking...</div>
+              <div className="text-[12px] text-slate-400 font-mono">Checking...</div>
             ) : isRegistered === true ? (
-              <div className="flex items-center gap-1.5 text-neon-green text-[10px] font-bold"><CheckCircle size={12} /> Registered</div>
+              <div className="flex items-center gap-1.5 text-neon-green text-[12px] font-bold"><CheckCircle size={12} /> Registered</div>
             ) : isRegistered === false ? (
-              <div className="flex items-center gap-1.5 text-red-400 text-[10px] font-bold"><AlertCircle size={12} /> Not registered</div>
+              <div className="flex items-center gap-1.5 text-red-400 text-[12px] font-bold"><AlertCircle size={12} /> Not registered</div>
             ) : null}
           </div>
         </div>
@@ -577,22 +577,22 @@ function RegisterMinerPanel({ accountId, evmAddress }: { accountId: string; evmA
         )}
 
         {txStep && (
-          <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[10px] font-mono text-neon-cyan">{txStep}</div>
+          <div className="p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl text-[12px] font-mono text-neon-cyan">{txStep}</div>
         )}
         {txError && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-mono text-red-400 flex items-start gap-2">
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[12px] font-mono text-red-400 flex items-start gap-2">
             <AlertCircle size={10} className="mt-0.5 flex-shrink-0" />
             {txError}
           </div>
         )}
         {txHash && (
           <a href={hashscanUrl(txHash)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+            className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline">
             <ExternalLink size={10} /> View TX on HashScan
           </a>
         )}
 
-        <div className="text-[9px] text-slate-600 font-mono">
+        <div className="text-[11px] text-slate-500 font-mono">
           Must be staked as Miner in StakingVaultV2 before registering in subnet
         </div>
       </div>
@@ -717,16 +717,16 @@ function SubmitResultPanel({ accountId, evmAddress, subnetIds }: { accountId: st
           <div className="w-8 h-8 rounded-lg bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center"><Send size={14} className="text-neon-pink" /></div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Submit Results</div>
-            <div className="text-[9px] text-slate-500 font-mono">SubnetRegistryV2.submitResult(taskId, resultHash)</div>
+            <div className="text-[11px] text-slate-400 font-mono">SubnetRegistryV2.submitResult(taskId, resultHash)</div>
           </div>
         </div>
-        <span className="text-[9px] font-bold text-neon-pink border border-neon-pink/30 bg-neon-pink/5 px-2 py-1 rounded-full uppercase tracking-widest">{tasks.length} tasks</span>
+        <span className="text-[11px] font-bold text-neon-pink border border-neon-pink/30 bg-neon-pink/5 px-2 py-1 rounded-full uppercase tracking-widest">{tasks.length} tasks</span>
       </div>
       <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
         {loadingTasks || subnetIds === null ? (
-          <div className="py-8 text-center text-slate-600 text-xs font-mono">{subnetIds === null ? 'Loading your subnets...' : 'Loading tasks...'}</div>
+          <div className="py-8 text-center text-slate-500 text-xs font-mono">{subnetIds === null ? 'Loading your subnets...' : 'Loading tasks...'}</div>
         ) : tasks.length === 0 ? (
-          <div className="py-10 text-center"><Send size={24} className="text-slate-700 mx-auto mb-2" /><div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No tasks to submit</div></div>
+          <div className="py-10 text-center"><Send size={24} className="text-slate-600 mx-auto mb-2" /><div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No tasks to submit</div></div>
         ) : tasks.map((task, i) => {
           const taskId = String(task.taskId || task.task_id || i);
           const isDone = !!submitted[taskId];
@@ -736,22 +736,22 @@ function SubmitResultPanel({ accountId, evmAddress, subnetIds }: { accountId: st
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[9px] font-black text-neon-pink border border-neon-pink/30 bg-neon-pink/5 px-2 py-0.5 rounded uppercase tracking-widest">{task.taskType || 'TASK'}</span>
-                    <span className="text-[9px] text-slate-600 font-mono">Subnet {task.subnetId ?? 0}</span>
+                    <span className="text-[11px] font-black text-neon-pink border border-neon-pink/30 bg-neon-pink/5 px-2 py-0.5 rounded uppercase tracking-widest">{task.taskType || 'TASK'}</span>
+                    <span className="text-[11px] text-slate-500 font-mono">Subnet {task.subnetId ?? 0}</span>
                     {isHcsOnly
-                      ? <span className="text-[9px] text-yellow-400/70 font-mono border border-yellow-400/20 px-1.5 py-0.5 rounded">HCS-only</span>
-                      : <span className="text-[9px] text-neon-purple/70 font-mono">On-chain #{task.onChainTaskId}</span>
+                      ? <span className="text-[11px] text-yellow-400/70 font-mono border border-yellow-400/20 px-1.5 py-0.5 rounded">HCS-only</span>
+                      : <span className="text-[11px] text-neon-purple/70 font-mono">On-chain #{task.onChainTaskId}</span>
                     }
                   </div>
                   <div className="text-xs text-slate-300 line-clamp-2 font-mono leading-relaxed">{task.prompt || task.taskHash || taskId}</div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className="text-neon-green font-black text-sm">+{Number(task.rewardAmount ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
-                  <div className="text-[9px] text-slate-500">MDT</div>
+                  <div className="text-neon-green font-black text-sm">{Number(task.rewardAmount ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                  <div className="text-[11px] text-slate-400">MDT</div>
                 </div>
               </div>
               {isDone ? (
-                <div className="flex items-center gap-2 text-neon-green text-[10px] font-bold">
+                <div className="flex items-center gap-2 text-neon-green text-[12px] font-bold">
                   <CheckCircle size={12} /> Submitted
                   {hashscanUrl(submitted[taskId]) && (
                     <a href={hashscanUrl(submitted[taskId])} target="_blank" rel="noopener noreferrer"
@@ -766,17 +766,17 @@ function SubmitResultPanel({ accountId, evmAddress, subnetIds }: { accountId: st
                     onChange={e => setResultHash(r => ({ ...r, [taskId]: e.target.value }))}
                     className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:border-neon-pink/40 outline-none" />
                   <button onClick={() => submitResult(task)} disabled={submitting[taskId]}
-                    className="px-4 py-2 bg-neon-pink/10 hover:bg-neon-pink/20 border border-neon-pink/40 text-neon-pink font-black text-[10px] uppercase tracking-widest rounded-lg transition-all disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap">
+                    className="px-4 py-2 bg-neon-pink/10 hover:bg-neon-pink/20 border border-neon-pink/40 text-neon-pink font-black text-[12px] uppercase tracking-widest rounded-lg transition-all disabled:opacity-40 flex items-center gap-1.5 whitespace-nowrap">
                     <Send size={10} /> {submitting[taskId] ? 'Submitting...' : isHcsOnly ? 'Submit (HCS)' : 'Submit'}
                   </button>
                 </div>
               )}
-              {errors[taskId] && <div className="text-[10px] text-red-400 font-mono">✗ {errors[taskId]}</div>}
+              {errors[taskId] && <div className="text-[12px] text-red-400 font-mono">✗ {errors[taskId]}</div>}
             </div>
           );
         })}
       </div>
-      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[10px] text-slate-600 font-mono">resultHash = IPFS CID or any hash of your AI result</div>
+      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[12px] text-slate-500 font-mono">resultHash = IPFS CID or any hash of your AI result</div>
     </div>
   );
 }
@@ -825,7 +825,7 @@ function TaskFeedPanel({ accountId, subnetIds }: { accountId: string; subnetIds:
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Available Tasks</div>
-            <div className="text-[9px] text-slate-500 uppercase tracking-widest">
+            <div className="text-[11px] text-slate-400 uppercase tracking-widest">
               HCS Topic 0.0.8198585
               {subnetIds === null
                 ? ' · Loading subnets...'
@@ -835,19 +835,19 @@ function TaskFeedPanel({ accountId, subnetIds }: { accountId: string; subnetIds:
             </div>
           </div>
         </div>
-        <span className="text-[9px] font-bold text-neon-green border border-neon-green/30 bg-neon-green/5 px-2 py-1 rounded-full uppercase tracking-widest">
+        <span className="text-[11px] font-bold text-neon-green border border-neon-green/30 bg-neon-green/5 px-2 py-1 rounded-full uppercase tracking-widest">
           {tasks.length} tasks
         </span>
       </div>
 
       <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
         {loading ? (
-          <div className="py-12 text-center text-slate-600 text-xs font-mono">Loading tasks from HCS...</div>
+          <div className="py-12 text-center text-slate-500 text-xs font-mono">Loading tasks from HCS...</div>
         ) : tasks.length === 0 ? (
           <div className="py-12 text-center">
-            <Zap size={28} className="text-slate-700 mx-auto mb-3" />
-            <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No tasks for your subnets</div>
-            <div className="text-[9px] text-slate-500 uppercase tracking-widest">
+            <Zap size={28} className="text-slate-600 mx-auto mb-3" />
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No tasks for your subnets</div>
+            <div className="text-[11px] text-slate-400 uppercase tracking-widest">
               {subnetIds === null
                 ? 'Loading your subnets...'
                 : subnetIds.length > 0
@@ -860,24 +860,24 @@ function TaskFeedPanel({ accountId, subnetIds }: { accountId: string; subnetIds:
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[9px] font-black text-neon-green border border-neon-green/30 bg-neon-green/5 px-2 py-0.5 rounded uppercase tracking-widest">
+                  <span className="text-[11px] font-black text-neon-green border border-neon-green/30 bg-neon-green/5 px-2 py-0.5 rounded uppercase tracking-widest">
                     {task.taskType || 'TASK'}
                   </span>
-                  <span className="text-[9px] text-slate-600 font-mono">Subnet {task.subnetId ?? 0}</span>
-                  <span className="text-[9px] text-slate-600 font-mono">{toUTC7(task.consensusTimestamp)}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">Subnet {task.subnetId ?? 0}</span>
+                  <span className="text-[11px] text-slate-500 font-mono">{toUTC7(task.consensusTimestamp)}</span>
                 </div>
                 <div className="text-xs text-slate-300 line-clamp-2 leading-relaxed font-mono">
                   {task.prompt || task.taskHash || task.taskId}
                 </div>
-                <div className="text-[9px] text-slate-600 mt-1 font-mono">ID: {String(task.taskId || '').substring(0, 20)}...</div>
+                <div className="text-[11px] text-slate-500 mt-1 font-mono">ID: {String(task.taskId || '').substring(0, 20)}...</div>
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="text-neon-green font-black text-sm">+{Number(task.rewardAmount ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
-                <div className="text-[9px] text-slate-500 uppercase tracking-widest">MDT</div>
+                <div className="text-[11px] text-slate-400 uppercase tracking-widest">MDT</div>
                 {task.consensusTimestamp && (
                   <a href={hashscanUrl(task.consensusTimestamp)}
                     target="_blank" rel="noopener noreferrer"
-                    className="text-[9px] text-neon-cyan/50 hover:text-neon-cyan flex items-center justify-end gap-0.5 mt-1 transition-colors">
+                    className="text-[11px] text-neon-cyan/50 hover:text-neon-cyan flex items-center justify-end gap-0.5 mt-1 transition-colors">
                     HCS <ExternalLink size={8} />
                   </a>
                 )}
@@ -887,7 +887,7 @@ function TaskFeedPanel({ accountId, subnetIds }: { accountId: string; subnetIds:
         ))}
       </div>
 
-      <div className="px-6 py-3 border-t border-white/5 bg-black/20 text-[10px] text-slate-600 font-mono flex justify-between">
+      <div className="px-6 py-3 border-t border-white/5 bg-black/20 text-[12px] text-slate-500 font-mono flex justify-between">
         <span>Submit results via SubnetRegistryV2.submitResult(taskId, resultHash)</span>
         <span>Auto-refresh 15s</span>
       </div>
@@ -965,28 +965,28 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">Task Results</div>
-            <div className="text-[9px] text-slate-500 font-mono">On-chain scores · winner status · earnings</div>
+            <div className="text-[11px] text-slate-400 font-mono">On-chain scores · winner status · earnings</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {totalEarned !== null && totalEarned > 0 && (
-            <span className="text-[9px] font-bold text-neon-green border border-neon-green/30 bg-neon-green/5 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-neon-green border border-neon-green/30 bg-neon-green/5 px-2 py-1 rounded-full">
               {totalEarned.toFixed(4)} MDT earned
             </span>
           )}
-          <button onClick={load} className="text-slate-600 hover:text-neon-cyan transition-colors">
+          <button onClick={load} className="text-slate-500 hover:text-neon-cyan transition-colors">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
       <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
         {loading ? (
-          <div className="py-8 text-center text-slate-600 text-xs font-mono">Loading task results...</div>
+          <div className="py-8 text-center text-slate-500 text-xs font-mono">Loading task results...</div>
         ) : results.length === 0 ? (
           <div className="py-10 text-center">
-            <Award size={24} className="text-slate-700 mx-auto mb-2" />
-            <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No completed tasks yet</div>
-            <div className="text-slate-700 text-[10px] mt-1">Submit results to tasks to appear here</div>
+            <Award size={24} className="text-slate-600 mx-auto mb-2" />
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No completed tasks yet</div>
+            <div className="text-slate-600 text-[12px] mt-1">Submit results to tasks to appear here</div>
           </div>
         ) : results.map((t, i) => {
           const isCompleted = t.status === 3;
@@ -996,10 +996,10 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCompleted ? (t.isWinner ? 'text-neon-green border-neon-green/30 bg-neon-green/5' : 'text-slate-400 border-white/10') : 'text-yellow-400 border-yellow-400/20 bg-yellow-400/5'}`}>
+                    <span className={`text-[11px] font-black uppercase tracking-widest px-2 py-0.5 rounded border ${isCompleted ? (t.isWinner ? 'text-neon-green border-neon-green/30 bg-neon-green/5' : 'text-slate-400 border-white/10') : 'text-yellow-400 border-yellow-400/20 bg-yellow-400/5'}`}>
                       {t.isWinner ? '🏆 WON' : STATUS_LABELS[t.status ?? 0]}
                     </span>
-                    <span className="text-[9px] text-neon-purple font-mono">#{t.onChainTaskId}</span>
+                    <span className="text-[11px] text-neon-purple font-mono">#{t.onChainTaskId}</span>
                   </div>
                   <div className="text-xs text-slate-300 line-clamp-1 font-mono">{t.prompt || t.taskHash || t.taskId}</div>
                 </div>
@@ -1007,7 +1007,7 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
                   <div className={`font-black text-sm ${t.isWinner ? 'text-neon-green' : 'text-slate-400'}`}>
                     {t.isWinner ? `+${(t.rewardAmount ?? 0).toLocaleString()}` : (t.rewardAmount ?? 0).toLocaleString()} MDT
                   </div>
-                  {scorePct && <div className="text-[9px] text-neon-cyan font-mono">Score: {scorePct}%</div>}
+                  {scorePct && <div className="text-[11px] text-neon-cyan font-mono">Score: {scorePct}%</div>}
                 </div>
               </div>
               {isCompleted && scorePct && (
@@ -1016,7 +1016,7 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
                     <div className={`h-full rounded-full ${t.isWinner ? 'bg-neon-green' : 'bg-slate-600'}`}
                       style={{ width: `${scorePct}%` }} />
                   </div>
-                  <span className="text-[9px] text-slate-500 font-mono">{scorePct}% consensus</span>
+                  <span className="text-[11px] text-slate-400 font-mono">{scorePct}% consensus</span>
                 </div>
               )}
               {/* HCS score message link + metrics breakdown */}
@@ -1025,11 +1025,11 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
                   <div className="flex items-center gap-2">
                     <a href={`https://hashscan.io/testnet/transaction/${t.hcsScoreTs}`}
                       target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-neon-purple text-[10px] font-bold hover:underline">
+                      className="flex items-center gap-1 text-neon-purple text-[12px] font-bold hover:underline">
                       <ExternalLink size={9} /> HCS Score Message
                     </a>
                     {t.hcsScore !== null && (
-                      <span className="text-[9px] text-slate-400 font-mono">· {t.hcsScore.toFixed(1)}%</span>
+                      <span className="text-[11px] text-slate-400 font-mono">· {t.hcsScore.toFixed(1)}%</span>
                     )}
                   </div>
                   {t.hcsMetrics && Object.keys(t.hcsMetrics).length > 0 && (
@@ -1038,8 +1038,8 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
                         const vp = Number(v ?? 0); const vPct = vp > 1 ? vp : vp * 100;
                         return (
                           <div key={k} className="flex items-center justify-between">
-                            <span className="text-[9px] text-slate-600 capitalize">{k}</span>
-                            <span className="text-[9px] text-slate-400 font-mono">{vPct.toFixed(0)}%</span>
+                            <span className="text-[11px] text-slate-500 capitalize">{k}</span>
+                            <span className="text-[11px] text-slate-400 font-mono">{vPct.toFixed(0)}%</span>
                           </div>
                         );
                       })}
@@ -1051,7 +1051,7 @@ function MinerResultsPanel({ evmAddress, accountId }: { evmAddress: string; acco
           );
         })}
       </div>
-      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[9px] text-slate-600 font-mono">
+      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[11px] text-slate-500 font-mono">
         Score = median of validator scores · 85% of reward goes to winning miner
       </div>
     </div>
@@ -1147,7 +1147,7 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
           </div>
           <div>
             <div className="text-sm font-black text-white uppercase tracking-wider">My Score History</div>
-            <div className="text-[9px] text-slate-500 uppercase tracking-widest">HCS Topic 0.0.8198584 · validator scores for your submissions</div>
+            <div className="text-[11px] text-slate-400 uppercase tracking-widest">HCS Topic 0.0.8198584 · validator scores for your submissions</div>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1156,10 +1156,10 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
               <div className={`text-neon-cyan font-black text-lg ${avgScore >= 80 ? 'text-neon-green' : avgScore >= 60 ? 'text-neon-cyan' : 'text-yellow-400'}`}>
                 {avgScore.toFixed(1)}%
               </div>
-              <div className="text-[9px] text-slate-500 uppercase tracking-widest">Avg Score</div>
+              <div className="text-[11px] text-slate-400 uppercase tracking-widest">Avg Score</div>
             </div>
           )}
-          <button onClick={load} className="text-slate-600 hover:text-neon-cyan transition-colors">
+          <button onClick={load} className="text-slate-500 hover:text-neon-cyan transition-colors">
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
@@ -1167,12 +1167,12 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
 
       <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto">
         {loading ? (
-          <div className="py-8 text-center text-slate-600 text-xs font-mono">Loading scores from HCS...</div>
+          <div className="py-8 text-center text-slate-500 text-xs font-mono">Loading scores from HCS...</div>
         ) : scores.length === 0 ? (
           <div className="py-10 text-center">
-            <Award size={24} className="text-slate-700 mx-auto mb-2" />
-            <div className="text-slate-600 text-xs font-bold uppercase tracking-widest">No scores yet</div>
-            <div className="text-slate-700 text-[10px] mt-1">Submit task results — validators will score them</div>
+            <Award size={24} className="text-slate-600 mx-auto mb-2" />
+            <div className="text-slate-500 text-xs font-bold uppercase tracking-widest">No scores yet</div>
+            <div className="text-slate-600 text-[12px] mt-1">Submit task results — validators will score them</div>
           </div>
         ) : scores.map((s, i) => {
           const score = s.score100 ?? 0;
@@ -1185,11 +1185,11 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
             <div key={i} className="px-6 py-4 hover:bg-white/[0.02] transition-colors space-y-2">
               <div className="flex items-center justify-between gap-3 overflow-hidden">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-mono text-white truncate">Task: {s.taskId || s.task_id}</div>
-                  <div className="text-[9px] text-slate-500 mt-0.5 font-mono">
+                  <div className="text-[12px] font-mono text-white truncate">Task: {s.taskId || s.task_id}</div>
+                  <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
                     Validator: <span className="text-slate-300">{s.validatorId || s.validator_id || '—'}</span>
-                    {s.confidence != null && <span className="ml-2 text-slate-600">· conf {(Number(s.confidence) * 100).toFixed(0)}%</span>}
-                    {s.consensusTimestamp && <span className="ml-2 text-slate-600">· {toUTC7(s.consensusTimestamp)}</span>}
+                    {s.confidence != null && <span className="ml-2 text-slate-500">· conf {(Number(s.confidence) * 100).toFixed(0)}%</span>}
+                    {s.consensusTimestamp && <span className="ml-2 text-slate-500">· {toUTC7(s.consensusTimestamp)}</span>}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -1197,13 +1197,13 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
                   <div className="flex items-center gap-1.5 justify-end mt-0.5">
                     {s.consensusTimestamp && (
                       <a href={hashscanUrl(s.consensusTimestamp)} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-0.5 text-neon-cyan/60 hover:text-neon-cyan text-[8px] font-bold">
+                        className="flex items-center gap-0.5 text-neon-cyan/60 hover:text-neon-cyan text-[10px] font-bold">
                         <ExternalLink size={7} /> HCS
                       </a>
                     )}
                     {s.hcs_sequence && (
                       <a href={hashscanUrl(s.hcs_sequence, true, '0.0.8198584')} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-0.5 text-neon-purple/60 hover:text-neon-purple text-[8px] font-bold">
+                        className="flex items-center gap-0.5 text-neon-purple/60 hover:text-neon-purple text-[10px] font-bold">
                         <Shield size={7} /> Verify
                       </a>
                     )}
@@ -1224,12 +1224,12 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
                     const vPct = v > 1 ? v : v * 100;
                     return (
                       <div key={key} className="flex items-center justify-between">
-                        <span className="text-[9px] text-slate-500 capitalize">{key}</span>
+                        <span className="text-[11px] text-slate-400 capitalize">{key}</span>
                         <div className="flex items-center gap-1.5">
                           <div className="w-12 h-0.5 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-neon-cyan/60 rounded-full" style={{ width: `${vPct}%` }} />
                           </div>
-                          <span className="text-[9px] text-slate-400 font-mono w-8 text-right">{vPct.toFixed(0)}%</span>
+                          <span className="text-[11px] text-slate-400 font-mono w-8 text-right">{vPct.toFixed(0)}%</span>
                         </div>
                       </div>
                     );
@@ -1240,7 +1240,7 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
           );
         })}
       </div>
-      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[9px] text-slate-600 font-mono">
+      <div className="px-5 py-3 border-t border-white/5 bg-black/20 text-[11px] text-slate-500 font-mono">
         Scores written to HCS by validators · immutable on Hedera blockchain
       </div>
     </div>
@@ -1299,8 +1299,8 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
     return (
       <div className="flex justify-center items-center py-24">
         <div className="text-center space-y-3">
-          <Shield size={40} className="text-slate-700 mx-auto" />
-          <div className="text-slate-500 font-bold uppercase tracking-widest text-sm">Connect wallet to view miner dashboard</div>
+          <Shield size={40} className="text-slate-600 mx-auto" />
+          <div className="text-slate-400 font-bold uppercase tracking-widest text-sm">Connect wallet to view miner dashboard</div>
         </div>
       </div>
     );
@@ -1322,7 +1322,7 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
             </div>
           </div>
           <div className="p-4 bg-black/40 border border-white/10 rounded-xl text-[11px] font-mono text-slate-400 space-y-1 text-left">
-            <div className="text-slate-500 uppercase tracking-widest text-[9px] mb-2">Requirements</div>
+            <div className="text-slate-400 uppercase tracking-widest text-[11px] mb-2">Requirements</div>
             <div>· Minimum <span className="text-neon-cyan font-bold">10 MDT</span> staked on StakingVaultV2</div>
             <div>· Role: <span className="text-neon-cyan font-bold">Miner (role=1)</span></div>
             <div>· Contract: <span className="text-slate-300">0x99968cF6...718f</span></div>
@@ -1347,7 +1347,7 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
       <div className="w-full max-w-[1600px] flex flex-col gap-8">
 
         {/* Breadcrumb */}
-        <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-500 uppercase">
+        <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-400 uppercase">
           <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>HOME</button>
           <ChevronRight size={12} />
           <span className="text-neon-cyan">MINER DASHBOARD</span>
@@ -1364,11 +1364,11 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
                 <h1 className="text-3xl font-black text-white uppercase tracking-tighter font-display">
                   Miner <span className="text-neon-cyan neon-text">Dashboard</span>
                 </h1>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">{accountId}</div>
+                <div className="text-[12px] text-slate-400 font-mono mt-0.5">{accountId}</div>
               </div>
             </div>
             {isMiner || stakeInfo?.isActive ? (
-              <div className="flex items-center gap-2 text-[10px] font-bold text-neon-green">
+              <div className="flex items-center gap-2 text-[12px] font-bold text-neon-green">
                 <CheckCircle size={12} />
                 <span>
                   {stakeInfo?.isActive ? `On-chain staked · ${stakeInfo.amountMDT} MDT` : ''}
@@ -1377,7 +1377,7 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-[10px] font-bold text-yellow-400">
+              <div className="flex items-center gap-2 text-[12px] font-bold text-yellow-400">
                 <AlertCircle size={12} />
                 <span>Not registered as miner yet</span>
               </div>
@@ -1420,11 +1420,11 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
           ].map((s, i) => (
             <div key={i} className="glass-panel p-5 rounded-xl border border-white/5 relative overflow-hidden">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{s.label}</span>
+                <span className="text-[11px] text-slate-400 uppercase font-bold tracking-widest">{s.label}</span>
                 <span className={`material-symbols-outlined text-lg opacity-30 ${s.color}`}>{s.icon}</span>
               </div>
               <div className={`font-black font-display text-xl text-white tracking-tight`}>{s.val}</div>
-              <div className="text-[9px] text-slate-600 mt-1">{s.sub}</div>
+              <div className="text-[11px] text-slate-500 mt-1">{s.sub}</div>
             </div>
           ))}
         </div>
@@ -1464,7 +1464,7 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
                     { k: 'Subnets', v: subnets.map(s => `S-${s}`).join(', ') || '—' },
                   ].map(({ k, v }) => (
                     <div key={k} className="flex justify-between gap-2 py-1.5 border-b border-white/5">
-                      <span className="text-slate-500 uppercase tracking-widest text-[9px]">{k}</span>
+                      <span className="text-slate-400 uppercase tracking-widest text-[11px]">{k}</span>
                       <span className="text-white font-bold text-right truncate max-w-[160px]">{v}</span>
                     </div>
                   ))}
@@ -1472,7 +1472,7 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
                 {myRegistration.consensusTimestamp && (
                   <a href={hashscanUrl(myRegistration.consensusTimestamp)}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+                    className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline">
                     <ExternalLink size={10} />
                     View on HashScan
                   </a>
@@ -1491,12 +1491,12 @@ export default function MinerDashboard({ onBack }: MinerDashboardProps) {
                 { step: '5', label: 'Claim Rewards', desc: 'SubnetRegistryV2.withdrawEarnings()', color: 'neon-yellow' },
               ].map((s) => (
                 <div key={s.step} className="flex items-start gap-3 p-3 rounded-xl border bg-white/[0.02] border-white/5">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-black bg-${s.color}/10 text-${s.color} border border-${s.color}/30`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-black bg-${s.color}/10 text-${s.color} border border-${s.color}/30`}>
                     {s.step}
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-white">{s.label}</div>
-                    <div className="text-[9px] text-slate-600 font-mono mt-0.5">{s.desc}</div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">{s.desc}</div>
                   </div>
                 </div>
               ))}

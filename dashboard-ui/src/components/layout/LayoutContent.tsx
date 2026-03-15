@@ -22,6 +22,8 @@ import ValidatorDetailView from "../dashboard/ValidatorDetailView";
 import MinerDetailView from "../dashboard/MinerDetailView";
 import ValidatorRegistrationView from "../dashboard/ValidatorRegistrationView";
 import ValidatorDashboard from "../dashboard/ValidatorDashboard";
+import HolderDashboard from "../dashboard/HolderDashboard";
+import HolderRegistrationView from "../dashboard/HolderRegistrationView";
 import { useWallet } from "@/context/WalletContext";
 
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
@@ -65,6 +67,14 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
         />;
       case ViewState.VALIDATOR_DASHBOARD:
         return <ValidatorDashboard onBack={() => setCurrentView(ViewState.HOME)} />;
+      case ViewState.HOLDER_DASHBOARD:
+        return <HolderDashboard onBack={() => setCurrentView(ViewState.HOME)} />;
+      case ViewState.REGISTER_HOLDER:
+        return <HolderRegistrationView
+          onBack={() => setCurrentView(ViewState.HOME)}
+          onViewChange={(v) => setCurrentView(v)}
+          onRegistered={() => setCurrentView(ViewState.HOLDER_DASHBOARD)}
+        />;
       case ViewState.EXPLORER:
         return <ExplorerView 
           onSelectBlock={handleSelectBlock} 

@@ -44,7 +44,7 @@ export default function ActivityFeed() {
                 <span className="w-2 h-2 rounded-full bg-red-500" />
                 <span className="w-2 h-2 rounded-full bg-yellow-500" />
                 <span className="w-2 h-2 rounded-full bg-neon-green" />
-                <span className="ml-2 text-[9px] text-slate-500 uppercase tracking-widest">METAGRAPH_CONSOLE_V2.4</span>
+                <span className="ml-2 text-[11px] text-slate-500 uppercase tracking-widest">METAGRAPH_CONSOLE_V2.4</span>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 bg-white/5 dark:bg-transparent">
@@ -65,13 +65,13 @@ export default function ActivityFeed() {
                                 <Icon size={11} className={`${color} mt-0.5 flex-shrink-0`} />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                                        <span className={`text-[9px] font-bold uppercase tracking-widest ${color}`}>{label}</span>
-                                        <span className="text-[9px] text-slate-500 flex items-center gap-1">
+                                        <span className={`text-[11px] font-bold uppercase tracking-widest ${color}`}>{label}</span>
+                                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
                                             <Clock size={8} />
                                             {formatUTC7(activity.timestamp)}
                                         </span>
                                     </div>
-                                    <p className="text-[10px] text-primary truncate opacity-80">{activity.message}</p>
+                                    <p className="text-[12px] text-primary truncate opacity-80">{activity.message}</p>
                                 </div>
                             </div>
                         );
@@ -79,7 +79,7 @@ export default function ActivityFeed() {
                 )}
             </div>
 
-            <div className="px-3 py-1.5 border-t border-white/5 text-[9px] text-slate-600 flex justify-between">
+            <div className="px-3 py-1.5 border-t border-white/5 text-[11px] text-slate-600 flex justify-between">
                 <span>LN {activities.length}, COL 0</span>
                 <span>UTF-8</span>
             </div>

@@ -278,14 +278,16 @@ class HederaClient:
 
         Args:
             topic_id: Topic ID
-            message: Message content
+            message: Message content (string — will be UTF-8 encoded to bytes)
 
         Returns:
             SDK TransactionReceipt (has .topic_sequence_number)
         """
         tx = TopicMessageSubmitTransaction()
         tx.set_topic_id(TopicId.from_string(topic_id))
-        tx.set_message(message)  # SDK encodes internally
+        # SDK's _build_proto_body does bytes(self.message, "utf-8") — must pass str, not bytes
+        message_str = message.decode("utf-8") if isinstance(message, bytes) else message
+        tx.set_message(message_str)
 
         receipt = tx.execute(self.client)
         return receipt

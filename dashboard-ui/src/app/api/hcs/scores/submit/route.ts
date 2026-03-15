@@ -64,6 +64,19 @@ export async function POST(req: Request) {
       taskId,
       sequence: hcsResult.sequence,
       transactionId: hcsResult.transaction_id,
+      // consensus_timestamp for direct HashScan link: hashscan.io/testnet/transaction/{timestamp}
+      consensusTimestamp: await (async () => {
+        try {
+          const seq = hcsResult.sequence;
+          if (!seq || seq === '0') return '';
+          const r = await fetch(
+            `https://testnet.mirrornode.hedera.com/api/v1/topics/${SCORING_TOPIC_ID}/messages/${seq}`,
+            { cache: 'no-store' }
+          );
+          if (r.ok) { const d = await r.json(); return d.consensus_timestamp || ''; }
+        } catch (_) {}
+        return '';
+      })(),
     });
   } catch (err: any) {
     console.error('[hcs/scores/submit]', err);

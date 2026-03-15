@@ -47,22 +47,22 @@ function FaucetPanel({ accountId, needed, stake, regFee, onSuccess }: {
         </div>
         <div>
           <div className="text-sm font-black text-yellow-400 uppercase tracking-wider">Testnet MDT Faucet</div>
-          <div className="text-[9px] text-slate-500 font-mono">MDT · 0.0.8198586 · Hedera Testnet</div>
+          <div className="text-[11px] text-slate-500 font-mono">MDT · 0.0.8198586 · Hedera Testnet</div>
         </div>
       </div>
       <div className="p-5 space-y-4">
         <div>
-          <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold mb-1.5">Wallet Address</div>
+          <div className="text-[11px] text-slate-500 uppercase tracking-widest font-bold mb-1.5">Wallet Address</div>
           <div className="px-3 py-2.5 bg-black/40 border border-white/10 rounded-xl font-mono text-sm text-white break-all select-all">
             {accountId || '—'}
           </div>
         </div>
         <div className="flex items-center justify-between p-3 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
           <div>
-            <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">Amount</div>
+            <div className="text-[11px] text-slate-500 uppercase tracking-widest font-bold">Amount</div>
             <div className="text-xl font-black text-yellow-400 mt-0.5">500 MDT</div>
           </div>
-          <div className="text-right text-[9px] text-slate-500 font-mono">
+          <div className="text-right text-[11px] text-slate-500 font-mono">
             <div>Need: {needed} MDT</div>
             <div>({stake} stake + ~{regFee} fee)</div>
           </div>
@@ -72,21 +72,21 @@ function FaucetPanel({ accountId, needed, stake, regFee, onSuccess }: {
             <div className="flex items-center gap-2 text-neon-green text-[11px] font-black">
               <span className="material-symbols-outlined text-sm">check_circle</span> {result.amount} MDT sent successfully
             </div>
-            {result.txId && <div className="text-[9px] text-slate-500 font-mono break-all">TX: {result.txId}</div>}
+            {result.txId && <div className="text-[11px] text-slate-500 font-mono break-all">TX: {result.txId}</div>}
             {result.txUrl && (
               <a href={result.txUrl} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-neon-cyan text-[10px] font-bold hover:underline">
+                className="flex items-center gap-1.5 text-neon-cyan text-[12px] font-bold hover:underline">
                 <span className="material-symbols-outlined text-xs">open_in_new</span> View on HashScan
               </a>
             )}
             {countdown !== null
-              ? <div className="text-[9px] text-yellow-400 font-mono animate-pulse">Checking balance in {countdown}s...</div>
-              : <div className="text-[9px] text-slate-500 font-mono">Refreshing balance...</div>
+              ? <div className="text-[11px] text-yellow-400 font-mono animate-pulse">Checking balance in {countdown}s...</div>
+              : <div className="text-[11px] text-slate-500 font-mono">Refreshing balance...</div>
             }
           </div>
         )}
         {err && (
-          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[10px] font-mono text-red-400">✗ {err}</div>
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-[12px] font-mono text-red-400">✗ {err}</div>
         )}
         {!result && (
           <button onClick={request} disabled={loading || !accountId}
@@ -172,7 +172,7 @@ interface BalanceInfo { mdtBalance: number; hbarBalance: number; evmAddress: str
 
 export default function RoleRegistrationView({ onBack, onViewChange, onRegistered }: Props) {
   const { accountId, address: walletEvm, isConnected, type: walletType, hashConnect } = useWallet();
-  const [stake, setStake] = useState(10);
+  const [stake, setStake] = useState<string>('10');
   const [caps, setCaps] = useState<string[]>(['text_generation']);
   const [selectedSubnets, setSelectedSubnets] = useState<number[]>([]);
   const [availableSubnets, setAvailableSubnets] = useState<SubnetInfo[]>([]);
@@ -187,7 +187,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
 
   const log = (msg: string) => setLogs(prev => [...prev, msg]);
   const minStake = MIN_STAKE.miner;
-  const totalNeeded = stake + REG_FEE_BUFFER;
+  const totalNeeded = Number(stake) + REG_FEE_BUFFER;
 
   const toggleCap = (c: string) =>
     setCaps(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
@@ -250,6 +250,25 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
       };
       setBalance(info);
       log(`Balance: ${data.mdtBalance.toFixed(2)} MDT · ${data.hbarBalance.toFixed(4)} HBAR`);
+
+      // Check existing stake — 1 account = 1 role
+      try {
+        const provider = new ethers.JsonRpcProvider(HEDERA_RPC);
+        const vaultRead = new ethers.Contract(VAULT_EVM, VAULT_ABI, provider);
+        const stakeInfo = await vaultRead.stakes(info.evmAddress);
+        if (stakeInfo.isActive) {
+          const role = Number(stakeInfo.role);
+          if (role === 1) {
+            log(`✓ Already staked as Miner (${Number(stakeInfo.amount) / 1e8} MDT)`);
+          } else {
+            const roleName = role === 2 ? 'Validator' : role === 3 ? 'Holder' : `role ${role}`;
+            setError(`ROLE_CONFLICT:${roleName}`);
+            setStep('error');
+            return;
+          }
+        }
+      } catch (_) {}
+
       if (info.hasEnough) {
         log(`✓ Sufficient MDT (need ${totalNeeded}, have ${data.mdtBalance.toFixed(2)})`);
         setStep('idle');
@@ -308,7 +327,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
   // Both flows: 1) Transfer MDT→vault (user signs)  2) recordDeposit (backend)  3) stake() (user signs)
   const doOnChainStake = async (evmAddress: string): Promise<{ txHash: string; txHashTransfer?: string; txHashContract?: string } | null> => {
     setStep('staking');
-    const amountRaw = BigInt(Math.floor(stake * 1e8));
+    const amountRaw = BigInt(Math.floor(Number(stake) * 1e8));
     const stakeRole = 1; // Miner=1
 
     log(`Staking ${stake} MDT on-chain via ${walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}...`);
@@ -340,7 +359,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
         setStep('deposit');
         log(`Step 1/3: Transferring ${totalMDT} MDT to vault via HTS (MetaMask)...`);
         const HTS_ABI_LOCAL = [
-          'function cryptoTransfer((int64 amount, address accountID, bool isApproval)[] transferList, (address token, (int64 amount, address accountID, bool isApproval)[] transfers, bool deleteSpenderAllowance)[] tokenTransfers) external returns (int64 responseCode)',
+          'function cryptoTransfer((int64 amount, address accountID, bool isApproval)[] transferList, (address token, (int64 amount, address accountID, bool isApproval)[] tokenTransfers, bool deleteSpenderAllowance)[] tokenTransfers) external returns (int64 responseCode)',
         ];
         const MDT_EVM = '0x00000000000000000000000000000000007d257a';
         const hts = new ethers.Contract('0x0000000000000000000000000000000000000167', HTS_ABI_LOCAL, signer);
@@ -526,7 +545,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
   const handleRegister = async () => {
     if (!accountId || !isConnected) return;
     if (caps.length === 0) { setError('Select at least one capability'); return; }
-    if (stake < minStake) { setError(`Minimum stake is ${minStake} MDT`); return; }
+    if (Number(stake) < minStake) { setError(`Minimum stake is ${minStake} MDT`); return; }
     if (selectedSubnets.length === 0) { setError('Select at least one subnet'); return; }
     if (!balance) { await checkBalance(); return; }
     if (!balance.hasEnough) { setStep('need_faucet'); return; }
@@ -569,7 +588,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          role: 'miner', accountId, stakeAmount: stake,
+          role: 'miner', accountId, stakeAmount: Number(stake),
           capabilities: caps,
           subnetIds: selectedSubnets,
           skipOnChainStake: true,
@@ -612,7 +631,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
           <h1 className="text-3xl font-display font-bold text-white uppercase tracking-tighter italic">
             Join as <span className="text-neon-cyan">AI Miner</span>
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+          <p className="text-[12px] font-bold text-slate-500 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
             <span className={`w-1.5 h-1.5 rounded-full ${step === 'done' ? 'bg-neon-green' : step === 'need_faucet' || step === 'error' ? 'bg-yellow-400' : 'bg-neon-cyan animate-pulse'}`} />
             {stepLabel}
             {walletType && <span className="text-slate-600">· via {walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}</span>}
@@ -629,7 +648,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
             </span>
             <div>
               <div className="text-xs font-black text-white uppercase tracking-wider">MDT Balance</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+              <div className="text-[12px] text-slate-500 font-mono mt-0.5">
                 {balance.mdtBalance.toFixed(2)} MDT · {balance.hbarBalance.toFixed(4)} HBAR
               </div>
             </div>
@@ -638,7 +657,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
             <div className={`text-lg font-black font-mono ${balance.hasEnough ? 'text-neon-green' : 'text-yellow-400'}`}>
               {balance.mdtBalance.toFixed(0)} / {totalNeeded}
             </div>
-            <div className="text-[9px] text-slate-500 uppercase tracking-widest">MDT (stake + regFee)</div>
+            <div className="text-[11px] text-slate-500 uppercase tracking-widest">MDT (stake + regFee)</div>
           </div>
         </div>
       )}
@@ -648,18 +667,40 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
         <FaucetPanel
           accountId={accountId || ''}
           needed={totalNeeded}
-          stake={stake}
+          stake={Number(stake)}
           regFee={REG_FEE_BUFFER}
           onSuccess={() => checkBalance()}
         />
       )}
 
+      {/* Role conflict warning */}
+      {step === 'error' && error?.startsWith('ROLE_CONFLICT:') && (() => {
+        const conflictRole = error.replace('ROLE_CONFLICT:', '');
+        return (
+          <div className="glass-panel p-5 border border-red-500/30 rounded-2xl space-y-3">
+            <div className="flex items-center gap-2 text-red-400 font-black text-xs uppercase tracking-widest">
+              <span className="material-symbols-outlined text-sm">warning</span> Role Conflict
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              This wallet is already staked as <span className="text-red-400 font-bold">{conflictRole}</span>. One account = one role — you cannot register as Miner while active as {conflictRole}.
+            </p>
+            <div className="p-3 bg-yellow-400/5 border border-yellow-400/20 rounded-xl text-[10px] text-yellow-400 space-y-1">
+              <div className="font-black uppercase tracking-widest mb-1">How to switch to Miner</div>
+              <div>1. Go to your <span className="text-white font-bold">{conflictRole} Dashboard</span> → Request Unstake</div>
+              <div>2. Wait <span className="text-white font-bold">7 days</span> cooldown</div>
+              <div>3. <span className="text-white font-bold">Withdraw</span> your stake</div>
+              <div>4. Come back here and register as Miner</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Registration form */}
-      {step !== 'done' && (
+      {step !== 'done' && step !== 'error' && (
         <div className="glass-panel p-6 space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Registration Details</h3>
-            <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest">
               {[
                 { label: 'Balance', done: !!balance?.hasEnough, active: step === 'checking' || step === 'need_faucet' },
                 { label: 'Stake', done: !!stakeResult, active: step === 'deposit' || step === 'staking' },
@@ -677,11 +718,11 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Hedera Account ID</label>
+            <label className="text-[12px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Hedera Account ID</label>
             <div className="px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-sm font-mono text-white flex items-center justify-between">
               <span>{isConnected ? accountId : <span className="text-slate-500">Connect wallet first</span>}</span>
               {walletType && (
-                <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded border ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple bg-neon-purple/10' : 'border-orange-400/40 text-orange-400 bg-orange-400/10'}`}>
+                <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded border ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple bg-neon-purple/10' : 'border-orange-400/40 text-orange-400 bg-orange-400/10'}`}>
                   {walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}
                 </span>
               )}
@@ -689,21 +730,26 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
+            <label className="text-[12px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
               Stake Amount (MDT) <span className="text-neon-cyan">· min {minStake} MDT</span>
             </label>
             <input type="number" min={minStake} value={stake}
-              onChange={e => setStake(Number(e.target.value))}
+              onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} 
+              onChange={(e) => {
+                let v = e.target.value;
+                if (v.length > 1 && v[0] === '0' && v[1] !== '.') v = v.substring(1);
+                setStake(v);
+              }}
               className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-sm font-mono text-white focus:border-neon-cyan/40 outline-none" />
-            <div className="text-[10px] text-slate-600 mt-1">Total needed: {totalNeeded} MDT (stake + ~{REG_FEE_BUFFER} regFee buffer)</div>
+            <div className="text-[12px] text-slate-600 mt-1">Total needed: {totalNeeded} MDT (stake + ~{REG_FEE_BUFFER} regFee buffer)</div>
           </div>
 
           <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Capabilities</label>
+              <label className="text-[12px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Capabilities</label>
               <div className="flex flex-wrap gap-2">
                 {CAPABILITIES.map(cap => (
                   <button key={cap} onClick={() => toggleCap(cap)}
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all ${
+                    className={`px-3 py-1.5 rounded-full text-[12px] font-bold uppercase tracking-widest border transition-all ${
                       caps.includes(cap) ? 'bg-neon-cyan/15 border-neon-cyan/50 text-neon-cyan' : 'bg-white/5 border-white/10 text-slate-500 hover:border-white/20'}`}>
                     {cap.replace(/_/g, ' ')}
                   </button>
@@ -713,45 +759,45 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
 
           {/* Subnet selector */}
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
+            <label className="text-[12px] font-bold text-slate-500 uppercase tracking-widest block mb-2">
               Subnets <span className="text-neon-cyan">· select at least one</span>
             </label>
             {availableSubnets.length === 0 ? (
-              <div className="text-[10px] text-slate-600 font-mono">Loading subnets...</div>
+              <div className="text-[12px] text-slate-600 font-mono">Loading subnets...</div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {availableSubnets.map(s => (
                   <button key={s.id} onClick={() => toggleSubnet(s.id)}
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-1.5 ${
+                    className={`px-3 py-1.5 rounded-full text-[12px] font-bold border transition-all flex items-center gap-1.5 ${
                       selectedSubnets.includes(s.id)
                         ? 'bg-neon-purple/15 border-neon-purple/50 text-neon-purple'
                         : 'bg-white/5 border-white/10 text-slate-500 hover:border-white/20'}`}>
                     <span className="material-symbols-outlined text-xs">hub</span>
                     {s.name || `Subnet ${s.id}`}
-                    <span className="text-[9px] opacity-60">{minersPerSubnet[s.id] ?? s.activeMiners} miners</span>
+                    <span className="text-[11px] opacity-60">{minersPerSubnet[s.id] ?? s.activeMiners} miners</span>
                   </button>
                 ))}
               </div>
             )}
             {selectedSubnets.length > 0 && (
-              <div className="text-[9px] text-slate-600 mt-1 font-mono">
+              <div className="text-[11px] text-slate-600 mt-1 font-mono">
                 Selected: {selectedSubnets.map(id => `Subnet ${id}`).join(', ')}
               </div>
             )}
           </div>
 
           {/* On-chain flow info */}
-          <div className="p-3 bg-neon-purple/5 border border-neon-purple/20 rounded-xl text-[10px] text-slate-400 leading-relaxed space-y-0.5">
+          <div className="p-3 bg-neon-purple/5 border border-neon-purple/20 rounded-xl text-[12px] text-slate-400 leading-relaxed space-y-0.5">
             <span className="text-neon-purple font-black uppercase tracking-widest block mb-1">On-Chain Flow · StakingVaultV2 + SubnetRegistryV2</span>
             {walletType === 'hashpack' ? (<>
               <div>1. HashPack: <code className="text-neon-cyan">TransferTransaction — {totalNeeded} MDT → vault</code></div>
               <div>2. Backend: <code className="text-neon-cyan">recordDeposit(userEVM, {totalNeeded} MDT)</code></div>
-              <div>3. HashPack: <code className="text-neon-cyan">vault.stake({stake * 1e8}, 1)</code></div>
+              <div>3. HashPack: <code className="text-neon-cyan">vault.stake({Number(stake) * 1e8}, 1)</code></div>
               <div>4. HashPack: <code className="text-neon-cyan">registry.registerMiner(subnetId) × {selectedSubnets.length}</code></div>
               <div>5. HCS: <code className="text-neon-cyan">miner_register → topic 0.0.8198583</code></div>
             </>) : (<>
               <div>1. Backend: <code className="text-neon-cyan">recordDeposit(userEVM, {totalNeeded} MDT)</code></div>
-              <div>2. MetaMask: <code className="text-neon-cyan">vault.stake({stake * 1e8}, 1)</code></div>
+              <div>2. MetaMask: <code className="text-neon-cyan">vault.stake({Number(stake) * 1e8}, 1)</code></div>
               <div>3. MetaMask: <code className="text-neon-cyan">registry.registerMiner(subnetId) × {selectedSubnets.length}</code></div>
               <div>4. HCS: <code className="text-neon-cyan">miner_register → topic 0.0.8198583</code></div>
             </>)}
@@ -762,10 +808,12 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
           )}
 
           {(() => {
+            const isMinerDone = step === 'error' ? false : (step as string) === 'done';
+            const isValidatorDone = step === 'error' ? false : (step as string) === 'done';
             const missingCaps = caps.length === 0;
             const missingSubnet = selectedSubnets.length === 0;
             const missingBalance = balance && !balance.hasEnough;
-            const missingStake = stake < minStake;
+            const missingStake = Number(stake) < minStake;
             const notReady = missingCaps || missingSubnet || missingBalance || missingStake;
             const isDisabled = busy || !isConnected || notReady;
 
@@ -806,19 +854,19 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
             </div>
             <div>
               <div className="text-sm font-black uppercase tracking-wider text-neon-green">Registered on Hedera</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-0.5">On-chain stake confirmed · HCS registered</div>
+              <div className="text-[12px] text-slate-500 font-mono mt-0.5">On-chain stake confirmed · HCS registered</div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 font-mono text-xs">
             <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-              <div className="text-slate-500 text-[9px] uppercase tracking-widest">HCS</div>
+              <div className="text-slate-500 text-[11px] uppercase tracking-widest">HCS</div>
               <div className="text-white">Sequence #{hcsResult.sequence}</div>
               <div className="text-slate-400">Topic {hcsResult.topicId}</div>
             </div>
             <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-              <div className="text-slate-500 text-[9px] uppercase tracking-widest">On-Chain Stake</div>
+              <div className="text-slate-500 text-[11px] uppercase tracking-widest">On-Chain Stake</div>
               <div className="text-white">{stake} MDT</div>
-              <div className="text-neon-green text-[10px]">
+              <div className="text-neon-green text-[12px]">
                 {stakeResult?.txHash === 'already_staked' ? 'Already staked ✓' : 'Staked ✓'}
               </div>
             </div>
@@ -853,7 +901,7 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
               </a>
             )}
           </div>
-          <div className="text-[10px] text-slate-500 font-mono text-center animate-pulse">
+          <div className="text-[12px] text-slate-500 font-mono text-center animate-pulse">
             Redirecting to Miner Dashboard...
           </div>
         </div>
@@ -862,9 +910,9 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
       {/* Activity log */}
       {logs.length > 0 && (
         <div className="glass-panel p-4 space-y-1">
-          <div className="text-[9px] font-bold text-slate-600 uppercase tracking-widest mb-2">Activity Log</div>
+          <div className="text-[11px] font-bold text-slate-600 uppercase tracking-widest mb-2">Activity Log</div>
           {logs.map((l, i) => (
-            <div key={i} className={`text-[10px] font-mono ${l.startsWith('✓') ? 'text-neon-green' : l.startsWith('⚠') ? 'text-yellow-400' : 'text-slate-400'}`}>{l}</div>
+            <div key={i} className={`text-[12px] font-mono ${l.startsWith('✓') ? 'text-neon-green' : l.startsWith('⚠') ? 'text-yellow-400' : 'text-slate-400'}`}>{l}</div>
           ))}
         </div>
       )}

@@ -77,7 +77,7 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
     // totalDeposit = reward + 2% protocol + 8% validator + 5% staking (subnet 0 feeRate=0)
     const totalRaw = (rewardRaw * BigInt(115)) / BigInt(100);
     const totalMDT = Number(totalRaw) / 1e8;
-    const durationSecs = deadline * 3600;
+    const durationSecs = Number(deadline) * 3600;
 
     let onChainTaskId: string | null = null;
     let contractTs: string | null = null;
@@ -220,10 +220,10 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
             <>
               {/* Flow info */}
               <div className="p-3 bg-neon-pink/5 border border-neon-pink/20 rounded-xl space-y-1">
-                <div className="flex items-center gap-2 text-neon-pink font-black uppercase tracking-widest text-[9px] mb-1.5">
+                <div className="flex items-center gap-2 text-neon-pink font-black uppercase tracking-widest text-[11px] mb-1.5">
                   <Info size={10} /> Protocol Flow
                 </div>
-                <div className="text-[10px] text-slate-400 space-y-0.5">
+                <div className="text-[12px] text-slate-400 space-y-0.5">
                   <div><span className="text-neon-pink font-bold">1.</span> Approve + <code className="text-white">createTask()</code> on-chain → MDT locked in contract, task recorded on blockchain</div>
                   <div><span className="text-neon-green font-bold">2.</span> Miners poll HCS → process AI task → <code className="text-white">submitResult()</code></div>
                   <div><span className="text-neon-purple font-bold">3.</span> Validators score → <code className="text-white">finalizeTask()</code> → rewards auto-distributed</div>
@@ -232,14 +232,14 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Task Type</label>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Task Type</label>
                   <select value={taskType} onChange={e => setTaskType(e.target.value)}
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-pink/50 transition-all">
                     {TASK_TYPES.map(t => <option key={t.value} value={t.value} className="bg-[#0a0e17]">{t.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Subnet</label>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Subnet</label>
                   <select value={subnetId} onChange={e => setSubnetId(Number(e.target.value))}
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-neon-cyan/50 transition-all">
                     {SUBNETS.map(s => <option key={s.id} value={s.id} className="bg-[#0a0e17]">{s.name}</option>)}
@@ -248,30 +248,30 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Prompt / Task Description</label>
+                <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Prompt / Task Description</label>
                 <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={4}
                   placeholder="E.g., Analyze this portfolio for risk factors and suggest hedging strategies..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-all resize-none placeholder:text-slate-600 font-mono" />
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-all resize-none placeholder:text-slate-500 font-mono" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
-                    Reward (MDT) <span className="text-slate-600">· total {totalMDT} MDT</span>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                    Reward (MDT) <span className="text-slate-500">· total {totalMDT} MDT</span>
                   </label>
                   <div className="relative">
-                    <input type="number" min="0.1" step="0.1" value={rewardMDT} onChange={e => setRewardMDT(e.target.value)}
+                    <input type="number" min="0.1" step="0.1" value={rewardMDT} onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setRewardMDT(e.target.value)}
                       className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white outline-none focus:border-neon-green/50 transition-all font-mono font-bold" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">MDT</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">MDT</span>
                   </div>
-                  <div className="text-[9px] text-slate-600 mt-1">85% miners · 8% validators · 5% stakers · 2% protocol</div>
+                  <div className="text-[11px] text-slate-500 mt-1">85% miners · 8% validators · 5% stakers · 2% protocol</div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Deadline (hours)</label>
+                  <label className="text-[12px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Deadline (hours)</label>
                   <div className="relative">
-                    <input type="number" min="1" max="168" value={deadline} onChange={e => setDeadline(Number(e.target.value))}
+                    <input type="number" min="1" max="168" value={deadline} onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setDeadline(Number(e.target.value))}
                       className="w-full bg-black/40 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white outline-none focus:border-neon-purple/50 transition-all font-mono font-bold" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-500">HRS</span>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">HRS</span>
                   </div>
                 </div>
               </div>
@@ -280,10 +280,10 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
                 {isConnected ? (
                   <><span className="w-2 h-2 rounded-full bg-neon-green animate-pulse" />
                   <span className="text-white font-bold">{accountId}</span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded border ml-1 ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple' : 'border-orange-400/40 text-orange-400'}`}>
+                  <span className={`text-[11px] px-1.5 py-0.5 rounded border ml-1 ${walletType === 'hashpack' ? 'border-neon-purple/40 text-neon-purple' : 'border-orange-400/40 text-orange-400'}`}>
                     {walletType === 'hashpack' ? 'HashPack' : 'MetaMask'}
                   </span>
-                  <span className="text-slate-600 text-[9px] ml-auto">~{totalMDT} MDT will be charged</span>
+                  <span className="text-slate-500 text-[11px] ml-auto">~{totalMDT} MDT will be charged</span>
                   </>
                 ) : <span className="text-red-400">Wallet Not Connected</span>}
               </div>
@@ -292,7 +292,7 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
                 <div className="bg-black/60 rounded-xl border border-white/5 p-4 space-y-1.5 max-h-36 overflow-y-auto font-mono">
                   {logs.map((l, i) => (
                     <div key={i} className={`text-[11px] ${l.includes('ERROR') ? 'text-red-400' : l.includes('✓') ? 'text-neon-green' : 'text-slate-400'}`}>
-                      <span className="opacity-40 mr-2 text-[9px]">{'>'}</span>{l}
+                      <span className="opacity-40 mr-2 text-[11px]">{'>'}</span>{l}
                     </div>
                   ))}
                   {loading && <div className="text-neon-pink text-[11px] flex items-center gap-2 mt-1"><Activity size={12} className="animate-spin" /> Processing...</div>}
@@ -315,11 +315,11 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-3 font-mono text-xs">
                 <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase">On-Chain Task ID</div>
+                  <div className="text-slate-400 text-[11px] uppercase">On-Chain Task ID</div>
                   <div className="text-neon-cyan font-black">{result.onChainTaskId ?? '— resolving...'}</div>
                 </div>
                 <div className="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1">
-                  <div className="text-slate-500 text-[9px] uppercase">Total Deposited</div>
+                  <div className="text-slate-400 text-[11px] uppercase">Total Deposited</div>
                   <div className="text-white font-black">{result.totalMDT?.toFixed(2)} MDT</div>
                 </div>
               </div>

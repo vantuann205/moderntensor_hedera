@@ -96,7 +96,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
         {/* Breadcrumb */}
         <div className="flex gap-2 items-center text-xs font-mono tracking-widest text-slate-500 uppercase">
           <button className="hover:text-neon-cyan transition-colors" onClick={onBack}>HOME</button>
-          <span className="material-symbols-outlined text-[10px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[12px]">chevron_right</span>
           <span className="text-neon-cyan">MINERS</span>
         </div>
 
@@ -126,7 +126,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
             { label: 'Avg Trust Score', val: (avgTrust * 100).toFixed(1) + '%', icon: 'speed', color: 'text-neon-green' },
           ].map((s, i) => (
             <div key={i} className="glass-panel p-5 rounded-xl border border-white/5 relative overflow-hidden">
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">{s.label}</p>
+              <p className="text-slate-400 text-[12px] font-bold uppercase tracking-widest mb-1">{s.label}</p>
               <div className="flex items-end justify-between mt-1">
                 <p className="text-white text-3xl font-black font-display tracking-tighter">{s.val}</p>
                 <span className={`material-symbols-outlined ${s.color} text-2xl opacity-40`}>{s.icon}</span>
@@ -161,7 +161,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
               <div className="glass-panel rounded-xl overflow-hidden border border-white/5">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
-                    <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                    <thead className="bg-white/5 border-b border-white/10 text-[12px] uppercase tracking-widest text-slate-400 font-bold">
                       <tr>
                         <th className="px-5 py-4 w-12 text-center">#</th>
                         <SortTh col="id" sort={sort} onToggle={toggle} className="px-5 py-4">Miner ID</SortTh>
@@ -201,10 +201,10 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                                   <div className="flex items-center gap-2">
                                     <div className="font-bold text-white group-hover:text-neon-cyan transition-colors">{id}</div>
                                     {isMe && (
-                                      <span className="text-[9px] font-black bg-neon-cyan text-black px-1.5 py-0.5 rounded uppercase tracking-widest">YOU</span>
+                                      <span className="text-[11px] font-black bg-neon-cyan text-black px-1.5 py-0.5 rounded uppercase tracking-widest">YOU</span>
                                     )}
                                   </div>
-                                  <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                                  <span className="text-[12px] text-slate-500 whitespace-nowrap">
                                     {m.consensusTimestamp ? (
                                       <>Verify on{' '}
                                         <a href={`https://hashscan.io/testnet/transaction/${m.consensusTimestamp}`}
@@ -223,18 +223,18 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                             <td className="px-5 py-4">
                               <div className="flex flex-wrap gap-1">
                                 {subnets.map(s => (
-                                  <span key={s} className="px-2 py-0.5 rounded text-[9px] bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">{s}</span>
+                                  <span key={s} className="px-2 py-0.5 rounded text-[11px] bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">{s}</span>
                                 ))}
                               </div>
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex flex-wrap gap-1">
                                 {caps.slice(0, 2).map((c, i) => (
-                                  <span key={i} className="px-2 py-0.5 rounded text-[9px] bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
+                                  <span key={i} className="px-2 py-0.5 rounded text-[11px] bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
                                     {c.replace(/_/g, ' ')}
                                   </span>
                                 ))}
-                                {caps.length > 2 && <span className="text-[9px] text-slate-500">+{caps.length - 2}</span>}
+                                {caps.length > 2 && <span className="text-[11px] text-slate-500">+{caps.length - 2}</span>}
                               </div>
                             </td>
                             <td className="px-5 py-4">
@@ -251,7 +251,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                               </div>
                             </td>
                             <td className="px-5 py-4 text-center">
-                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                                 tasks > 0
                                   ? 'bg-green-500/10 text-green-400 border border-green-500/30'
                                   : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
@@ -265,7 +265,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                     </tbody>
                   </table>
                 </div>
-                <div className="px-5 py-3 border-t border-white/5 text-[10px] text-slate-600 font-mono flex justify-between">
+                <div className="px-5 py-3 border-t border-white/5 text-[12px] text-slate-600 font-mono flex justify-between">
                   <span>{uniqueMiners.length} unique miners · {miners.length} HCS events (deduped server-side)</span>
                   <span>Auto-refresh 20s · HCS Mirror Node</span>
                 </div>
@@ -283,11 +283,11 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                 </h3>
                 <div className="flex flex-col gap-4">
                   <div>
-                    <label className="text-[10px] text-slate-500 uppercase font-bold tracking-widest block mb-2">
+                    <label className="text-[12px] text-slate-500 uppercase font-bold tracking-widest block mb-2">
                       Stake Amount (MDT)
                     </label>
                     <input type="number" value={stakeAmount}
-                      onChange={e => setStakeAmount(Number(e.target.value))}
+                      onKeyDown={(e) => ["e", "E", "+", "-"].includes(e.key) && e.preventDefault()} onChange={e => setStakeAmount(Number(e.target.value))}
                       className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:border-neon-cyan outline-none transition-all" />
                     <input type="range" min="1000" max="50000" step="1000" value={stakeAmount}
                       onChange={e => setStakeAmount(Number(e.target.value))}
@@ -300,12 +300,12 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                       { label: 'Monthly', val: (stakeAmount * 0.0012 * 30).toFixed(2), color: 'border-neon-green text-neon-green' },
                     ].map((r, i) => (
                       <div key={i} className={`bg-white/5 rounded-lg p-3 border-l-2 ${r.color} flex justify-between items-center`}>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{r.label}</span>
+                        <span className="text-[12px] text-slate-500 uppercase font-bold tracking-widest">{r.label}</span>
                         <span className={`font-mono font-bold text-lg ${r.color.split(' ')[1]}`}>{r.val} MDT</span>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-slate-600">* Based on 0.12% daily reward rate</p>
+                  <p className="text-[12px] text-slate-600">* Based on 0.12% daily reward rate</p>
                 </div>
               </div>
 
@@ -319,7 +319,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                   className="block w-full px-4 py-3 bg-neon-cyan/10 border border-neon-cyan/30 rounded-lg text-neon-cyan hover:bg-neon-cyan hover:text-black transition-all text-center font-bold text-sm">
                   View Registration Topic
                 </a>
-                <p className="text-[10px] text-slate-600 mt-3 text-center">All miners registered on Hedera HCS</p>
+                <p className="text-[12px] text-slate-600 mt-3 text-center">All miners registered on Hedera HCS</p>
               </div>
             </div>
 

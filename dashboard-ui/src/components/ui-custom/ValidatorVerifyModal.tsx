@@ -106,7 +106,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                                 { label: 'Reward Weight', value: result.reward_weight, color: 'text-neon-purple' },
                             ].map(item => (
                                 <div key={item.label} className="bg-black/40 rounded-lg p-3 border border-white/5">
-                                    <div className="text-[10px] text-slate-500 uppercase tracking-widest">{item.label}</div>
+                                    <div className="text-[12px] text-slate-500 uppercase tracking-widest">{item.label}</div>
                                     <div className={`text-xl font-bold font-mono ${item.color}`}>{item.value}</div>
                                 </div>
                             ))}
@@ -151,7 +151,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                                 <input type="range" min={0} max={100} value={score} onChange={e => setScore(Number(e.target.value))}
                                     className="w-full h-2 accent-purple-500 cursor-pointer"
                                 />
-                                <div className="flex justify-between text-[10px] text-slate-600">
+                                <div className="flex justify-between text-[12px] text-slate-600">
                                     <span>0 — Reject</span><span>60 — Accept</span><span>100 — Perfect</span>
                                 </div>
                             </div>
@@ -173,7 +173,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                                 }
                                 <div>
                                     <div className={`text-xs font-bold uppercase ${verdict === 'accepted' ? 'text-neon-green' : 'text-red-400'}`}>{verdict}</div>
-                                    <div className="text-[10px] text-slate-500">Reward weight: {rewardWeight}</div>
+                                    <div className="text-[12px] text-slate-500">Reward weight: {rewardWeight}</div>
                                 </div>
                             </div>
 
