@@ -168,7 +168,7 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                                   <thead className="bg-white/5 border-b border-white/10 text-[10px] uppercase tracking-widest text-slate-400 font-bold">
                                       <tr>
                                           <SortTh col="taskId" sort={sort} onToggle={toggle} className="px-4 py-4">Task ID</SortTh>
-                                          <SortTh col="taskType" sort={sort} onToggle={toggle} className="px-4 py-4">Task Type</SortTh>
+                                          <th className="px-4 py-4">Task Type</th>
                                           <th className="px-4 py-4">Prompt</th>
                                           <SortTh col="reward" sort={sort} onToggle={toggle} className="px-4 py-4 text-right">Reward</SortTh>
                                           <SortTh col="subnet" sort={sort} onToggle={toggle} className="px-4 py-4 text-center">Subnet</SortTh>

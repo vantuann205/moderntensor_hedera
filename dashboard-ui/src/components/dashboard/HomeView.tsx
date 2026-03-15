@@ -38,6 +38,26 @@ const CountUp: React.FC<{ end: number; duration?: number; prefix?: string; suffi
   return <>{prefix}{val.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}{suffix}</>;
 };
 
+const MorphingText = () => {
+  const words = ["AI Intelligence", "Neural Consensus", "Proof of Trust", "On-Chain Veracity"];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % words.length);
+    }, 5000); // More relaxed timing
+    return () => clearInterval(timer);
+  }, [words.length]);
+
+  return (
+    <span className="relative inline-block min-w-[300px]">
+      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text" style={{ animationDuration: '5s, 6s' }}>
+        {words[index]}
+      </span>
+    </span>
+  );
+};
+
 // ── Ticker bar ──
 const TickerContent = ({ price }: { price: number }) => (
   <div className="flex items-center gap-12 whitespace-nowrap px-6">
@@ -190,6 +210,105 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
         </div>
       </div>
 
+      {/* ── Hero Section (only when NOT connected) ── */}
+      {!isConnected && (
+        <div className="relative w-full overflow-hidden rounded-2xl border border-white/5 mb-2">
+          {/* Background glow blobs */}
+          <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-neon-cyan/5 blur-[120px] pointer-events-none" />
+          <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full bg-neon-purple/5 blur-[120px] pointer-events-none" />
+
+          <div className="relative z-10 px-8 py-14 lg:px-16 lg:py-20 flex flex-col lg:flex-row items-center gap-12">
+            {/* Left: text */}
+            <div className="flex-1 flex flex-col gap-6">
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-full border border-neon-cyan/40 bg-neon-cyan/10 text-neon-cyan text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse inline-block" />
+                  Live on Hedera Testnet
+                </span>
+              </div>
+
+              <h1 className="text-white text-5xl lg:text-6xl font-black font-display leading-tight tracking-tight uppercase">
+                Verifiable<br />
+                <MorphingText /><br />
+                <span className="text-slate-400 text-3xl lg:text-4xl font-light normal-case tracking-normal">on Hedera</span>
+              </h1>
+
+              <p className="text-slate-400 text-base leading-relaxed max-w-xl">
+                ModernTensor is the decentralized protocol for verifiable AI computation. 
+                Every task submission, neural score, and network reward is cryptographically logged on 
+                <span className="text-neon-cyan font-semibold"> Hedera HCS</span> — establishing a permanent Proof of Trust for the Agentic AI economy.
+              </p>
+
+              {/* Feature pills */}
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { icon: 'verified', label: 'Proof of Intelligence', color: 'text-neon-cyan' },
+                  { icon: 'history', label: 'Immutable HCS Logs', color: 'text-neon-purple' },
+                  { icon: 'payments', label: 'Agent Micro-payments', color: 'text-neon-green' },
+                  { icon: 'token', label: 'MDT Staking Ready', color: 'text-neon-pink' },
+                ].map((f, i) => (
+                  <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 ${f.color} text-xs font-semibold`}>
+                    <span className="material-symbols-outlined text-sm">{f.icon}</span>
+                    {f.label}
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-slate-500 text-sm">
+                Connect your wallet to get started — choose a role and join the network.
+              </p>
+            </div>
+
+            {/* Right: role preview cards */}
+            <div className="flex-shrink-0 grid grid-cols-2 gap-4 w-full max-w-sm">
+              {ROLES.map(role => (
+                <div key={role.id}
+                  className={`glass-panel rounded-2xl p-5 border ${role.borderClass} ${role.glowClass} flex flex-col gap-3 group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden`}>
+                  <div className="absolute -top-6 -right-6 w-12 h-12 bg-white/5 rounded-full blur-xl group-hover:bg-white/10 transition-colors" />
+                  
+                  <div className={`w-11 h-11 rounded-xl bg-${role.color}/10 border border-${role.color}/30 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(255,255,255,0.02)] group-hover:border-${role.color} transition-all`}>
+                    <span className={`material-symbols-outlined text-${role.color} text-xl`}>{role.icon}</span>
+                  </div>
+                  <div>
+                    <div className="text-white font-black text-base font-display tracking-tight uppercase group-hover:text-neon-cyan transition-colors">{role.title}</div>
+                    <div className={`text-${role.color} text-[10px] font-extrabold uppercase tracking-widest bg-${role.color}/5 px-1.5 py-0.5 rounded border border-${role.color}/20 inline-block mt-1`}>
+                      {role.subtitle}
+                    </div>
+                  </div>
+                  <div className="text-[11px] text-slate-400 leading-snug font-medium line-clamp-3 italic opacity-90">{role.desc}</div>
+                  <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter">Yield</span>
+                    <span className={`text-[10px] font-black uppercase text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]`}>
+                      {role.earn.replace('of task reward', '').replace('pool', '')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom stats bar */}
+          <div className="relative z-10 border-t border-white/5 grid grid-cols-2 lg:grid-cols-4 divide-x divide-white/5 bg-white/[0.02]">
+            {[
+              { label: 'Consensus Layer', value: 'Hedera HCS', icon: 'hub', color: 'text-neon-cyan' },
+              { label: 'Token', value: 'MDT · 0.0.8198586', icon: 'token', color: 'text-neon-purple' },
+              { label: 'Subnets', value: '3 Active', icon: 'account_tree', color: 'text-neon-green' },
+              { label: 'Network', value: 'Testnet', icon: 'wifi_tethering', color: 'text-neon-blue' },
+            ].map((s, i) => (
+              <div key={i} className="px-6 py-5 flex items-center gap-4 group hover:bg-white/[0.02] transition-colors">
+                <div className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center ${s.color} opacity-80 group-hover:opacity-100 group-hover:border-current transition-all shrink-0`}>
+                   <span className="material-symbols-outlined text-xl">{s.icon}</span>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-0.5">{s.label}</div>
+                  <div className={`text-white text-sm font-black tracking-wide font-display group-hover:${s.color} transition-colors uppercase`}>{s.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Role Selection (only when wallet connected) ── */}
       {isConnected && (
         <div className="w-full">
@@ -318,7 +437,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
           <div className="bg-panel-dark border border-panel-border p-6 rounded-xl flex flex-col justify-center relative overflow-hidden">
             <div className="flex items-center gap-2 mb-3">
               <span className="material-symbols-outlined text-neon-cyan text-xl">token</span>
-              <p className="text-neon-cyan text-sm font-semibold uppercase tracking-widest">Circulating Supply</p>
+              <p className="text-neon-cyan text-sm font-semibold uppercase tracking-widest">Total Supply</p>
             </div>
             <p className="text-white text-4xl font-display font-bold">
               {mdtSupply !== null
@@ -419,26 +538,6 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
       </div>
 
       <SubmitTaskModal isOpen={showSubmitTask} onClose={() => setShowSubmitTask(false)} />
-
-      {/* ── Connect Wallet CTA (only when NOT connected) ── */}
-      {!isConnected && (
-        <div className="glass-panel rounded-2xl p-8 border border-neon-cyan/20 text-center relative overflow-hidden mb-8">
-          <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/5 via-transparent to-neon-purple/5" />
-          <span className="material-symbols-outlined text-5xl text-neon-cyan mb-4 block">account_balance_wallet</span>
-          <h3 className="text-white text-2xl font-display font-bold mb-2">Connect Your Wallet</h3>
-          <p className="text-slate-400 mb-6 max-w-md mx-auto">
-            Connect your Hedera wallet to choose a role and participate in the ModernTensor AI marketplace.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {ROLES.map(r => (
-              <div key={r.id} className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-${r.color}/30 bg-${r.color}/5 text-${r.color} text-xs font-bold`}>
-                <span className="material-symbols-outlined text-sm">{r.icon}</span>
-                {r.title}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
     </div>
   );

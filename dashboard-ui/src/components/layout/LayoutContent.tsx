@@ -18,6 +18,8 @@ import AllTransactionsView from "../dashboard/AllTransactionsView";
 import TransactionDetailsView from "../dashboard/TransactionDetailsView";
 import BlockDetailsView from "../dashboard/BlockDetailsView";
 import MinerDashboard from "../dashboard/MinerDashboard";
+import ValidatorDetailView from "../dashboard/ValidatorDetailView";
+import MinerDetailView from "../dashboard/MinerDetailView";
 import { useWallet } from "@/context/WalletContext";
 
 export default function LayoutContent({ children }: { children: React.ReactNode }) {
@@ -25,6 +27,8 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.HOME);
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
   const [selectedBlockHeight, setSelectedBlockHeight] = useState<string | null>(null);
+  const [selectedValidatorId, setSelectedValidatorId] = useState<string | null>(null);
+  const [selectedMinerId, setSelectedMinerId] = useState<string | null>(null);
   const { isMiner, isConnected, accountId } = useWallet();
 
   // No auto-navigate — user stays on HOME, cards show registered state
@@ -64,12 +68,22 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
       case ViewState.MINERS:
         return <MinersView 
           onBack={() => setCurrentView(ViewState.HOME)} 
-          onSelectMiner={(id) => console.log('Selected miner:', id)} 
+          onSelectMiner={(id) => { setSelectedMinerId(id); setCurrentView(ViewState.MINER_DETAILS); }} 
+        />;
+      case ViewState.MINER_DETAILS:
+        return <MinerDetailView
+          minerId={selectedMinerId || ''}
+          onBack={() => setCurrentView(ViewState.MINERS)}
         />;
       case ViewState.VALIDATORS:
         return <ValidatorsView 
           onBack={() => setCurrentView(ViewState.HOME)} 
-          onSelectValidator={(a) => setCurrentView(ViewState.VALIDATOR_DETAILS)} 
+          onSelectValidator={(id) => { setSelectedValidatorId(id); setCurrentView(ViewState.VALIDATOR_DETAILS); }} 
+        />;
+      case ViewState.VALIDATOR_DETAILS:
+        return <ValidatorDetailView
+          validatorId={selectedValidatorId || ''}
+          onBack={() => setCurrentView(ViewState.VALIDATORS)}
         />;
       case ViewState.TASKS:
         return <TasksView 
