@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Network, Terminal, X, ShieldAlert, Cpu, Activity, Play, Info, Trophy, Zap } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWallet } from '@/context/WalletContext';
@@ -40,14 +41,17 @@ export default function RegistrationModal({ isOpen, onClose }: RegistrationModal
     const [success, setSuccess] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
 
+    const [mounted, setMounted] = useState(false);
+    
     // Pre-fill ID when wallet connects
     useEffect(() => {
+        setMounted(true);
         if (accountId || address) {
             setId(accountId || address || '');
         }
     }, [accountId, address]);
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
     
     const roleInfo = ROLE_INFO[type];
     const stakeNum = Number(stake);
@@ -85,8 +89,8 @@ export default function RegistrationModal({ isOpen, onClose }: RegistrationModal
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-y-auto">
+    return createPortal(
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-y-auto">
             <div className="fixed inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
             
             <div className="relative w-full max-w-4xl bg-[#0a0e17] border-2 border-white/20 rounded-3xl shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 fade-in duration-300">
@@ -245,6 +249,7 @@ export default function RegistrationModal({ isOpen, onClose }: RegistrationModal
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

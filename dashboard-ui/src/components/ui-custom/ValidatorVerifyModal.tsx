@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, X, ShieldCheck, Activity, AlertTriangle, ThumbsUp, ThumbsDown, Target } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWallet } from '@/context/WalletContext';
@@ -25,8 +26,10 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
     const [isVerifying, setIsVerifying] = useState(false);
     const [result, setResult] = useState<any>(null);
     const [error, setError] = useState('');
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
     const verdict = score >= 60 ? 'accepted' : 'rejected';
     const rewardWeight = Math.round(confidence * (score / 100) * 100) / 100;
@@ -67,8 +70,8 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-[#0a0e17]/80 backdrop-blur-sm" onClick={onClose} />
             
             <div className="relative w-full max-w-2xl bg-[#0a0e17] border border-white/10 rounded-xl shadow-2xl overflow-hidden glass-panel">
@@ -213,6 +216,7 @@ export default function ValidatorVerifyModal({ isOpen, onClose, taskId, minerId 
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

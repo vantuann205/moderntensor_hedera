@@ -20,7 +20,8 @@
  *   3. HCS topic 0.0.8198585 — type: task_create
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ethers } from 'ethers';
 import {
   AccountId,
@@ -59,8 +60,11 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
   const [logs, setLogs] = useState<string[]>([]);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!isOpen || !mounted) return null;
   const log = (msg: string) => setLogs(p => [...p, msg]);
 
   const handleSubmit = async () => {
@@ -194,8 +198,8 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
   const reset = () => { setResult(null); setLogs([]); setError(null); setPrompt(''); };
   const totalMDT = (Number(rewardMDT) * 1.15).toFixed(2);
 
-  return (
-    <div className="fixed inset-0 z-[200]">
+  return createPortal(
+    <div className="fixed inset-0 z-[10001]">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
       <div className="absolute top-[22%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-[#0a0e17]/95 backdrop-blur-xl border border-white/10 shadow-[0_40px_80px_rgba(0,0,0,0.8)] rounded-3xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neon-pink/50 to-transparent" />
@@ -359,6 +363,7 @@ export default function SubmitTaskModal({ isOpen, onClose }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

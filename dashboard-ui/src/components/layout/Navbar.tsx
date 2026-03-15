@@ -72,7 +72,7 @@ export default function Navbar({
             <span className="ml-auto text-[10px] bg-white/5 border border-white/10 rounded px-1.5 py-0.5 text-slate-500 font-mono">⌘K</span>
           </div>
           <div className="hidden md:block">
-            <WalletConnect />
+            <WalletConnect onOpenAccount={() => onNavClick(ViewState.ACCOUNT)} />
           </div>
           <button 
               className="md:hidden text-white p-2"
