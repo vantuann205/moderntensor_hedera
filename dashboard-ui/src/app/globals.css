@@ -235,6 +235,33 @@ body {
   appearance: textfield;
 }
 
+/* Gradient flow animation for headlines */
+.animate-gradient-flow {
+  background: linear-gradient(-45deg, #00f3ff, #bc13fe, #00ffa3, #ff00ff);
+  background-size: 300% 300%;
+  animation: gradient-flow 5s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes morph-fade-in {
+  0% { opacity: 0; transform: translateY(10px); filter: blur(10px); }
+  10% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  90% { opacity: 1; transform: translateY(0); filter: blur(0); }
+  100% { opacity: 0; transform: translateY(-10px); filter: blur(10px); }
+}
+
+.animate-morph {
+  animation: morph-fade-in 4s ease-in-out infinite;
+}
+
 wcm-modal, wcm-modal-router, .wcm-card, wcm-modal-backcard, .wcm-container {
   display: none !important;
   opacity: 0 !important;
