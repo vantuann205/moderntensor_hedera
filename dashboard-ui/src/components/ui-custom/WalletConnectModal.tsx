@@ -78,7 +78,7 @@ export default function WalletConnectModal({ isOpen, onClose }: WalletConnectMod
                     >
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-xl bg-[#111827] p-2.5 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3ymr3UNKopfI0NmUY95Dr-0589vG-91KuAA&s" alt="MetaMask" className="w-full h-full object-contain rounded-md" />
+                                <img src="https://www.pngall.com/wp-content/uploads/17/Metamask-Wallet-Logo-Design-PNG.png" alt="MetaMask" className="w-full h-full object-contain" />
                             </div>
                             <div className="text-left flex flex-col">
                                 <span className="text-sm font-black text-white uppercase tracking-wider group-hover:text-orange-500 transition-colors font-display">MetaMask / EVM</span>

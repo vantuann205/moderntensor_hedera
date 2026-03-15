@@ -19,7 +19,7 @@ const PYTHON = process.env.PYTHON_PATH
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { taskType, prompt, rewardMDT, subnetId, deadline, requester } = body;
+    const { taskType, prompt, rewardMDT, subnetId, deadline, requester, onChainTaskId, contractTs, transferTs } = body;
 
     if (!taskType || !prompt || !rewardMDT || !requester) {
       return NextResponse.json({ error: 'taskType, prompt, rewardMDT, requester required' }, { status: 400 });
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     const taskId = `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const rewardRaw = Math.floor(Number(rewardMDT) * 1e8); // MDT → 8 decimals
 
-    const hcsMessage = {
+    const hcsMessage: Record<string, any> = {
       type: 'task_submit',
       task_id: taskId,
       task_type: taskType,
@@ -39,6 +39,11 @@ export async function POST(req: Request) {
       deadline_hours: deadline ?? 24,
       timestamp: new Date().toISOString(),
     };
+
+    // Include on-chain references if provided
+    if (onChainTaskId != null) hcsMessage.on_chain_task_id = String(onChainTaskId);
+    if (contractTs) hcsMessage.contract_ts = contractTs;
+    if (transferTs) hcsMessage.transfer_ts = transferTs;
 
     const tmpFile = path.join(os.tmpdir(), `hcs_task_${Date.now()}.json`);
     fs.writeFileSync(tmpFile, JSON.stringify({ topic_id: TASK_TOPIC_ID, message: hcsMessage }), 'utf-8');
@@ -84,6 +89,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       taskId,
+      onChainTaskId: onChainTaskId ?? null,
       topicId: TASK_TOPIC_ID,
       sequence: hcsResult.sequence,
       transactionId: rawTxId,

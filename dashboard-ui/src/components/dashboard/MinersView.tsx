@@ -266,7 +266,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
                   </table>
                 </div>
                 <div className="px-5 py-3 border-t border-white/5 text-[10px] text-slate-600 font-mono flex justify-between">
-                  <span>{uniqueMiners.length} unique miners · {miners.length} total HCS events</span>
+                  <span>{uniqueMiners.length} unique miners · {miners.length} HCS events (deduped server-side)</span>
                   <span>Auto-refresh 20s · HCS Mirror Node</span>
                 </div>
               </div>

@@ -56,10 +56,21 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           scoresRes.json()
         ]);
 
-        const subnetMiners = minersData.data?.filter((m: any) => {
+        // API already deduplicates, but filter for this subnet
+        const rawSubnetMiners: any[] = minersData.data?.filter((m: any) => {
           const ids = m.subnet_ids ?? m.subnetIds ?? [];
           return ids.includes(subnet.id);
         }) || [];
+
+        // Safety dedup by miner_id (keep latest hcs_sequence)
+        const minerMap = new Map<string, any>();
+        rawSubnetMiners.forEach((m: any) => {
+          const id = m.miner_id || m.account_id || m.minerId;
+          if (!id) return;
+          const ex = minerMap.get(id);
+          if (!ex || (m.hcs_sequence ?? 0) > (ex.hcs_sequence ?? 0)) minerMap.set(id, m);
+        });
+        const subnetMiners = Array.from(minerMap.values());
         
         const subnetTasks = tasksData.data?.filter((t: any) =>
           (t.subnetId || 0) === subnet.id
@@ -82,9 +93,13 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
     fetchSubnetData();
   }, [subnet.id]);
 
-  // Extract active validators for this subnet by viewing the scores
   const uniqueValidators = Array.from(new Set(scores.map(s => s.validatorId))).filter(Boolean);
-  const totalStaked = miners.reduce((sum, m) => sum + (m.stake_amount ?? m.stakeAmount ?? 0), 0);
+  // stake_amount from API is already in MDT (not raw 8-decimal)
+  const totalStaked = miners.reduce((sum, m) => {
+    const raw = m.stake_amount ?? m.stakeAmount ?? 0;
+    // Handle both raw (>1e6) and already-converted values
+    return sum + (Number(raw) > 1e6 ? Number(raw) / 1e8 : Number(raw));
+  }, 0);
 
   const REWARD_DATA = [
     { name: 'Miner Reward', value: 80, color: '#00f3ff' }, // neon-cyan
@@ -134,7 +149,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
             { label: 'Network Miners', val: miners.length, icon: 'memory', color: 'text-neon-cyan', suffix: '', decimals: 0 },
             { label: 'Active Validators', val: uniqueValidators.length, icon: 'shield_person', color: 'text-neon-pink', suffix: '', decimals: 0 },
             { label: 'Tasks Completed', val: tasks.length, icon: 'task', color: 'text-neon-green', suffix: '', decimals: 0 },
-            { label: 'Subnet Stake', val: totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', decimals: 0 }
+            { label: 'Subnet Stake', val: totalStaked, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', decimals: 0 }
           ].map((stat, i) => (
             <div key={i} className="flex flex-col gap-2">
               <div className="flex items-center gap-2 text-text-secondary">
@@ -185,7 +200,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
                   </div>
                   <div className="text-right">
                     <div className="font-display font-bold text-neon-cyan">
-                      <CountUp end={(miner.stake_amount ?? miner.stakeAmount ?? 0) / 100000000} suffix=" MDT" />
+                      <CountUp end={(() => { const raw = miner.stake_amount ?? miner.stakeAmount ?? 0; return Number(raw) > 1e6 ? Number(raw) / 1e8 : Number(raw); })()} suffix=" MDT" />
                     </div>
                     <div className="text-[10px] text-text-secondary uppercase tracking-widest">Staked</div>
                   </div>
@@ -323,52 +338,36 @@ interface SubnetsHubProps {
   onSelect?: (id: number) => void;
 }
 
+const SUBNET_STYLE: Record<number, { color: string; gradient: string; glow: string; icon: string }> = {
+  0: { color: 'neon-cyan',   gradient: 'from-neon-cyan/20 to-transparent',   glow: 'shadow-[0_0_20px_rgba(0,243,255,0.1)]',   icon: 'psychology' },
+  1: { color: 'neon-pink',   gradient: 'from-neon-pink/20 to-transparent',   glow: 'shadow-[0_0_20px_rgba(255,0,255,0.1)]',   icon: 'image' },
+  2: { color: 'neon-purple', gradient: 'from-neon-purple/20 to-transparent', glow: 'shadow-[0_0_20px_rgba(188,19,254,0.1)]', icon: 'code' },
+};
+const DEFAULT_STYLE = { color: 'neon-green', gradient: 'from-neon-green/20 to-transparent', glow: 'shadow-[0_0_20px_rgba(0,255,128,0.1)]', icon: 'hub' };
+
 export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
   const { data: stats, loading, error } = useProtocolStats();
   const [selectedSubnet, setSelectedSubnet] = useState<any>(null);
+  const [subnetDefs, setSubnetDefs] = useState<any[]>([]);
 
-  // Define Subnets with premium gradients and visuals
-  const subnets = [
-    {
-      id: 0,
-      name: 'General Intelligence',
-      description: 'Text generation, code review, and general AI tasks',
-      emission: '45%',
-      miners: stats?.minersPerSubnet?.[0] || 0,
-      validators: stats?.validatorsPerSubnet?.[0] || 0,
-      tasks: stats?.tasksPerSubnet?.[0] || 0,
-      color: 'neon-cyan',
-      gradient: 'from-neon-cyan/20 to-transparent',
-      glow: 'shadow-[0_0_20px_rgba(0,243,255,0.1)]',
-      icon: 'psychology'
-    },
-    {
-      id: 1,
-      name: 'Image Generation',
-      description: 'Image generation, style transfer, and visual AI',
-      emission: '30%',
-      miners: stats?.minersPerSubnet?.[1] || 0,
-      validators: stats?.validatorsPerSubnet?.[1] || 0,
-      tasks: stats?.tasksPerSubnet?.[1] || 0,
-      color: 'neon-pink',
-      gradient: 'from-neon-pink/20 to-transparent',
-      glow: 'shadow-[0_0_20px_rgba(255,0,255,0.1)]',
-      icon: 'image'
-    },
-    {
-      id: 2,
-      name: 'Code Analysis',
-      description: 'Code review, bug detection, and optimization',
-      emission: '25%',
-      miners: stats?.minersPerSubnet?.[2] || 0,
-      validators: stats?.validatorsPerSubnet?.[2] || 0,
-      tasks: stats?.tasksPerSubnet?.[2] || 0,
-      color: 'neon-purple',
-      gradient: 'from-neon-purple/20 to-transparent',
-      glow: 'shadow-[0_0_20px_rgba(188,19,254,0.1)]',
-      icon: 'code'
-    }
-  ];
+  useEffect(() => {
+    fetch('/api/subnets')
+      .then(r => r.json())
+      .then(d => { if (d.success && d.data?.length) setSubnetDefs(d.data); })
+      .catch(() => {});
+  }, []);
+
+  // Merge subnet definitions with live stats
+  const subnets = subnetDefs.map(s => {
+    const style = SUBNET_STYLE[s.id] ?? DEFAULT_STYLE;
+    return {
+      ...s,
+      miners: stats?.minersPerSubnet?.[s.id] ?? s.activeMiners ?? 0,
+      validators: stats?.validatorsPerSubnet?.[s.id] ?? 0,
+      tasks: stats?.tasksPerSubnet?.[s.id] ?? 0,
+      ...style,
+    };
+  });
 
   if (selectedSubnet) {
     return <SubnetDetail subnet={selectedSubnet} onBack={() => setSelectedSubnet(null)} />;

@@ -45,13 +45,13 @@ const MorphingText = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % words.length);
-    }, 5000); // More relaxed timing
+    }, 4000); // Changed from 5s to 4s
     return () => clearInterval(timer);
   }, [words.length]);
 
   return (
     <span className="relative inline-block min-w-[300px]">
-      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text" style={{ animationDuration: '5s, 6s' }}>
+      <span key={index} className="animate-morph animate-gradient-flow inline-block neon-text" style={{ animationDuration: '4s, 8s' }}>
         {words[index]}
       </span>
     </span>
@@ -59,22 +59,35 @@ const MorphingText = () => {
 };
 
 // ── Ticker bar ──
-const TickerContent = ({ price }: { price: number }) => (
-  <div className="flex items-center gap-12 whitespace-nowrap px-6">
-    {[
-      { label: 'MDT Price', value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>, extra: <span className="text-neon-green flex items-center gap-0.5 font-bold text-xs"><span className="material-symbols-outlined text-sm">arrow_drop_up</span>4.2%</span> },
-      { label: 'Market Cap', value: '$2.42B' },
-      { label: '24h Vol', value: '$145.2M' },
-      { label: 'Total Staked', value: '4.1M (72%)' },
-    ].map((item, i) => (
-      <div key={i} className="flex items-center gap-3">
-        <span className="text-text-secondary uppercase text-[10px] tracking-widest font-bold">{item.label}</span>
-        <span className="text-neon-cyan font-bold text-base">{item.value}</span>
-        {item.extra}
-      </div>
-    ))}
-  </div>
-);
+const TickerContent = ({ price }: { price: number }) => {
+  const diff = ((price - 11) / 11) * 100;
+  const isUp = diff >= 0;
+  return (
+    <div className="flex items-center gap-12 whitespace-nowrap px-6">
+      {[
+        { 
+          label: 'MDT Price', 
+          value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>, 
+          extra: (
+            <span className={`${isUp ? 'text-neon-green' : 'text-red-400'} flex items-center gap-0.5 font-bold text-xs`}>
+              <span className="material-symbols-outlined text-sm">{isUp ? 'arrow_drop_up' : 'arrow_drop_down'}</span>
+              {isUp ? '+' : ''}{diff.toFixed(1)}%
+            </span>
+          ) 
+        },
+        { label: 'Market Cap', value: '$2.42B' },
+        { label: '24h Vol', value: '$145.2M' },
+        { label: 'Total Staked', value: '4.1M (72%)' },
+      ].map((item, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <span className="text-text-secondary uppercase text-[10px] tracking-widest font-bold">{item.label}</span>
+          <span className="text-neon-cyan font-bold text-base">{item.value}</span>
+          {item.extra}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const initialChart = [
   { time: '00:00', value: 10.2 }, { time: '04:00', value: 10.8 }, { time: '08:00', value: 10.5 },
@@ -111,9 +124,9 @@ const ROLES = [
     desc: 'Score miner submissions and maintain network quality. Requires subnet owner approval.',
     minStake: '500 MDT',
     earn: '8% of task reward',
-    action: 'View Validators',
-    registerView: ViewState.VALIDATORS,
-    registerRole: null,
+    action: 'Register as Validator',
+    registerView: ViewState.REGISTER_VALIDATOR,
+    registerRole: 'validator',
   },
   {
     id: 'holder',
@@ -328,7 +341,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                 (role.id === 'validator' && isValidator);
               const dashboardView =
                 role.id === 'miner' ? ViewState.MINER_DASHBOARD :
-                role.id === 'validator' ? ViewState.VALIDATORS : null;
+                role.id === 'validator' ? ViewState.VALIDATOR_DASHBOARD : null;
               const handleClick = () => {
                 if (!onViewChange) return;
                 if (isActive && dashboardView) onViewChange(dashboardView);
@@ -411,7 +424,9 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                 <span className="text-6xl font-display font-bold text-white tracking-tighter">
                   <CountUp end={price} prefix="$" decimals={2} duration={500} />
                 </span>
-                <span className="text-neon-green font-mono text-base bg-neon-green/10 px-3 py-1 rounded border border-neon-green/30">+4.2%</span>
+                <span className={`${(price >= 11) ? 'text-neon-green bg-neon-green/10 border-neon-green/30' : 'text-red-400 bg-red-400/10 border-red-400/30'} font-mono text-base px-3 py-1 rounded border`}>
+                  {price >= 11 ? '+' : ''}{(((price - 11) / 11) * 100).toFixed(1)}%
+                </span>
               </div>
             </div>
           </div>

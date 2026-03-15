@@ -21,6 +21,7 @@ interface WalletContextType extends WalletState {
     connectHashPack: () => Promise<void>;
     connectMetaMask: () => Promise<void>;
     disconnect: () => Promise<void>;
+    hashConnect: import('hashconnect').HashConnect | null;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -71,7 +72,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 });
                 const rpcData = await rpcRes.json();
                 // result is 0x0...01 (true) or 0x0...00 (false)
-                isM = rpcData.result !== '0x' && BigInt(rpcData.result || '0x0') === 1n;
+                isM = rpcData.result !== '0x' && BigInt(rpcData.result || '0x0') === BigInt(1);
             } catch (_) {}
 
             // Fallback: check HCS registration topic
@@ -249,7 +250,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [checkRealStatus]);
 
     return (
-        <WalletContext.Provider value={{ ...state, connectHashPack, connectMetaMask, disconnect }}>
+        <WalletContext.Provider value={{ ...state, connectHashPack, connectMetaMask, disconnect, hashConnect: hc }}>
             {children}
         </WalletContext.Provider>
     );

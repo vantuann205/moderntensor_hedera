@@ -235,21 +235,28 @@ body {
   appearance: textfield;
 }
 
-/* Gradient flow animation for headlines - Slower & more premium */
+/* AI Neural Gradient Flow - Left to Right then Diagonal Rotating */
 .animate-gradient-flow {
-  background: linear-gradient(-45deg, #00f3ff, #7000ff, #00ffa3, #ff007a, #00f3ff);
+  background: linear-gradient(135deg, 
+    #00f3ff 0%, 
+    #7000ff 25%, 
+    #00ffa3 50%, 
+    #c026d3 75%, 
+    #00f3ff 100%
+  );
   background-size: 400% 400%;
-  animation: gradient-flow 6s ease-in-out infinite;
+  animation: ai-neural-flow 8s ease-in-out infinite;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 8px rgba(0, 243, 255, 0.2));
+  filter: drop-shadow(0 0 12px rgba(0, 243, 255, 0.3));
 }
 
-@keyframes gradient-flow {
+@keyframes ai-neural-flow {
   0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  33% { background-position: 100% 50%; } /* Left to Right */
+  66% { background-position: 100% 0%; }  /* Diagonal Up */
+  100% { background-position: 0% 50%; } /* Cycle back */
 }
 
 @keyframes morph-fade-in {

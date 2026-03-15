@@ -23,7 +23,7 @@ export function WalletConnect() {
         >
           <div className={`w-6 h-6 rounded flex items-center justify-center ${type === 'hashpack' ? 'bg-neon-cyan/10 border-neon-cyan/20' : 'bg-orange-500/10 border-orange-500/20'} border`}>
             <img 
-              src={type === 'hashpack' ? "https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png" : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQm75vp4StozEiplXmRw_lonYrfxv8rvfUIDw&s"} 
+              src={type === 'hashpack' ? "https://cdn.prod.website-files.com/614c99cf4f23700c8aa3752a/6323b696c42eaa1be5f8152a_public.png" : "https://www.pngall.com/wp-content/uploads/17/Metamask-Wallet-Logo-Design-PNG.png"} 
               className={`w-4 h-4 object-contain ${type === 'metamask' ? 'rounded-md' : ''}`} 
               alt="W"
             />
@@ -80,7 +80,7 @@ export function WalletConnect() {
       >
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
         
-        <Zap size={13} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+        <Wallet size={13} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
         Connect Wallet
         
         <div className="absolute -inset-1 bg-neon-cyan/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
