@@ -58,17 +58,19 @@ COPY scripts/ ./scripts/
 COPY .env* ./
 
 # Copy standalone Next.js build
-COPY --from=node_base /app/dashboard-ui/.next/standalone ./dashboard-ui/
-COPY --from=node_base /app/dashboard-ui/.next/static ./dashboard-ui/.next/static
-COPY --from=node_base /app/dashboard-ui/public ./dashboard-ui/public
+# standalone/ contains server.js + node_modules + .next/server
+# static assets must be placed at .next/static inside standalone
+# public must be placed at public inside standalone
+COPY --from=node_base /app/dashboard-ui/.next/standalone/ ./
+COPY --from=node_base /app/dashboard-ui/.next/static ./.next/static
+COPY --from=node_base /app/dashboard-ui/public ./public
 
 # Runtime env
 ENV PYTHON_PATH=/usr/local/bin/python3
 ENV PYTHONIOENCODING=utf-8
 ENV NODE_ENV=production
 ENV PORT=3000
-
-WORKDIR /app/dashboard-ui
+ENV HOSTNAME=0.0.0.0
 
 EXPOSE 3000
 
