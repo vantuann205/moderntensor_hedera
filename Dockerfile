@@ -1,12 +1,4 @@
-FROM node:20-slim AS node_base
-
-# ── Stage 1: Build Next.js ────────────────────────────────────────────────────
-WORKDIR /app/dashboard-ui
-COPY dashboard-ui/package*.json ./
-RUN npm ci
-COPY dashboard-ui/ ./
-
-# Inject NEXT_PUBLIC vars at build time so they are baked into the bundle
+# Define ARGs at the top level so they are available to all stages
 ARG NEXT_PUBLIC_HEDERA_NETWORK=testnet
 ARG NEXT_PUBLIC_HEDERA_ACCOUNT_ID=0.0.8127455
 ARG NEXT_PUBLIC_REGISTRATION_TOPIC_ID=0.0.8198583
@@ -21,6 +13,30 @@ ARG NEXT_PUBLIC_MDT_EVM_ADDRESS=0x00000000000000000000000000000000007d257a
 ARG NEXT_PUBLIC_PAYMENT_ESCROW_EVM=0x6537c62E5062Ea8B64949536046075141009bE91
 ARG NEXT_PUBLIC_PAYMENT_ESCROW_ID=0.0.8231002
 
+FROM node:20-slim AS node_base
+
+# ── Stage 1: Build Next.js ────────────────────────────────────────────────────
+WORKDIR /app/dashboard-ui
+COPY dashboard-ui/package*.json ./
+RUN npm ci
+COPY dashboard-ui/ ./
+
+# Redeclare ARGs inside this stage to use them
+ARG NEXT_PUBLIC_HEDERA_NETWORK
+ARG NEXT_PUBLIC_HEDERA_ACCOUNT_ID
+ARG NEXT_PUBLIC_REGISTRATION_TOPIC_ID
+ARG NEXT_PUBLIC_SCORING_TOPIC_ID
+ARG NEXT_PUBLIC_TASK_TOPIC_ID
+ARG NEXT_PUBLIC_MDT_TOKEN_ID
+ARG NEXT_PUBLIC_STAKING_VAULT_EVM
+ARG NEXT_PUBLIC_STAKING_VAULT_ID
+ARG NEXT_PUBLIC_SUBNET_REGISTRY_EVM
+ARG NEXT_PUBLIC_SUBNET_REGISTRY_ID
+ARG NEXT_PUBLIC_MDT_EVM_ADDRESS
+ARG NEXT_PUBLIC_PAYMENT_ESCROW_EVM
+ARG NEXT_PUBLIC_PAYMENT_ESCROW_ID
+
+# Set ENVs for build-time baking into client-side code
 ENV NEXT_PUBLIC_HEDERA_NETWORK=$NEXT_PUBLIC_HEDERA_NETWORK
 ENV NEXT_PUBLIC_HEDERA_ACCOUNT_ID=$NEXT_PUBLIC_HEDERA_ACCOUNT_ID
 ENV NEXT_PUBLIC_REGISTRATION_TOPIC_ID=$NEXT_PUBLIC_REGISTRATION_TOPIC_ID
@@ -40,8 +56,8 @@ RUN npm run build
 # ── Stage 2: Final image with Python + Node ───────────────────────────────────
 FROM python:3.12-slim
 
-# Install Node.js 20
-RUN apt-get update && apt-get install -y curl && \
+# Install Node.js 20 + CA Certificates
+RUN apt-get update && apt-get install -y curl ca-certificates && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -58,9 +74,6 @@ COPY scripts/ ./scripts/
 COPY .env* ./
 
 # Copy standalone Next.js build
-# standalone/ contains server.js + node_modules + .next/server
-# static assets must be placed at .next/static inside standalone
-# public must be placed at public inside standalone
 COPY --from=node_base /app/dashboard-ui/.next/standalone/ ./
 COPY --from=node_base /app/dashboard-ui/.next/static ./.next/static
 COPY --from=node_base /app/dashboard-ui/public ./public
@@ -70,7 +83,37 @@ ENV PYTHON_PATH=/usr/local/bin/python3
 ENV PYTHONIOENCODING=utf-8
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+
+# Redeclare ARGs in final stage to set as runtime ENVs
+ARG NEXT_PUBLIC_HEDERA_NETWORK
+ARG NEXT_PUBLIC_HEDERA_ACCOUNT_ID
+ARG NEXT_PUBLIC_REGISTRATION_TOPIC_ID
+ARG NEXT_PUBLIC_SCORING_TOPIC_ID
+ARG NEXT_PUBLIC_TASK_TOPIC_ID
+ARG NEXT_PUBLIC_MDT_TOKEN_ID
+ARG NEXT_PUBLIC_STAKING_VAULT_EVM
+ARG NEXT_PUBLIC_STAKING_VAULT_ID
+ARG NEXT_PUBLIC_SUBNET_REGISTRY_EVM
+ARG NEXT_PUBLIC_SUBNET_REGISTRY_ID
+ARG NEXT_PUBLIC_MDT_EVM_ADDRESS
+ARG NEXT_PUBLIC_PAYMENT_ESCROW_EVM
+ARG NEXT_PUBLIC_PAYMENT_ESCROW_ID
+
+ENV NEXT_PUBLIC_HEDERA_NETWORK=$NEXT_PUBLIC_HEDERA_NETWORK
+ENV NEXT_PUBLIC_HEDERA_ACCOUNT_ID=$NEXT_PUBLIC_HEDERA_ACCOUNT_ID
+ENV NEXT_PUBLIC_REGISTRATION_TOPIC_ID=$NEXT_PUBLIC_REGISTRATION_TOPIC_ID
+ENV NEXT_PUBLIC_SCORING_TOPIC_ID=$NEXT_PUBLIC_SCORING_TOPIC_ID
+ENV NEXT_PUBLIC_TASK_TOPIC_ID=$NEXT_PUBLIC_TASK_TOPIC_ID
+ENV NEXT_PUBLIC_MDT_TOKEN_ID=$NEXT_PUBLIC_MDT_TOKEN_ID
+ENV NEXT_PUBLIC_STAKING_VAULT_EVM=$NEXT_PUBLIC_STAKING_VAULT_EVM
+ENV NEXT_PUBLIC_STAKING_VAULT_ID=$NEXT_PUBLIC_STAKING_VAULT_ID
+ENV NEXT_PUBLIC_SUBNET_REGISTRY_EVM=$NEXT_PUBLIC_SUBNET_REGISTRY_EVM
+ENV NEXT_PUBLIC_SUBNET_REGISTRY_ID=$NEXT_PUBLIC_SUBNET_REGISTRY_ID
+ENV NEXT_PUBLIC_MDT_EVM_ADDRESS=$NEXT_PUBLIC_MDT_EVM_ADDRESS
+ENV NEXT_PUBLIC_PAYMENT_ESCROW_EVM=$NEXT_PUBLIC_PAYMENT_ESCROW_EVM
+ENV NEXT_PUBLIC_PAYMENT_ESCROW_ID=$NEXT_PUBLIC_PAYMENT_ESCROW_ID
 
 EXPOSE 3000
 
