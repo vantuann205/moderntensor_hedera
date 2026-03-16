@@ -59,25 +59,25 @@ const MorphingText = () => {
 };
 
 // ── Ticker bar ──
-const TickerContent = ({ price }: { price: number }) => {
+const TickerContent = ({ price, totalStaked, marketCap }: { price: number; totalStaked: number; marketCap: number }) => {
   const diff = ((price - 11) / 11) * 100;
   const isUp = diff >= 0;
   return (
     <div className="flex items-center gap-12 whitespace-nowrap px-6">
       {[
-        { 
-          label: 'MDT Price', 
-          value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>, 
+        {
+          label: 'MDT Price',
+          value: <span className="flex items-center text-neon-cyan"><span className="text-neon-cyan text-sm mr-0.5">$</span><CountUp end={price} duration={500} decimals={2} /></span>,
           extra: (
             <span className={`${isUp ? 'text-neon-green' : 'text-red-400'} flex items-center gap-0.5 font-bold text-xs`}>
               <span className="material-symbols-outlined text-sm">{isUp ? 'arrow_drop_up' : 'arrow_drop_down'}</span>
               {isUp ? '+' : ''}{diff.toFixed(1)}%
             </span>
-          ) 
+          )
         },
-        { label: 'Market Cap', value: '$2.42B' },
-        { label: '24h Vol', value: '$145.2M' },
-        { label: 'Total Staked', value: '4.1M (72%)' },
+        { label: 'Market Cap', value: <span className="flex items-center"><span className="text-sm mr-0.5">$</span><CountUp end={marketCap / 1_000_000} duration={500} decimals={2} /><span className="ml-0.5">M</span></span> },
+        { label: '24h Vol', value: '$56,870' },
+        { label: 'Total Staked', value: totalStaked > 0 ? `${totalStaked.toLocaleString()} MDT` : '—' },
       ].map((item, i) => (
         <div key={i} className="flex items-center gap-3">
           <span className="text-text-secondary uppercase text-[12px] tracking-widest font-bold">{item.label}</span>
@@ -202,6 +202,16 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
   }, [stats]);
 
   const price = chart[chart.length - 1].value;
+  const totalStaked = stats?.totalStaked ?? 0;
+
+  // Market cap animates between 15M-16M, ticks every 3s like price chart
+  const [marketCap, setMarketCap] = useState(15_700_000);
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setMarketCap(prev => Math.max(15_000_000, Math.min(16_000_000, prev + (Math.random() - 0.5) * 50_000)));
+    }, 3000);
+    return () => clearInterval(iv);
+  }, []);
 
   const handleRoleAction = (role: typeof ROLES[0]) => {
     if (!onViewChange) return;
@@ -217,9 +227,9 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
         <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-bg-dark to-transparent z-10" />
         <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-bg-dark to-transparent z-10" />
         <div className="flex animate-marquee text-sm font-mono hover:[animation-play-state:paused] cursor-default">
-          <TickerContent price={price} />
-          <TickerContent price={price} />
-          <TickerContent price={price} />
+          <TickerContent price={price} totalStaked={totalStaked} marketCap={marketCap} />
+          <TickerContent price={price} totalStaked={totalStaked} marketCap={marketCap} />
+          <TickerContent price={price} totalStaked={totalStaked} marketCap={marketCap} />
         </div>
       </div>
 

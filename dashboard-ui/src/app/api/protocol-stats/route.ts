@@ -4,16 +4,29 @@ import { ethers } from 'ethers';
 
 const HEDERA_RPC = 'https://testnet.hashio.io/api';
 const STAKING_VAULT = '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f';
-const STAKING_VAULT_ABI = ['function totalStaked() view returns (uint256)'];
 const MDT_DECIMALS = 8;
+
+// Use getPoolStats() which returns totalStaked as first element — more reliable than state var getter
+const STAKING_VAULT_ABI = [
+  'function getPoolStats() view returns (uint256 _totalStaked, uint256 _activeMinerCount, uint256 _activeValidatorCount, uint256 _activeHolderCount, uint256 _totalRewardsDeposited, uint256 _totalRewardsClaimed, uint256 _totalFeesBurned, uint256 _currentRegFee)',
+];
 
 async function fetchOnChainTotalStaked(): Promise<number> {
   try {
     const provider = new ethers.JsonRpcProvider(HEDERA_RPC);
+    // 8 second timeout
     const vault = new ethers.Contract(STAKING_VAULT, STAKING_VAULT_ABI, provider);
-    const raw: bigint = await vault.totalStaked();
-    return Number(ethers.formatUnits(raw, MDT_DECIMALS));
-  } catch {
+    const statsPromise = vault.getPoolStats();
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('RPC timeout')), 8000)
+    );
+    const stats = await Promise.race([statsPromise, timeoutPromise]);
+    const raw: bigint = stats[0]; // _totalStaked
+    const result = Number(ethers.formatUnits(raw, MDT_DECIMALS));
+    console.log('[protocol-stats] on-chain totalStaked:', result);
+    return result;
+  } catch (e) {
+    console.error('[protocol-stats] fetchOnChainTotalStaked failed:', e);
     return 0;
   }
 }
@@ -44,8 +57,11 @@ export async function GET() {
     const totalTasks = tasks.length;
     const totalScores = scores.length;
 
-    // Use on-chain totalStaked from StakingVaultV2 (authoritative source)
-    const totalStaked = onChainTotalStaked;
+    // totalStaked = sum of latest stake per unique miner from HCS (authoritative for this protocol)
+    // HCS stakeAmount is raw (8 decimals), divide by 1e8 to get MDT
+    const hcsTotalStaked = uniqueMiners.reduce((sum, m) => sum + (m.stakeAmount || 0), 0) / 1e8;
+    // On-chain is secondary (only tracks users who called stake() contract directly)
+    const totalStaked = hcsTotalStaked > 0 ? hcsTotalStaked : onChainTotalStaked;
 
     // Calculate average score
     const avgScore = scores.length > 0

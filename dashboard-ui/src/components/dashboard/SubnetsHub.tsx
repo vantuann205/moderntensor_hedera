@@ -400,7 +400,7 @@ export default function SubnetsHub({ onSelect }: SubnetsHubProps) {
             { label: 'Total Miners', val: stats.totalMiners, icon: 'memory', color: 'text-neon-cyan', bg: 'bg-neon-cyan/5' },
             { label: 'Validators', val: stats.totalValidators, icon: 'verified', color: 'text-neon-pink', bg: 'bg-neon-pink/5' },
             { label: 'Tasks Processed', val: stats.totalTasks, icon: 'terminal', color: 'text-neon-green', bg: 'bg-neon-green/5' },
-            { label: 'Total Staked', val: stats.totalStaked / 100000000, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', bg: 'bg-neon-purple/5' }
+            { label: 'Total Staked', val: stats.totalStaked, suffix: ' MDT', icon: 'account_balance_wallet', color: 'text-neon-purple', bg: 'bg-neon-purple/5' }
           ].map((stat, i) => (
             <div key={i} className={`glass-panel rounded-2xl p-6 border border-white/10 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300`}>
               <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bg} blur-2xl rounded-full -mr-8 -mt-8 px-8 transition-transform group-hover:scale-150`}></div>
