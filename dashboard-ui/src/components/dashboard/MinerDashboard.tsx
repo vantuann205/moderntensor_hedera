@@ -1087,7 +1087,6 @@ function ScoreHistoryPanel({ accountId, evmAddress }: { accountId: string; evmAd
       // Check on-chain submissions for tasks with onChainTaskId
       if (evmAddress) {
         const { ethers } = await import('ethers');
-        const { CONTRACTS, SUBNET_REGISTRY_ABI } = await import('@/lib/contracts');
         const provider = new ethers.JsonRpcProvider(CONTRACTS.HEDERA_RPC);
         const registry = new ethers.Contract(CONTRACTS.SUBNET_REGISTRY, SUBNET_REGISTRY_ABI, provider);
 

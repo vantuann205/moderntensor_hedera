@@ -1,12 +1,30 @@
 import { NextResponse } from 'next/server';
 import { hcsMirrorClient } from '@/lib/hcs-mirror-client';
+import { ethers } from 'ethers';
+
+const HEDERA_RPC = 'https://testnet.hashio.io/api';
+const STAKING_VAULT = '0x99968cF6Aa38337a4dD3cBf40D13011293Cf718f';
+const STAKING_VAULT_ABI = ['function totalStaked() view returns (uint256)'];
+const MDT_DECIMALS = 8;
+
+async function fetchOnChainTotalStaked(): Promise<number> {
+  try {
+    const provider = new ethers.JsonRpcProvider(HEDERA_RPC);
+    const vault = new ethers.Contract(STAKING_VAULT, STAKING_VAULT_ABI, provider);
+    const raw: bigint = await vault.totalStaked();
+    return Number(ethers.formatUnits(raw, MDT_DECIMALS));
+  } catch {
+    return 0;
+  }
+}
 
 export async function GET() {
   try {
-    const [miners, tasks, scores] = await Promise.all([
+    const [miners, tasks, scores, onChainTotalStaked] = await Promise.all([
       hcsMirrorClient.getMinerRegistrations(),
       hcsMirrorClient.getTaskSubmissions(),
-      hcsMirrorClient.getScoreSubmissions()
+      hcsMirrorClient.getScoreSubmissions(),
+      fetchOnChainTotalStaked(),
     ]);
 
     // Deduplicate miners by minerId — keep latest registration (highest sequenceNumber)
@@ -26,8 +44,8 @@ export async function GET() {
     const totalTasks = tasks.length;
     const totalScores = scores.length;
 
-    // Calculate total staked from deduplicated miners
-    const totalStaked = uniqueMiners.reduce((sum, m) => sum + (m.stakeAmount || 0), 0);
+    // Use on-chain totalStaked from StakingVaultV2 (authoritative source)
+    const totalStaked = onChainTotalStaked;
 
     // Calculate average score
     const avgScore = scores.length > 0
