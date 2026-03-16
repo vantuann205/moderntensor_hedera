@@ -5,7 +5,6 @@ WORKDIR /app/dashboard-ui
 COPY dashboard-ui/package*.json ./
 RUN npm ci
 COPY dashboard-ui/ ./
-# Build will use env vars injected at runtime via Railway
 RUN npm run build
 
 # ── Stage 2: Final image with Python + Node ───────────────────────────────────
@@ -28,17 +27,19 @@ COPY sdk/ ./sdk/
 COPY scripts/ ./scripts/
 COPY .env* ./
 
-# Copy built Next.js app
-COPY --from=node_base /app/dashboard-ui ./dashboard-ui
-COPY --from=node_base /app/dashboard-ui/node_modules ./dashboard-ui/node_modules
+# Copy standalone Next.js build (much smaller than full node_modules)
+COPY --from=node_base /app/dashboard-ui/.next/standalone ./dashboard-ui/
+COPY --from=node_base /app/dashboard-ui/.next/static ./dashboard-ui/.next/static
+COPY --from=node_base /app/dashboard-ui/public ./dashboard-ui/public
 
 # Set Python path for API routes
 ENV PYTHON_PATH=/usr/local/bin/python3
 ENV PYTHONIOENCODING=utf-8
 ENV NODE_ENV=production
+ENV PORT=3000
 
 WORKDIR /app/dashboard-ui
 
 EXPOSE 3000
 
-CMD ["node_modules/.bin/next", "start", "-p", "3000"]
+CMD ["node", "server.js"]

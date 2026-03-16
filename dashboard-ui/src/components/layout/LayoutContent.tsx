@@ -165,7 +165,7 @@ export default function LayoutContent({ children }: { children: React.ReactNode 
             </main>
             <footer className="mt-auto border-t border-white/5 bg-bg-dark/50 backdrop-blur py-6 z-20">
               <div className="w-full px-6 lg:px-10 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p className="text-slate-600 text-xs font-mono">© 2024 MODERN TENSOR HEDERA. SYSTEM ONLINE.</p>
+                <p className="text-slate-600 text-xs font-mono">© 2026 MODERN TENSOR HEDERA. SYSTEM ONLINE.</p>
                 <div className="flex gap-8 text-xs font-bold uppercase tracking-wider text-slate-500">
                   <button className="hover:text-neon-cyan transition-colors">Docs</button>
                   <button className="hover:text-neon-cyan transition-colors">API</button>
