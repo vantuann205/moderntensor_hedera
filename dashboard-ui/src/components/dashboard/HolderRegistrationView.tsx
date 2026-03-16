@@ -222,9 +222,9 @@ export default function HolderRegistrationView({ onBack, onViewChange, onRegiste
         const totalMDT = Number(totalRaw) / 1e8;
         log(`Step 1/3: Transferring ${totalMDT} MDT to vault — approve in HashPack...`);
 
-        const transferTx = new TransferTransaction().addTokenTransfer(MDT_TOKEN_ID, hederaId, -Number(totalRaw)).addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(vaultAccountId), Number(totalRaw));
-        const transferReceipt = await hashConnect.sendTransaction(hederaId, transferTx);
-        const transferTs = await resolveHederaTxId(transferReceipt.transactionId);
+        const transferTx = new TransferTransaction().addTokenTransfer(MDT_TOKEN_ID, hederaId, -Number(totalRaw)).addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(vaultAccountId), Number(totalRaw) as any);
+        const transferReceipt = await hashConnect.sendTransaction(hederaId as any, transferTx as any);
+        const transferTs = await resolveHederaTxId((transferReceipt as any).transactionId as any);
         log(`✓ Step 1/3: MDT transferred${transferTs ? ` · ${transferTs}` : ''}`);
 
         log(`Step 2/3: Recording deposit...`);
@@ -234,11 +234,11 @@ export default function HolderRegistrationView({ onBack, onViewChange, onRegiste
         log(`✓ Step 2/3: pendingDeposit: ${depositData.pendingDeposit} MDT`);
 
         log(`Step 3/3: Calling vault.stake(${stakeNum} MDT, Holder) — approve in HashPack...`);
-        const params = new ContractFunctionParameters().addUint256(amountRaw.toString()).addUint8(stakeRole);
+        const params = new ContractFunctionParameters().addUint256(amountRaw as any).addUint8(stakeRole);
         const contractId = ContractId.fromString(CONTRACTS.STAKING_VAULT_ID);
-        const contractTx = new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('stake', params);
-        const stakeReceipt = await hashConnect.sendTransaction(hederaId, contractTx);
-        const contractTs = await resolveHederaTxId(stakeReceipt.transactionId);
+        const contractTx = new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('stake', params as any);
+        const stakeReceipt = await hashConnect.sendTransaction(hederaId as any, contractTx as any);
+        const contractTs = await resolveHederaTxId((stakeReceipt as any).transactionId as any);
         log(`✓ Step 3/3: Staked${contractTs ? ` · ${contractTs}` : ''}`);
         return { txHash: contractTs || `hashpack_${Date.now()}`, txHashTransfer: transferTs || undefined, txHashContract: contractTs || undefined };
       }

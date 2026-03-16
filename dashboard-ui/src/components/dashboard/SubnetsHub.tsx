@@ -46,7 +46,7 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
       try {
         const [minersRes, tasksRes, scoresRes] = await Promise.all([
           fetch('/api/hcs/miners'),
-          fetch('/api/hcs/tasks'),
+          fetch('/api/hcs/tasks?all=true'), // Get ALL tasks for accurate count
           fetch('/api/hcs/scores')
         ]);
 
@@ -55,6 +55,13 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
           tasksRes.json(),
           scoresRes.json()
         ]);
+
+        console.log('[SubnetDetail] Raw data:', {
+          miners: minersData.data?.length,
+          tasks: tasksData.data?.length,
+          scores: scoresData.data?.length,
+          subnetId: subnet.id
+        });
 
         // API already deduplicates, but filter for this subnet
         const rawSubnetMiners: any[] = minersData.data?.filter((m: any) => {
@@ -72,13 +79,24 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
         });
         const subnetMiners = Array.from(minerMap.values());
         
+        // Filter ALL tasks for this subnet (not just active ones)
         const subnetTasks = tasksData.data?.filter((t: any) =>
           (t.subnetId || 0) === subnet.id
         ) || [];
 
-        // Filter scores relevant precisely to this subnet's tasks
-        const subnetTaskIds = new Set(subnetTasks.map((t: any) => t.taskId));
-        const subnetScores = (scoresData.data || []).filter((s: any) => subnetTaskIds.has(s.taskId));
+        // Get ALL scores for this subnet (not just from current tasks)
+        const allScores = scoresData.data || [];
+        const subnetScores = allScores.filter((s: any) => {
+          // Find the task for this score
+          const task = tasksData.data?.find((t: any) => t.taskId === s.taskId);
+          return task && (task.subnetId || 0) === subnet.id;
+        });
+
+        console.log('[SubnetDetail] Filtered for subnet', subnet.id, ':', {
+          miners: subnetMiners.length,
+          tasks: subnetTasks.length,
+          scores: subnetScores.length
+        });
 
         setMiners(subnetMiners);
         setTasks(subnetTasks);
@@ -94,6 +112,8 @@ const SubnetDetail: React.FC<SubnetDetailProps> = ({ subnet, onBack }) => {
   }, [subnet.id]);
 
   const uniqueValidators = Array.from(new Set(scores.map(s => s.validatorId))).filter(Boolean);
+  console.log('[SubnetDetail] Subnet:', subnet.id, 'Total scores:', scores.length, 'Unique validators:', uniqueValidators.length, uniqueValidators);
+  
   // stake_amount from API is already in MDT (not raw 8-decimal)
   const totalStaked = miners.reduce((sum, m) => {
     const raw = m.stake_amount ?? m.stakeAmount ?? 0;

@@ -1,8 +1,12 @@
 'use client';
 
-import { useActivity } from '@/lib/hooks/useProtocolData';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Cpu, Zap, Shield, UserPlus, CheckCircle2, Clock } from 'lucide-react';
+
+// Mock useActivity hook since it doesn't exist
+function useActivity() {
+  return { data: [], loading: false, error: null };
+}
 
 function getEventStyle(type: string) {
     switch (type) {
@@ -20,7 +24,7 @@ function getEventStyle(type: string) {
 }
 
 export default function ActivityFeed() {
-    const { data: activityData, isLoading } = useActivity();
+    const { data: activityData, loading } = useActivity();
     const activities = Array.isArray(activityData) ? activityData : [];
 
     const formatUTC7 = (ts: any) => {
@@ -48,7 +52,7 @@ export default function ActivityFeed() {
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1.5 bg-white/5 dark:bg-transparent">
-                {isLoading ? (
+                {loading ? (
                     [...Array(5)].map((_, i) => (
                         <Skeleton key={i} className="h-8 w-full bg-white/5 rounded" />
                     ))

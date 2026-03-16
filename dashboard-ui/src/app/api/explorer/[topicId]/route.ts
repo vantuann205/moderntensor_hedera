@@ -7,9 +7,9 @@ const MIRROR_BASE = process.env.NEXT_PUBLIC_MIRROR_BASE || 'https://testnet.mirr
 
 export async function GET(
     request: Request,
-    { params }: { params: { topicId: string } }
+    { params }: { params: Promise<{ topicId: string }> }
 ) {
-    const { topicId } = params;
+    const { topicId } = await params;
     const url = new URL(request.url);
     const type = url.searchParams.get('type') || 'hcs'; // type=miners|validators|tasks|hcs
 

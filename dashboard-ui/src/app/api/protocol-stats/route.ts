@@ -35,7 +35,7 @@ export async function GET() {
   try {
     const [miners, tasks, scores, onChainTotalStaked] = await Promise.all([
       hcsMirrorClient.getMinerRegistrations(),
-      hcsMirrorClient.getTaskSubmissions(),
+      hcsMirrorClient.getTaskSubmissions(), // Get ALL tasks directly from client
       hcsMirrorClient.getScoreSubmissions(),
       fetchOnChainTotalStaked(),
     ]);

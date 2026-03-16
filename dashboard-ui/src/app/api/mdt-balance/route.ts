@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const entry = tokens.find((t: any) => t.token_id === MDT_TOKEN_ID);
 
     // MDT has 8 decimals — convert smallest unit to MDT
-    const rawBalance = entry ? BigInt(entry.balance) : 0n;
+    const rawBalance = entry ? BigInt(entry.balance) : BigInt(0);
     const mdtBalance = Number(rawBalance) / 1e8;
 
     // Also fetch HBAR balance

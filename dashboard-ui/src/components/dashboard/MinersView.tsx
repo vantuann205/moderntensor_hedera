@@ -110,11 +110,6 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
               AI compute providers registered on Hedera HCS
             </p>
           </div>
-          <a href="https://hashscan.io/testnet/topic/0.0.8198583" target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-xs font-bold hover:bg-neon-cyan hover:text-black transition-all uppercase tracking-widest">
-            <span className="material-symbols-outlined text-sm">open_in_new</span>
-            Verify on HashScan
-          </a>
         </div>
 
         {/* Stats */}

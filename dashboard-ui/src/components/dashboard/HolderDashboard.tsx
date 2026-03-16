@@ -120,9 +120,9 @@ export default function HolderDashboard({ onBack }: Props) {
       } else if (walletType === 'hashpack' && hashConnect && accountId) {
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.STAKING_VAULT_ID);
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('claimRewards'));
-        setTxHash(String(receipt.transactionId || ''));
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('claimRewards') as any);
+        setTxHash(String((receipt as any).transactionId || ''));
         setTxStep(`✓ Claimed ${pendingRewards.toFixed(4)} MDT`);
         setPendingRewards(0);
       }
@@ -144,9 +144,9 @@ export default function HolderDashboard({ onBack }: Props) {
       } else if (walletType === 'hashpack' && hashConnect && accountId) {
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.STAKING_VAULT_ID);
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('requestUnstake'));
-        setTxHash(String(receipt.transactionId || ''));
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('requestUnstake') as any);
+        setTxHash(String((receipt as any).transactionId || ''));
         setTxStep('✓ Unstake requested — 7-day cooldown started');
       }
       await loadData();
@@ -167,9 +167,9 @@ export default function HolderDashboard({ onBack }: Props) {
       } else if (walletType === 'hashpack' && hashConnect && accountId) {
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.STAKING_VAULT_ID);
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('withdraw'));
-        setTxHash(String(receipt.transactionId || ''));
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('withdraw') as any);
+        setTxHash(String((receipt as any).transactionId || ''));
         setTxStep(`✓ Withdrawn ${stakeInfo?.amount?.toFixed(2)} MDT`);
       }
       await loadData();

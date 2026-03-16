@@ -32,7 +32,7 @@ export default function ValidatorsPage() {
         try {
             const result = await stakeValidator(stakingTarget.validator_id || stakingTarget.id, Number(stakeAmount));
             setStakeState('success');
-            setStakeMsg(result.message || 'Stake submitted!');
+            setStakeMsg((result as any).message || 'Stake submitted!');
         } catch (e: any) {
             setStakeState('error');
             setStakeMsg(e.message || 'Stake failed');

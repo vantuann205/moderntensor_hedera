@@ -439,9 +439,9 @@ function WithdrawEarningsPanel({ evmAddress, accountId }: { evmAddress: string; 
       } else if (walletType === 'hashpack' && hashConnect && accountId) {
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.SUBNET_REGISTRY_ID);
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('withdrawEarnings'));
-        setTxHash(String(receipt.transactionId || '')); setTxStep(`✓ Withdrawn ${pending?.toFixed(4)} MDT`); setPending(0);
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('withdrawEarnings') as any);
+        setTxHash(String((receipt as any).transactionId || '')); setTxStep(`✓ Withdrawn ${pending?.toFixed(4)} MDT`); setPending(0);
       }
     } catch (e: any) { setTxError(e.message); setTxStep(null); }
   };
@@ -521,9 +521,9 @@ function RegisterMinerPanel({ accountId, evmAddress }: { accountId: string; evmA
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.SUBNET_REGISTRY_ID);
         const params = new ContractFunctionParameters().addUint256(Long.fromNumber(subnetId));
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('registerMiner', params));
-        setTxHash(String(receipt.transactionId || ''));
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('registerMiner', params) as any);
+        setTxHash(String((receipt as any).transactionId || ''));
         setTxStep(`✓ Registered in Subnet ${subnetId}`);
         setIsRegistered(true);
       }
@@ -691,9 +691,9 @@ function SubmitResultPanel({ accountId, evmAddress, subnetIds }: { accountId: st
         const params = new ContractFunctionParameters()
           .addUint256(Long.fromString(String(onChainTaskId)))
           .addString(hash);
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('submitResult', params));
-        setSubmitted(s => ({ ...s, [taskId]: String(receipt.transactionId || 'submitted') }));
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('submitResult', params) as any);
+        setSubmitted(s => ({ ...s, [taskId]: String((receipt as any).transactionId || 'submitted') }));
       }
 
       // After on-chain submit — write result_submit to HCS so task disappears from feed

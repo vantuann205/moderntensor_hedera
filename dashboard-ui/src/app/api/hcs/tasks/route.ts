@@ -15,12 +15,23 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     // role=validator → show tasks that have submissions pending scoring (don't hide on result_submit)
     const isValidator = searchParams.get('role') === 'validator';
+    // all=true → return ALL tasks without filtering (for stats/subnet detail)
+    const returnAll = searchParams.get('all') === 'true';
 
     // Fetch tasks + scoring topic messages in parallel
     const [tasks, scoringMessages] = await Promise.all([
       hcsMirrorClient.getTaskSubmissions(),
       hcsMirrorClient.getTopicMessages(SCORING_TOPIC_ID, 200),
     ]);
+
+    // If all=true, return everything without filtering
+    if (returnAll) {
+      return NextResponse.json({
+        success: true,
+        data: tasks,
+        count: tasks.length,
+      });
+    }
 
     // Build sets of "done" taskIds from HCS scoring topic
     const resultSubmittedIds = new Set<string>();

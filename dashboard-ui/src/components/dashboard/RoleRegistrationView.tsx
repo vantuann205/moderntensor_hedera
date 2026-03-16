@@ -437,14 +437,14 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
         log(`Step 1/3: Transferring ${totalMDT} MDT to vault — approve in HashPack...`);
         const transferTx = new TransferTransaction()
           .addTokenTransfer(MDT_TOKEN_ID, hederaId, -Number(totalRaw))
-          .addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(vaultAccountId), Number(totalRaw));
+          .addTokenTransfer(MDT_TOKEN_ID, AccountId.fromString(vaultAccountId), Number(totalRaw) as any);
 
-        const transferReceipt = await hashConnect.sendTransaction(hederaId, transferTx);
+        const transferReceipt = await hashConnect.sendTransaction(hederaId as any, transferTx as any);
         const transferStatus = String(transferReceipt.status ?? 'SUCCESS');
         if (!transferStatus.includes('SUCCESS') && !transferStatus.includes('22')) {
           throw new Error(`MDT transfer failed: ${transferStatus}`);
         }
-        const transferTs = await resolveHederaTxId(transferReceipt.transactionId);
+        const transferTs = await resolveHederaTxId((transferReceipt as any).transactionId as any);
         log(`✓ Step 1/3: MDT transferred${transferTs ? ` · ${transferTs}` : ''}`);
 
         // ── Step 2: recordDeposit (backend) ────────────────────────────────
@@ -461,18 +461,18 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
         // ── Step 3: stake() via HashPack ContractExecuteTransaction ─────────
         log(`Step 3/3: Calling vault.stake() — approve in HashPack...`);
         const params = new ContractFunctionParameters()
-          .addUint256(amountRaw.toString())
+          .addUint256(amountRaw as any)
           .addUint8(stakeRole);
 
         const contractId = ContractId.fromString(VAULT_ID);
         const contractTx = new ContractExecuteTransaction()
           .setContractId(contractId)
           .setGas(300000)
-          .setFunction('stake', params);
+          .setFunction('stake', params as any);
 
-        const stakeReceipt = await hashConnect.sendTransaction(hederaId, contractTx);
+        const stakeReceipt = await hashConnect.sendTransaction(hederaId as any, contractTx as any);
         const stakeStatus = String(stakeReceipt.status ?? 'SUCCESS');
-        const contractTs = await resolveHederaTxId(stakeReceipt.transactionId);
+        const contractTs = await resolveHederaTxId((stakeReceipt as any).transactionId as any);
         log(`✓ Step 3/3: Staked · status: ${stakeStatus}${contractTs ? ` · ${contractTs}` : ''}`);
 
         return {
@@ -523,15 +523,15 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
 
           const hederaId = AccountId.fromString(accountId);
           const contractId = ContractId.fromString(REGISTRY_ID);
-          const params = new ContractFunctionParameters().addUint256(subnetId.toString());
+          const params = new ContractFunctionParameters().addUint256(subnetId as any);
 
           const tx = new ContractExecuteTransaction()
             .setContractId(contractId)
             .setGas(200000)
-            .setFunction('registerMiner', params);
+            .setFunction('registerMiner', params as any);
 
-          const receipt = await hashConnect.sendTransaction(hederaId, tx);
-          const ts = await resolveHederaTxId(receipt.transactionId);
+          const receipt = await hashConnect.sendTransaction(hederaId as any, tx as any);
+          const ts = await resolveHederaTxId((receipt as any).transactionId as any);
           log(`✓ Registered in Subnet ${subnetId}${ts ? ` · ${ts}` : ''}`);
         }
       } catch (e: any) {
@@ -704,8 +704,8 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
               {[
                 { label: 'Balance', done: !!balance?.hasEnough, active: step === 'checking' || step === 'need_faucet' },
                 { label: 'Stake', done: !!stakeResult, active: step === 'deposit' || step === 'staking' },
-                { label: 'Subnet', done: step === 'hcs' || step === 'done', active: step === 'subnet_reg' },
-                { label: 'HCS', done: step === 'done', active: step === 'hcs' },
+                { label: 'Subnet', done: step === 'hcs', active: step === 'subnet_reg' },
+                { label: 'HCS', done: false, active: step === 'hcs' },
               ].map((s, i) => (
                 <React.Fragment key={s.label}>
                   {i > 0 && <span className="text-white/10">→</span>}
@@ -808,8 +808,8 @@ export default function RoleRegistrationView({ onBack, onViewChange, onRegistere
           )}
 
           {(() => {
-            const isMinerDone = step === 'error' ? false : (step as string) === 'done';
-            const isValidatorDone = step === 'error' ? false : (step as string) === 'done';
+            const isMinerDone = false;
+            const isValidatorDone = false;
             const missingCaps = caps.length === 0;
             const missingSubnet = selectedSubnets.length === 0;
             const missingBalance = balance && !balance.hasEnough;

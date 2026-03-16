@@ -12,7 +12,7 @@ interface TasksViewProps {
 }
 
 export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
-  const { data: tasks, loading, error } = useTasks();
+  const { data: tasks, loading, error } = useTasks({ all: true }); // Get ALL tasks for display
   const { data: scores } = useScores();
   const { data: miners } = useMiners();
   const [filterType, setFilterType] = useState<string>('all');
@@ -81,11 +81,6 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
-                  <a href="https://hashscan.io/testnet/topic/0.0.8198585" target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan text-xs font-bold hover:bg-neon-cyan hover:text-black transition-all uppercase tracking-widest">
-                    <span className="material-symbols-outlined text-sm">open_in_new</span>
-                    Verify on HashScan
-                  </a>
                   <button onClick={() => setShowSubmit(true)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest bg-neon-pink/10 border border-neon-pink/40 text-neon-pink hover:bg-neon-pink/20 transition-all">
                     <span className="material-symbols-outlined text-sm">add_task</span>

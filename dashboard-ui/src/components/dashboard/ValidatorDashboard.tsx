@@ -159,9 +159,9 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
           .addUint256(Long.fromString(String(onChainId)))
           .addUint256(Long.fromNumber(subIdx))
           .addUint256(Long.fromNumber(scoreVal));
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('validateSubmission', params));
-        onChainTx = String(receipt.transactionId || 'submitted');
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(300000).setFunction('validateSubmission', params) as any);
+        onChainTx = String((receipt as any).transactionId || 'submitted');
       }
 
       // After on-chain success → submit HCS score_submit message with full metrics
@@ -205,9 +205,9 @@ function ScoreSubmissionPanel({ accountId, evmAddress }: { accountId: string; ev
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.SUBNET_REGISTRY_ID);
         const params = new ContractFunctionParameters().addUint256(Long.fromString(String(task.onChainTaskId)));
-        const receipt = await hashConnect.sendTransaction(hederaId,
-          new ContractExecuteTransaction().setContractId(contractId).setGas(400000).setFunction('finalizeTask', params));
-        setDone(d => ({ ...d, [key]: { onChainTx: String(receipt.transactionId || 'finalized'), hcsTx: '' } }));
+        const receipt = await hashConnect.sendTransaction(hederaId as any,
+          new ContractExecuteTransaction().setContractId(contractId).setGas(400000).setFunction('finalizeTask', params) as any);
+        setDone(d => ({ ...d, [key]: { onChainTx: String((receipt as any).transactionId || 'finalized'), hcsTx: '' } }));
       }
       await loadTasks();
     } catch (e: any) { setErrors(er => ({ ...er, [key]: e.reason || e.message || 'Finalize failed' })); }
@@ -451,7 +451,7 @@ function ValidatorReputationPanel({ evmAddress }: { evmAddress: string }) {
     try {
       const provider = new ethers.JsonRpcProvider(CONTRACTS.HEDERA_RPC);
       const registry = new ethers.Contract(CONTRACTS.SUBNET_REGISTRY, SUBNET_REGISTRY_ABI, provider);
-      const [totalV, accurateV, repScore, lastActive, earnings, pending] = await Promise.all([
+      const [repData, earnings, pending] = await Promise.all([
         registry.getValidatorReputation(evmAddress).then((r: any) => [
           Number(r.totalValidations),
           Number(r.accurateValidations),
@@ -461,14 +461,14 @@ function ValidatorReputationPanel({ evmAddress }: { evmAddress: string }) {
         registry.validatorEarnings(evmAddress).then(Number),
         registry.pendingWithdrawals(evmAddress).then(Number),
       ]);
-      const [tv, av, rs, la] = totalV as number[];
+      const [tv, av, rs, la] = repData as number[];
       setRep({
         totalValidations: tv,
         accurateValidations: av,
         reputationScore: rs,
         lastActiveAt: la,
-        totalEarnings: earnings / 1e8,
-        pendingWithdrawal: pending / 1e8,
+        totalEarnings: (earnings || 0) / 1e8,
+        pendingWithdrawal: (pending || 0) / 1e8,
       });
     } catch (_) {}
     finally { setLoading(false); }
@@ -747,8 +747,8 @@ export default function ValidatorDashboard({ onBack }: Props) {
       } else if (walletType === 'hashpack' && hashConnect && accountId) {
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.SUBNET_REGISTRY_ID);
-        const receipt = await hashConnect.sendTransaction(hederaId, new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('withdrawEarnings'));
-        setTxHash(String(receipt.transactionId || '')); setTxStep(`✓ Withdrawn ${pendingEarnings.toFixed(4)} MDT`); setPendingEarnings(0);
+        const receipt = await hashConnect.sendTransaction(hederaId as any, new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('withdrawEarnings') as any);
+        setTxHash(String((receipt as any).transactionId || '')); setTxStep(`✓ Withdrawn ${pendingEarnings.toFixed(4)} MDT`); setPendingEarnings(0);
       }
       await loadData();
     } catch (e: any) { setTxError(e.message); setTxStep(null); }
@@ -767,7 +767,7 @@ export default function ValidatorDashboard({ onBack }: Props) {
       } else if (walletType === 'hashpack' && hashConnect && accountId) {
         const hederaId = AccountId.fromString(accountId);
         const contractId = ContractId.fromString(CONTRACTS.STAKING_VAULT_ID);
-        await hashConnect.sendTransaction(hederaId, new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('requestUnstake'));
+        await hashConnect.sendTransaction(hederaId as any, new ContractExecuteTransaction().setContractId(contractId).setGas(200000).setFunction('requestUnstake') as any);
         setTxStep('✓ Unstake requested — 7-day cooldown');
       }
       await loadData();

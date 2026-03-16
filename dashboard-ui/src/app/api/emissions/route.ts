@@ -41,15 +41,18 @@ export async function GET() {
 
             // Convert to list sorted by amount desc
             data = Object.entries(accountTotals)
-                .map(([accountId, amount]) => ({
-                    id: accountId,
-                    subnet: `Subnet-1`,
-                    name: accountId,
-                    amount: amount.toFixed(2),
-                    timestamp: new Date(Object.values(epochs)[0]?.end_time * 1000 || Date.now()).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    epochs: epochList,
-                    total_distributed: totalDistributed,
-                }))
+                .map(([accountId, amount]) => {
+                    const firstEpoch = Object.values(epochs)[0] as any;
+                    return {
+                        id: accountId,
+                        subnet: `Subnet-1`,
+                        name: accountId,
+                        amount: amount.toFixed(2),
+                        timestamp: new Date((firstEpoch?.end_time || Date.now() / 1000) * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                        epochs: epochList,
+                        total_distributed: totalDistributed,
+                    };
+                })
                 .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount));
 
             // Attach epoch metadata to first item for the chart

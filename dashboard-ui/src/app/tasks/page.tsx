@@ -117,7 +117,7 @@ const columns: ColumnDef<any>[] = [
 ];
 
 export default function TasksPage() {
-    const { data: tasks, isLoading } = useTasks();
+    const { data: tasks, loading: isLoading } = useTasks();
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (

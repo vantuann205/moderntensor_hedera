@@ -86,7 +86,7 @@ export function useMiners() {
   return { data, loading, error };
 }
 
-export function useTasks() {
+export function useTasks(options?: { all?: boolean }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +95,8 @@ export function useTasks() {
     async function fetchTasks() {
       try {
         setLoading(true);
-        const response = await fetch('/api/hcs/tasks');
+        const url = options?.all ? '/api/hcs/tasks?all=true' : '/api/hcs/tasks';
+        const response = await fetch(url);
         const result = await response.json();
         
         if (result.success) {
@@ -115,7 +116,7 @@ export function useTasks() {
     const interval = setInterval(fetchTasks, 20000); // Refresh every 20s
     
     return () => clearInterval(interval);
-  }, []);
+  }, [options?.all]);
 
   return { data, loading, error };
 }
