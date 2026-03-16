@@ -13,6 +13,7 @@ interface ValidatorsViewProps {
 export default function ValidatorsView({ onBack, onSelectValidator }: ValidatorsViewProps) {
   const { data: scores, loading, error } = useScores();
   const [stakeAmount, setStakeAmount] = useState<string>('1000');
+  const [searchTerm, setSearchTerm] = useState('');
   const { sort, toggle, sortData } = useSort('totalValidations', 'desc');
 
   // Extract unique validators from scores
@@ -46,7 +47,7 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
       v.totalCreativity += score.metrics?.creativity ?? 0;
     });
 
-    return Array.from(validatorMap.values()).map(v => ({
+    const mapped = Array.from(validatorMap.values()).map(v => ({
       ...v,
       avgScore:       v.totalScore / v.totalValidations,
       avgConfidence:  v.totalConfidence / v.totalValidations,
@@ -55,9 +56,18 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
       avgCompleteness: v.totalCompleteness / v.totalValidations,
       avgCreativity:  v.totalCreativity / v.totalValidations,
     }));
+
+    return mapped;
   }, [scores]);
 
-  const sortedValidators = sortData(validators, (v, col) => {
+  // Apply search filter for table only
+  const filteredValidators = React.useMemo(() => {
+    if (!searchTerm.trim()) return validators;
+    const term = searchTerm.toLowerCase();
+    return validators.filter(v => (v.id || '').toLowerCase().includes(term));
+  }, [validators, searchTerm]);
+
+  const sortedValidators = sortData(filteredValidators, (v, col) => {
     if (col === 'id') return v.id;
     if (col === 'validations') return v.totalValidations;
     if (col === 'avgScore') return v.avgScore;
@@ -82,6 +92,18 @@ export default function ValidatorsView({ onBack, onSelectValidator }: Validators
                     <p className="text-slate-400 text-lg font-light max-w-2xl font-body tracking-wider">
                         AI validators scoring miner submissions on Hedera HCS
                     </p>
+                </div>
+
+                {/* Search bar */}
+                <div className="relative w-full lg:w-96 group">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors">search</span>
+                    <input 
+                        type="text" 
+                        placeholder="Search by Validator ID..." 
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-neon-cyan/50 focus:bg-white/10 outline-none transition-all font-mono text-sm"
+                    />
                 </div>
             </div>
 

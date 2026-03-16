@@ -17,13 +17,14 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
   const { data: miners } = useMiners();
   const [filterType, setFilterType] = useState<string>('all');
   const [showSubmit, setShowSubmit] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { sort, toggle, sortData } = useSort('timestamp', 'desc');
 
   // Calculate task stats from scores
   const tasksWithStats = React.useMemo(() => {
     if (!tasks || tasks.length === 0) return [];
 
-    return tasks.map((task: any) => {
+    const mapped = tasks.map((task: any) => {
       const taskScores = scores?.filter((s: any) => s.taskId === task.taskId) || [];
       const validations = taskScores.length;
       const avgScore = validations > 0
@@ -34,16 +35,25 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
       const status = validations > 0 ? 'completed' : 'pending';
 
       return { ...task, validations, avgScore, status };
-    }).sort((a: any, b: any) => {
+    });
+
+    return mapped.sort((a: any, b: any) => {
       const tA = a.consensusTimestamp ? Number(a.consensusTimestamp.replace('.', '')) : new Date(a.timestamp).getTime();
       const tB = b.consensusTimestamp ? Number(b.consensusTimestamp.replace('.', '')) : new Date(b.timestamp).getTime();
       return tB - tA;
     });
   }, [tasks, scores]);
 
+  // Apply search filter for table only
+  const searchedTasks = React.useMemo(() => {
+    if (!searchTerm.trim()) return tasksWithStats;
+    const term = searchTerm.toLowerCase();
+    return tasksWithStats.filter((t: any) => (t.taskId || '').toLowerCase().includes(term));
+  }, [tasksWithStats, searchTerm]);
+
   const filteredTasks = filterType === 'all' 
-    ? tasksWithStats 
-    : tasksWithStats.filter((t: any) => t.taskType === filterType);
+    ? searchedTasks 
+    : searchedTasks.filter((t: any) => t.taskType === filterType);
 
   const sortedTasks = sortData(filteredTasks, (t: any, col) => {
     if (col === 'taskId') return t.taskId;
@@ -86,6 +96,19 @@ export default function TasksView({ onBack, onSelectTask }: TasksViewProps) {
                     <span className="material-symbols-outlined text-sm">add_task</span>
                     Submit Task
                   </button>
+
+                  {/* Search box */}
+                  <div className="relative group">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors text-lg">search</span>
+                    <input 
+                      type="text" 
+                      placeholder="Search ID..." 
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      className="bg-white/5 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-white placeholder:text-slate-600 focus:border-neon-cyan/50 focus:bg-white/10 outline-none transition-all font-mono text-sm w-48 focus:w-64"
+                    />
+                  </div>
+
                   {/* Filter */}
                   <div className="flex gap-2">
                   <button

@@ -34,6 +34,7 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState(10000);
+  const [searchTerm, setSearchTerm] = useState('');
   const { accountId: myAccountId, isConnected } = useWallet();
   const { sort, toggle, sortData } = useSort('hcs_sequence', 'desc');
 
@@ -73,13 +74,23 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
     return Array.from(map.values()).sort((a, b) => (b.hcs_sequence ?? 0) - (a.hcs_sequence ?? 0));
   }, [miners]);
 
+  // Apply search filter for table only
+  const filteredMiners = React.useMemo(() => {
+    if (!searchTerm.trim()) return uniqueMiners;
+    const term = searchTerm.toLowerCase();
+    return uniqueMiners.filter(m => {
+      const id = (m.miner_id || m.account_id || '').toLowerCase();
+      return id.includes(term);
+    });
+  }, [uniqueMiners, searchTerm]);
+
   const totalStaked = uniqueMiners.reduce((s, m) => s + toMDT(m.stake_amount), 0);
   const totalTasks = uniqueMiners.reduce((s, m) => s + Number(m.tasks_completed ?? 0), 0);
   const avgTrust = uniqueMiners.length > 0
     ? uniqueMiners.reduce((s, m) => s + Number(m.trust_score ?? 0.5), 0) / uniqueMiners.length
     : 0;
 
-  const sortedMiners = sortData(uniqueMiners, (m, col) => {
+  const sortedMiners = sortData(filteredMiners, (m, col) => {
     if (col === 'id') return m.miner_id || m.account_id || '';
     if (col === 'stake') return toMDT(m.stake_amount);
     if (col === 'tasks') return Number(m.tasks_completed ?? 0);
@@ -109,6 +120,18 @@ export default function MinersView({ onBack, onSelectMiner }: MinersViewProps) {
             <p className="text-slate-400 text-base font-light max-w-2xl mt-2 tracking-wider">
               AI compute providers registered on Hedera HCS
             </p>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative w-full lg:w-96 group">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors">search</span>
+            <input 
+              type="text" 
+              placeholder="Search by Miner ID..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-neon-cyan/50 focus:bg-white/10 outline-none transition-all font-mono text-sm"
+            />
           </div>
         </div>
 
