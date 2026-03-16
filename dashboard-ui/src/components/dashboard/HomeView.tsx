@@ -283,7 +283,7 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
             </div>
 
             {/* Right: role preview cards */}
-            <div className="flex-shrink-0 grid grid-cols-2 gap-4 w-full max-w-sm">
+            <div className="flex-shrink-0 grid grid-cols-2 gap-4 w-full max-w-lg">
               {ROLES.map(role => (
                 <div key={role.id}
                   className={`glass-panel rounded-2xl p-5 border ${role.borderClass} ${role.glowClass} flex flex-col gap-3 group hover:scale-[1.02] transition-all duration-300 relative overflow-hidden`}>
@@ -299,9 +299,9 @@ export default function HomeView({ onViewChange }: HomeViewProps) {
                     </div>
                   </div>
                   <div className="text-[11px] text-slate-400 leading-snug font-medium line-clamp-3 italic opacity-90">{role.desc}</div>
-                  <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between">
-                    <span className="text-[11px] text-slate-400 font-bold uppercase tracking-tighter">Yield</span>
-                    <span className={`text-[12px] font-black uppercase text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]`}>
+                  <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between gap-2 overflow-hidden">
+                    <span className="text-[11px] text-slate-400 font-bold uppercase tracking-tighter shrink-0">Yield</span>
+                    <span className="text-[12px] font-black uppercase text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] truncate text-right">
                       {role.earn.replace('of task reward', '').replace('pool', '')}
                     </span>
                   </div>

@@ -22,6 +22,9 @@ const notoSans = Noto_Sans({
 export const metadata: Metadata = {
   title: "ModernTensor Hedera Dashboard",
   description: "Next-generation Hedera network dashboard",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 import Providers from "@/components/Providers";
