@@ -14,7 +14,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing required fields: reward, requester, code' }, { status: 400 });
         }
 
-        const pythonPath = "C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe";
+        const pythonPath = process.env.PYTHON_PATH || 'python3';
         const cwd = path.join(process.cwd(), '..');
 
         // Chuẩn bị file code tạm thời do code có thể chứa nhiều ký tự đặc biệt khó truyền qua command-line string

@@ -5,7 +5,7 @@ import path from 'path';
 
 const execAsync = util.promisify(exec);
 
-const PYTHON = "C:\\Users\\NGO VAN TUAN\\AppData\\Local\\Programs\\Python\\Python312\\python.exe";
+const PYTHON = process.env.PYTHON_PATH || 'python3';
 const ENV = { ...process.env, PYTHONIOENCODING: 'utf-8' };
 
 export async function POST(req: Request) {
