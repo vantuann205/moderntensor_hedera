@@ -11,7 +11,13 @@ const data = [
 export default function TokenomicsView() {
   const [stakeAmount, setStakeAmount] = useState<string>('1000');
   const apy = 0.184;
-  const price = 423.50;
+  const price = 0.0157; // $15.7M marketcap / 1B supply
+
+  // Total supply: 1 billion MDT
+  // Circulating: 67% = 670M, Locked: 33% = 330M
+  const TOTAL_SUPPLY = 1_000_000_000;
+  const CIRCULATING = 670_000_000;
+  const LOCKED = 330_000_000;
 
   const dailyOutput = useMemo(() => (Number(stakeAmount) * apy) / 365, [stakeAmount]);
   const monthlyOutput = useMemo(() => (Number(stakeAmount) * apy) / 12, [stakeAmount]);
@@ -63,7 +69,7 @@ export default function TokenomicsView() {
                   </PieChart>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                      <span className="text-slate-500 text-[12px] uppercase tracking-widest mb-1 font-mono">Circulating</span>
-                     <span className="text-5xl font-display font-bold text-white neon-text">MTN</span>
+                     <span className="text-5xl font-display font-bold text-white neon-text">MDT</span>
                      <span className="text-neon-cyan text-lg font-bold mt-1">67%</span>
                   </div>
                </div>
@@ -71,20 +77,20 @@ export default function TokenomicsView() {
                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-8 font-mono">
                   <div className="relative pl-4 border-l-2 border-neon-cyan">
                      <h4 className="text-slate-500 text-[12px] uppercase tracking-widest mb-1">Circulating Supply</h4>
-                     <p className="text-3xl font-display font-bold text-white tracking-tight">14,204,591 <span className="text-sm font-normal text-neon-cyan">MTN</span></p>
+                     <p className="text-3xl font-display font-bold text-white tracking-tight">670,000,000 <span className="text-sm font-normal text-neon-cyan">MDT</span></p>
                   </div>
                   <div className="relative pl-4 border-l-2 border-white/10">
                      <h4 className="text-slate-500 text-[12px] uppercase tracking-widest mb-1">Locked Supply</h4>
-                     <p className="text-3xl font-display font-bold text-white/50 tracking-tight">6,795,409 <span className="text-sm font-normal text-slate-500 font-display">MTN</span></p>
+                     <p className="text-3xl font-display font-bold text-white/50 tracking-tight">330,000,000 <span className="text-sm font-normal text-slate-500 font-display">MDT</span></p>
                   </div>
                   <div className="pt-6 border-t border-dashed border-white/10 col-span-1 sm:col-span-2 flex justify-between items-end mt-2 uppercase tracking-widest">
                      <div>
                         <h4 className="text-neon-cyan text-[12px] mb-1">Max Supply Cap</h4>
-                        <p className="text-4xl font-display font-bold text-white">21.0M</p>
+                        <p className="text-4xl font-display font-bold text-white">1,000,000,000</p>
                      </div>
                      <div className="text-right">
                         <h4 className="text-neon-purple text-[12px] mb-1">Market Cap</h4>
-                        <p className="text-2xl font-display font-bold text-white neon-text-purple">$6.2B</p>
+                        <p className="text-2xl font-display font-bold text-white neon-text-purple">$15.7M</p>
                      </div>
                   </div>
                </div>
@@ -104,7 +110,7 @@ export default function TokenomicsView() {
                <div>
                   <div className="flex justify-between mb-2">
                      <label className="text-[12px] text-neon-cyan uppercase font-black">Stake Amount</label>
-                     <span className="text-neon-cyan text-[12px] opacity-60">∑ MTN</span>
+                     <span className="text-neon-cyan text-[12px] opacity-60">∑ MDT</span>
                   </div>
                    <input className="w-full bg-black/40 border border-neon-cyan/30 rounded p-3 text-right text-white font-mono focus:border-neon-cyan outline-none text-lg" 
                      type="number" value={stakeAmount} 
