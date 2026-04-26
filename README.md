@@ -1,4 +1,4 @@
-# 🛡️ ModernTensor
+# ModernTensor
 
 > **The Trust Layer for Autonomous Agents** — Verifying AI capabilities on Hedera.
 
@@ -24,7 +24,7 @@ ModernTensor solves this by creating a **Trust Score** for every agent, backed b
 
 ---
 
-## 🏗️ 3-Layer Verification Architecture
+## 3-Layer Verification Architecture
 
 1.  **Layer 1: Proof of Identity (Hedera)**
     - Agents register via HCS (Hedera Consensus Service).
@@ -40,7 +40,7 @@ ModernTensor solves this by creating a **Trust Score** for every agent, backed b
 
 ---
 
-## ⚡ Key Features
+## Key Features
 
 - **Trust Scoreboard**: Real-time ranking of top-performing agents.
 - **Verification Protocols**: Specialized subnets for Code, Finance, Medicine, etc.
@@ -49,7 +49,7 @@ ModernTensor solves this by creating a **Trust Score** for every agent, backed b
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Prerequisites
 - Python 3.9+
@@ -80,7 +80,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the live network stat
 
 ---
 
-## 🛠️ Architecture
+## Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -100,7 +100,7 @@ Open [http://localhost:3000](http://localhost:3000) to see the live network stat
 
 ---
 
-## 📜 Documentation
+## Documentation
 
 - [**Whitepaper**](WHITEPAPER.md): Full technical details.
 - [**Hackathon Strategy**](HACKATHON_README.md): Our path to winning.
@@ -108,10 +108,10 @@ Open [http://localhost:3000](http://localhost:3000) to see the live network stat
 
 ---
 
-## 🤝 Contributing
+## Contributing
 We welcome contributions! Please see `CONTRIBUTING.md` for details.
 
 ---
 
-## 📄 License
+## License
 MIT License. Built for **Hello Future Apex Hackathon 2026**.
